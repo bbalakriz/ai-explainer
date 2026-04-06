@@ -868,6 +868,8 @@ function Step4_Concat({ data }) {
         <FlowArrow label="concat" />
         <MatrixDisplay matrix={data.concat} label="Concat" rows={3} cols={4} glow="green" tooltip="[3×2] ‖ [3×2] = [3×4]" />
         <FlowArrow label="× W_O" />
+        <MatrixDisplay matrix={W_O} label="W_O" rows={4} cols={4} glow="rose" tooltip="Output projection matrix — mixes information across heads back into d_model space" />
+        <FlowArrow label="=" />
         <MatrixDisplay matrix={data.multiHead} label="MultiHead Output" rows={3} cols={4} glow="orange" tooltip="Final projection back to d_model space" />
       </div>
 
