@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Transformer Interactive Explainer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .glow-blue { box-shadow: 0 0 15px 3px rgba(59,130,246,0.5), 0 0 30px 5px rgba(59,130,246,0.2); }
+  .glow-orange { box-shadow: 0 0 15px 3px rgba(249,115,22,0.5), 0 0 30px 5px rgba(249,115,22,0.2); }
+  .glow-green { box-shadow: 0 0 15px 3px rgba(34,197,94,0.5), 0 0 30px 5px rgba(34,197,94,0.2); }
+  .glow-purple { box-shadow: 0 0 15px 3px rgba(168,85,247,0.5), 0 0 30px 5px rgba(168,85,247,0.2); }
+  .glow-cyan { box-shadow: 0 0 15px 3px rgba(6,182,212,0.5), 0 0 30px 5px rgba(6,182,212,0.2); }
+  .glow-rose { box-shadow: 0 0 15px 3px rgba(244,63,94,0.5), 0 0 30px 5px rgba(244,63,94,0.2); }
+  .glow-ft { animation: ftpulse 2s ease-in-out infinite; }
+  @keyframes ftpulse {
+    0%, 100% { box-shadow: 0 0 10px 2px rgba(251,191,36,0.4); }
+    50% { box-shadow: 0 0 25px 8px rgba(251,191,36,0.7); }
+  }
+  .fade-in { animation: fadeIn 0.4s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .heatmap-cell { transition: background-color 0.3s; }
+  .arrow-flow { stroke-dasharray: 8 4; animation: flowDash 1s linear infinite; }
+  @keyframes flowDash { to { stroke-dashoffset: -12; } }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #1e293b; }
+  ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+  .tooltip-container:hover .tooltip-content { display: block; }
+  .tooltip-content { display: none; }
+  .changed-val { animation: valChange 1s ease-in-out infinite alternate; }
+  @keyframes valChange { from { color: #fbbf24; } to { color: #f97316; } }
+  .prob-bar { transition: width 0.5s ease-out; }
+  .winner { animation: winPulse 1.5s ease-in-out infinite; }
+  @keyframes winPulse {
+    0%, 100% { background-color: rgba(34,197,94,0.15); }
+    50% { background-color: rgba(34,197,94,0.3); }
+  }
+</style>
+</head>
+<body class="min-h-screen">
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo } = React;
+
+// ── Math Utilities ──────────────────────────────────────────────────────────
+function matMul(A, B) {
+  const rows = A.length, cols = B[0].length, inner = B.length;
+  const C = Array.from({ length: rows }, () => Array(cols).fill(0));
+  for (let i = 0; i < rows; i++)
+    for (let j = 0; j < cols; j++)
+      for (let k = 0; k < inner; k++)
+        C[i][j] += A[i][k] * B[k][j];
+  return C;
+}
+
+function transpose(A) {
+  return A[0].map((_, j) => A.map(row => row[j]));
+}
+
+function scalarDiv(A, s) {
+  return A.map(row => row.map(v => v / s));
+}
+
+function softmaxRows(A) {
+  return A.map(row => {
+    const max = Math.max(...row);
+    const exps = row.map(v => Math.exp(v - max));
+    const sum = exps.reduce((a, b) => a + b, 0);
+    return exps.map(v => v / sum);
+  });
+}
+
+function softmax1D(arr) {
+  const max = Math.max(...arr);
+  const exps = arr.map(v => Math.exp(v - max));
+  const sum = exps.reduce((a, b) => a + b, 0);
+  return exps.map(v => v / sum);
+}
+
+function relu(A) {
+  return A.map(row => row.map(v => Math.max(0, v)));
+}
+
+function addMat(A, B) {
+  return A.map((row, i) => row.map((v, j) => v + B[i][j]));
+}
+
+function concatCols(A, B) {
+  return A.map((row, i) => [...row, ...B[i]]);
+}
+
+function splitCols(A, start, end) {
+  return A.map(row => row.slice(start, end));
+}
+
+function vecMatMul(vec, mat) {
+  // vec: [d], mat: [d × out] → [out]
+  return mat[0].map((_, j) => vec.reduce((sum, v, i) => sum + v * mat[i][j], 0));
+}
+
+function r(v) { return Math.round(v * 1000) / 1000; }
+function fmt(v) { return r(v).toFixed(2); }
+
+// ── Vocabulary ──────────────────────────────────────────────────────────────
+// Small vocab of 10 words for demonstration
+const VOCAB = [
+  { word: "AI",    id: 0 },
+  { word: "is",    id: 1 },
+  { word: "fast",  id: 2 },
+  { word: "slow",  id: 3 },
+  { word: "the",   id: 4 },
+  { word: "very",  id: 5 },
+  { word: "not",   id: 6 },
+  { word: "and",   id: 7 },
+  { word: "good",  id: 8 },
+  { word: "new",   id: 9 },
+];
+
+const VOCAB_WORDS = VOCAB.map(v => v.word);
+
+const TOKENS = ["AI", "is", "fast"];
+const TOKEN_IDS = [0, 1, 2];
+
+// ── Embedding Table (vocab_size=10 × d_model=4) ────────────────────────────
+// Each row is a learned embedding vector for one vocabulary word
+const EMBEDDING_TABLE = [
+  [1.0, 0.5, 0.3, 0.8],   // 0: AI
+  [0.2, 0.9, 0.6, 0.1],   // 1: is
+  [0.7, 0.4, 1.0, 0.5],   // 2: fast
+  [0.3, 0.2, 0.4, 0.2],   // 3: slow
+  [0.1, 0.4, 0.1, 0.3],   // 4: the
+  [0.2, 0.3, 0.2, 0.2],   // 5: very
+  [0.2, 0.3, 0.2, 0.3],   // 6: not
+  [1.0, 0.9, 1.0, 0.9],   // 7: and
+  [0.4, 0.1, 0.3, 0.1],   // 8: good
+  [0.4, 0.2, 0.1, 0.3],   // 9: new
+];
+
+// The embeddings for our 3 input tokens (rows 0, 1, 2 of the table)
+const EMBEDDINGS = TOKEN_IDS.map(id => EMBEDDING_TABLE[id]);
+
+const POS_ENC = [
+  [0.00, 0.10, 0.00, 0.10],
+  [0.08, 0.00, 0.08, 0.00],
+  [0.01, 0.10, 0.01, 0.10],
+];
+
+// Weight matrices (4×4 each). The resulting Q, K, V outputs [3×4] are split into 2 heads of [3×2].
+const W_Q = [
+  [0.2, 0.1, 0.3, 0.0],
+  [0.0, 0.3, 0.1, 0.2],
+  [0.1, 0.0, 0.2, 0.3],
+  [0.3, 0.2, 0.0, 0.1],
+];
+
+const W_K = [
+  [0.1, 0.3, 0.2, 0.1],
+  [0.2, 0.0, 0.1, 0.3],
+  [0.3, 0.1, 0.0, 0.2],
+  [0.0, 0.2, 0.3, 0.0],
+];
+
+const W_V = [
+  [0.3, 0.1, 0.0, 0.2],
+  [0.1, 0.2, 0.3, 0.0],
+  [0.0, 0.3, 0.1, 0.1],
+  [0.2, 0.0, 0.2, 0.3],
+];
+
+const W_O = [
+  [0.2, 0.1, 0.3, 0.1],
+  [0.1, 0.3, 0.0, 0.2],
+  [0.3, 0.0, 0.2, 0.1],
+  [0.0, 0.2, 0.1, 0.3],
+];
+
+// FFN weights: W1 is 4×8, W2 is 8×4
+const W_FFN1 = [
+  [0.1, 0.2, 0.0, 0.3, 0.1, 0.2, 0.0, 0.1],
+  [0.2, 0.0, 0.3, 0.1, 0.0, 0.1, 0.3, 0.2],
+  [0.0, 0.3, 0.1, 0.2, 0.2, 0.0, 0.1, 0.3],
+  [0.3, 0.1, 0.2, 0.0, 0.3, 0.1, 0.2, 0.0],
+];
+
+const W_FFN2 = [
+  [0.2, 0.1, 0.0, 0.3],
+  [0.0, 0.3, 0.2, 0.1],
+  [0.1, 0.0, 0.3, 0.2],
+  [0.3, 0.2, 0.1, 0.0],
+  [0.1, 0.1, 0.2, 0.2],
+  [0.2, 0.0, 0.1, 0.3],
+  [0.0, 0.3, 0.0, 0.1],
+  [0.3, 0.2, 0.3, 0.0],
+];
+
+// Unembedding / output projection: W_unembed [4 × 10] (d_model × vocab_size)
+// In practice, W_unembed = transpose(EmbeddingTable) — this is called "weight tying."
+// The same matrix that maps token_id → vector also maps vector → token_id (in reverse).
+const W_UNEMBED = transpose(EMBEDDING_TABLE); // [4×10] = transpose of [10×4]
+
+// Fine-tuned weight deltas (applied to W_Q and W_V)
+const FT_DELTA_Q = [
+  [+0.05, -0.02, +0.08, -0.03],
+  [-0.03, +0.06, -0.01, +0.04],
+  [+0.02, -0.04, +0.05, +0.01],
+  [-0.01, +0.03, -0.02, +0.07],
+];
+
+const FT_DELTA_V = [
+  [-0.04, +0.03, +0.06, -0.02],
+  [+0.05, -0.01, -0.03, +0.04],
+  [-0.02, +0.07, +0.01, -0.05],
+  [+0.03, -0.03, +0.04, +0.02],
+];
+
+// ── Compute Pipeline ────────────────────────────────────────────────────────
+function computePipeline(fineTuned) {
+  const X = addMat(EMBEDDINGS, POS_ENC);
+
+  const wQ = fineTuned ? addMat(W_Q, FT_DELTA_Q) : W_Q;
+  const wV = fineTuned ? addMat(W_V, FT_DELTA_V) : W_V;
+  const wK = W_K;
+
+  const Q_full = matMul(X, wQ);
+  const K_full = matMul(X, wK);
+  const V_full = matMul(X, wV);
+
+  const Q1 = splitCols(Q_full, 0, 2), Q2 = splitCols(Q_full, 2, 4);
+  const K1 = splitCols(K_full, 0, 2), K2 = splitCols(K_full, 2, 4);
+  const V1 = splitCols(V_full, 0, 2), V2 = splitCols(V_full, 2, 4);
+
+  const d_k = 2;
+  const scale = Math.sqrt(d_k);
+
+  const QK1_raw = matMul(Q1, transpose(K1));
+  const QK1_scaled = scalarDiv(QK1_raw, scale);
+  const A1 = softmaxRows(QK1_scaled);
+  const O1 = matMul(A1, V1);
+
+  const QK2_raw = matMul(Q2, transpose(K2));
+  const QK2_scaled = scalarDiv(QK2_raw, scale);
+  const A2 = softmaxRows(QK2_scaled);
+  const O2 = matMul(A2, V2);
+
+  const concat = concatCols(O1, O2);
+  const multiHead = matMul(concat, W_O);
+  const residual = addMat(X, multiHead);
+
+  const hidden = relu(matMul(residual, W_FFN1));
+  const ffnOut = matMul(hidden, W_FFN2);
+  const output = addMat(residual, ffnOut);
+
+  // Next token prediction: take last token's output vector
+  const lastTokenVec = output[output.length - 1]; // the "fast" token's final representation
+  const logits = vecMatMul(lastTokenVec, W_UNEMBED); // [10] logits over vocab
+  const probs = softmax1D(logits);
+  const predictedId = probs.indexOf(Math.max(...probs));
+
+  return {
+    X, wQ, wK, wV,
+    Q_full, K_full, V_full,
+    Q1, Q2, K1, K2, V1, V2,
+    QK1_raw, QK1_scaled, A1, O1,
+    QK2_raw, QK2_scaled, A2, O2,
+    concat, multiHead, residual,
+    hidden, ffnOut, output,
+    lastTokenVec, logits, probs, predictedId,
+  };
+}
+
+// ── Components ──────────────────────────────────────────────────────────────
+
+function Tooltip({ text, children }) {
+  return (
+    <span className="tooltip-container relative inline-block">
+      {children}
+      <span className="tooltip-content absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-700 text-xs text-slate-200 rounded-lg shadow-xl whitespace-nowrap border border-slate-600">
+        {text}
+      </span>
+    </span>
+  );
+}
+
+function MatrixDisplay({ matrix, label, rows, cols, glow, highlight, highlightOld, showDiff, compact, tooltip, rowLabels, colLabels }) {
+  const cls = `rounded-xl border p-3 ${
+    glow === 'blue' ? 'border-blue-500/50 bg-blue-950/30 glow-blue' :
+    glow === 'orange' ? 'border-orange-500/50 bg-orange-950/30 glow-orange' :
+    glow === 'green' ? 'border-green-500/50 bg-green-950/30 glow-green' :
+    glow === 'purple' ? 'border-purple-500/50 bg-purple-950/30 glow-purple' :
+    glow === 'cyan' ? 'border-cyan-500/50 bg-cyan-950/30 glow-cyan' :
+    glow === 'rose' ? 'border-rose-500/50 bg-rose-950/30 glow-rose' :
+    glow === 'ft' ? 'border-amber-400/60 bg-amber-950/30 glow-ft' :
+    'border-slate-700 bg-slate-800/50'
+  }`;
+
+  const cellSize = compact ? 'w-12 h-7 text-[10px]' : 'w-14 h-8 text-xs';
+
+  return (
+    <div className={`${cls} fade-in inline-block`}>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xs font-semibold text-slate-300">{label}</span>
+        {tooltip && <Tooltip text={tooltip}><span className="text-[10px] text-slate-500 cursor-help border border-slate-600 rounded-full w-4 h-4 flex items-center justify-center">?</span></Tooltip>}
+        {rows != null && cols != null && (
+          <span className="mono text-[10px] text-slate-500">[{rows}×{cols}]</span>
+        )}
+      </div>
+      {colLabels && (
+        <div className={`flex gap-0.5 mb-0.5 ${rowLabels ? 'ml-12' : ''}`}>
+          {colLabels.map((l, i) => (
+            <div key={i} className={`${compact ? 'w-12' : 'w-14'} text-center text-[9px] text-slate-500`}>{l}</div>
+          ))}
+        </div>
+      )}
+      <div className="flex flex-col gap-0.5">
+        {matrix.map((row, i) => (
+          <div key={i} className="flex gap-0.5 items-center">
+            {rowLabels && <span className="text-[9px] text-slate-500 w-11 text-right mr-1 truncate">{rowLabels[i]}</span>}
+            {row.map((val, j) => {
+              const isHighlight = highlight && highlight(i, j);
+              const oldVal = highlightOld ? highlightOld[i][j] : null;
+              const changed = showDiff && oldVal !== null && Math.abs(r(val) - r(oldVal)) > 0.001;
+              return (
+                <div
+                  key={j}
+                  className={`${cellSize} mono flex items-center justify-center rounded ${
+                    isHighlight ? 'bg-amber-500/30 text-amber-300 font-bold' :
+                    changed ? 'bg-amber-600/20 text-amber-300 changed-val font-bold' :
+                    'bg-slate-900/60 text-slate-300'
+                  }`}
+                >
+                  {fmt(val)}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FlowArrow({ label }) {
+  return (
+    <div className="flex flex-col items-center justify-center mx-2 min-w-[40px]">
+      <svg width="40" height="24" viewBox="0 0 40 24">
+        <line x1="0" y1="12" x2="32" y2="12" stroke="#64748b" strokeWidth="2" className="arrow-flow" />
+        <polygon points="32,6 40,12 32,18" fill="#64748b" />
+      </svg>
+      {label && <span className="text-[9px] text-slate-500 mt-0.5 whitespace-nowrap">{label}</span>}
+    </div>
+  );
+}
+
+function DownArrow({ label }) {
+  return (
+    <div className="flex flex-col items-center justify-center my-2">
+      <svg width="24" height="32" viewBox="0 0 24 32">
+        <line x1="12" y1="0" x2="12" y2="24" stroke="#64748b" strokeWidth="2" className="arrow-flow" />
+        <polygon points="6,24 12,32 18,24" fill="#64748b" />
+      </svg>
+      {label && <span className="text-[9px] text-slate-500 mt-0.5 whitespace-nowrap">{label}</span>}
+    </div>
+  );
+}
+
+function HeatmapMatrix({ matrix, label, tokens, tooltip }) {
+  const max = Math.max(...matrix.flat());
+  const min = Math.min(...matrix.flat());
+  const range = max - min || 1;
+
+  return (
+    <div className="rounded-xl border border-purple-500/50 bg-purple-950/20 p-3 fade-in inline-block">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xs font-semibold text-slate-300">{label}</span>
+        {tooltip && <Tooltip text={tooltip}><span className="text-[10px] text-slate-500 cursor-help border border-slate-600 rounded-full w-4 h-4 flex items-center justify-center">?</span></Tooltip>}
+        <span className="mono text-[10px] text-slate-500">[3×3]</span>
+      </div>
+      <div className="flex gap-0.5 mb-0.5 ml-12">
+        {tokens.map((t, i) => (
+          <div key={i} className="w-14 text-center text-[10px] text-slate-400 font-medium">{t}</div>
+        ))}
+      </div>
+      <div className="flex flex-col gap-0.5">
+        {matrix.map((row, i) => (
+          <div key={i} className="flex gap-0.5 items-center">
+            <span className="text-[10px] text-slate-400 w-11 text-right mr-1 font-medium">{tokens[i]}</span>
+            {row.map((val, j) => {
+              const intensity = (val - min) / range;
+              const bg = `rgba(168, 85, 247, ${0.1 + intensity * 0.7})`;
+              return (
+                <div
+                  key={j}
+                  className="w-14 h-10 mono text-[11px] flex items-center justify-center rounded heatmap-cell font-medium"
+                  style={{ backgroundColor: bg, color: intensity > 0.5 ? '#fff' : '#cbd5e1' }}
+                >
+                  {fmt(val)}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StepIndicator({ steps, current, onStep }) {
+  return (
+    <div className="flex items-center justify-center gap-1 mb-8 flex-wrap">
+      {steps.map((step, i) => (
+        <React.Fragment key={i}>
+          <button
+            onClick={() => onStep(i)}
+            className={`px-2.5 py-2 rounded-lg text-[11px] font-medium transition-all ${
+              i === current
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                : i < current
+                ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                : 'bg-slate-800 text-slate-500 hover:bg-slate-700'
+            }`}
+          >
+            <span className="mr-1">{i < current ? '✓' : i + 1}</span>
+            {step}
+          </button>
+          {i < steps.length - 1 && (
+            <svg width="16" height="12" viewBox="0 0 16 12" className="text-slate-600 flex-shrink-0">
+              <line x1="0" y1="6" x2="10" y2="6" stroke="currentColor" strokeWidth="1.5" />
+              <polygon points="10,2 16,6 10,10" fill="currentColor" />
+            </svg>
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function MathCallout({ text }) {
+  return (
+    <div className="bg-slate-800/80 border border-slate-700 rounded-lg px-3 py-2 text-[11px] text-slate-400 mt-3 max-w-xl">
+      <span className="text-blue-400 font-semibold mr-1">Math:</span> {text}
+    </div>
+  );
+}
+
+function DimensionBadge({ text }) {
+  return <span className="inline-block mono text-[9px] bg-slate-700/50 text-slate-400 px-1.5 py-0.5 rounded">{text}</span>;
+}
+
+// ── Step 0: Tokenization ────────────────────────────────────────────────────
+
+function Step0_Tokenization() {
+  const [highlightId, setHighlightId] = useState(null);
+
+  return (
+    <div className="fade-in">
+      <h3 className="text-lg font-bold text-white mb-1">Step 1: Tokenization & Vocabulary Lookup</h3>
+      <p className="text-sm text-slate-400 mb-5">
+        The raw text is split into tokens, each mapped to an integer ID via a vocabulary table. The ID is then used to look up the token's learned embedding vector.
+      </p>
+
+      {/* Raw text → tokens */}
+      <div className="mb-6">
+        <h4 className="text-sm font-semibold text-slate-300 mb-3">1a. Tokenize the input string</h4>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="bg-slate-800 border border-slate-600 rounded-xl px-5 py-3">
+            <span className="mono text-base text-slate-200">"AI is fast"</span>
+            <div className="text-[10px] text-slate-500 mt-1">Raw input string</div>
+          </div>
+          <FlowArrow label="split" />
+          <div className="flex gap-2">
+            {TOKENS.map((t, i) => (
+              <div
+                key={i}
+                className={`rounded-lg px-4 py-2 text-center cursor-pointer transition-all border ${
+                  highlightId === i
+                    ? 'bg-cyan-900/50 border-cyan-500/60 shadow-lg'
+                    : 'bg-slate-800 border-slate-600 hover:border-slate-500'
+                }`}
+                onMouseEnter={() => setHighlightId(i)}
+                onMouseLeave={() => setHighlightId(null)}
+              >
+                <div className="mono text-sm font-bold text-cyan-300">"{t}"</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">token {i}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <MathCallout text="Tokenizer splits text on whitespace (simplified). Real models use BPE or SentencePiece subword tokenizers that handle unknown words by splitting into pieces." />
+      </div>
+
+      {/* Vocabulary table */}
+      <div className="mb-6">
+        <h4 className="text-sm font-semibold text-slate-300 mb-3">1b. Vocabulary table — map each token to an integer ID</h4>
+        <div className="flex gap-6 flex-wrap">
+          <div className="rounded-xl border border-slate-700 bg-slate-800/50 overflow-hidden">
+            <div className="grid grid-cols-2 text-[11px]">
+              <div className="px-3 py-1.5 bg-slate-700/50 font-semibold text-slate-400 border-b border-slate-700">Token</div>
+              <div className="px-3 py-1.5 bg-slate-700/50 font-semibold text-slate-400 border-b border-slate-700">ID</div>
+              {VOCAB.map(v => {
+                const isInput = TOKEN_IDS.includes(v.id);
+                const isHovered = highlightId === v.id;
+                return (
+                  <React.Fragment key={v.id}>
+                    <div
+                      className={`px-3 py-1.5 mono border-b border-slate-800 transition-all ${
+                        isHovered ? 'bg-cyan-900/40 text-cyan-300 font-bold' :
+                        isInput ? 'bg-blue-900/20 text-blue-300' : 'text-slate-400'
+                      }`}
+                      onMouseEnter={() => setHighlightId(v.id)}
+                      onMouseLeave={() => setHighlightId(null)}
+                    >
+                      {v.word}
+                    </div>
+                    <div
+                      className={`px-3 py-1.5 mono border-b border-slate-800 transition-all ${
+                        isHovered ? 'bg-cyan-900/40 text-cyan-300 font-bold' :
+                        isInput ? 'bg-blue-900/20 text-blue-300' : 'text-slate-400'
+                      }`}
+                      onMouseEnter={() => setHighlightId(v.id)}
+                      onMouseLeave={() => setHighlightId(null)}
+                    >
+                      {v.id}
+                    </div>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex flex-col justify-center">
+            <div className="text-[11px] text-slate-400 mb-2">Our input maps to:</div>
+            <div className="flex items-center gap-2">
+              {TOKENS.map((t, i) => (
+                <React.Fragment key={i}>
+                  <div
+                    className="bg-blue-900/30 border border-blue-700/40 rounded-lg px-3 py-1.5 text-center cursor-pointer"
+                    onMouseEnter={() => setHighlightId(TOKEN_IDS[i])}
+                    onMouseLeave={() => setHighlightId(null)}
+                  >
+                    <div className="mono text-xs text-blue-300">"{t}"</div>
+                    <div className="mono text-lg font-bold text-blue-200">{TOKEN_IDS[i]}</div>
+                  </div>
+                  {i < TOKENS.length - 1 && <span className="text-slate-600">,</span>}
+                </React.Fragment>
+              ))}
+            </div>
+            <div className="mono text-[11px] text-slate-500 mt-2">token_ids = [{TOKEN_IDS.join(', ')}]</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Embedding lookup */}
+      <div>
+        <h4 className="text-sm font-semibold text-slate-300 mb-3">1c. Embedding lookup — use token IDs to index into the embedding table</h4>
+        <div className="flex items-start gap-4 flex-wrap">
+          <div>
+            <MatrixDisplay
+              matrix={EMBEDDING_TABLE}
+              label="Embedding Table"
+              rows={10} cols={4}
+              glow="cyan"
+              tooltip="Learned during pre-training. Each row is a d_model=4 vector."
+              rowLabels={VOCAB_WORDS}
+              colLabels={['d₀', 'd₁', 'd₂', 'd₃']}
+              compact
+              highlight={(i, j) => TOKEN_IDS.includes(i) && (highlightId === null || highlightId === i)}
+            />
+            <div className="text-[10px] text-slate-500 mt-1 ml-12">vocab_size=10 × d_model=4</div>
+          </div>
+
+          <div className="flex flex-col items-center justify-center pt-12">
+            <FlowArrow label="lookup IDs [0,1,2]" />
+            <div className="text-[10px] text-slate-500 mt-1">table[id] → row</div>
+          </div>
+
+          <div className="pt-4">
+            <MatrixDisplay
+              matrix={EMBEDDINGS}
+              label="Token Embeddings"
+              rows={3} cols={4}
+              glow="blue"
+              tooltip="Rows 0, 1, 2 extracted from the embedding table"
+              rowLabels={TOKENS}
+              colLabels={['d₀', 'd₁', 'd₂', 'd₃']}
+            />
+            <div className="text-[10px] text-slate-500 mt-1">These 3 rows become the input matrix</div>
+          </div>
+        </div>
+        <MathCallout text="embedding(token) = EmbeddingTable[token_id]. This is a simple row lookup, not a multiplication. The table is learned during pre-training — each row encodes semantic meaning in d_model=4 dimensions." />
+      </div>
+
+      <div className="mt-4 bg-amber-900/20 border border-amber-700/40 rounded-lg px-3 py-2 text-[11px] text-amber-300/80 max-w-lg">
+        <strong>Note:</strong> We use d_model=4 (not 3) so 2 heads divide evenly: d_head = 4/2 = 2. Real models use d_model=768 or larger with vocabularies of 30,000-100,000+ tokens.
+      </div>
+    </div>
+  );
+}
+
+// ── Step 1: Positional Encoding + Input ─────────────────────────────────────
+
+function Step1_Embedding({ data }) {
+  return (
+    <div className="fade-in">
+      <h3 className="text-lg font-bold text-white mb-1">Step 2: Positional Encoding</h3>
+      <p className="text-sm text-slate-400 mb-4">
+        Transformers have no built-in sense of word order. Positional encoding vectors are added to each embedding to inject position information.
+      </p>
+      <div className="flex items-center flex-wrap gap-4">
+        <MatrixDisplay
+          matrix={EMBEDDINGS}
+          label="Token Embeddings"
+          rows={3} cols={4}
+          glow="blue"
+          tooltip="From the embedding lookup in Step 1"
+          rowLabels={TOKENS}
+        />
+        <div className="flex flex-col items-center">
+          <span className="text-2xl text-slate-500">+</span>
+        </div>
+        <MatrixDisplay
+          matrix={POS_ENC}
+          label="Positional Encoding"
+          rows={3} cols={4}
+          glow="green"
+          tooltip="Encodes position 0, 1, 2 in the sequence using sin/cos (simplified here)"
+          rowLabels={['pos 0', 'pos 1', 'pos 2']}
+        />
+        <FlowArrow label="element-wise add" />
+        <MatrixDisplay
+          matrix={data.X}
+          label="Input X"
+          rows={3} cols={4}
+          glow="orange"
+          tooltip="This combined matrix is the input to the Transformer layer"
+          rowLabels={TOKENS}
+        />
+      </div>
+      <MathCallout text='X = Embedding + PositionalEncoding → [3×4]. Without positional encoding, "AI is fast" and "fast is AI" would look identical to the Transformer. The PE breaks this symmetry.' />
+    </div>
+  );
+}
+
+function Step2_QKV({ data, fineTuned }) {
+  return (
+    <div className="fade-in">
+      <h3 className="text-lg font-bold text-white mb-1">Step 3: Q, K, V Projection</h3>
+      <p className="text-sm text-slate-400 mb-4">
+        The input is projected through learned weight matrices to create Query, Key, and Value matrices.
+      </p>
+
+      <div className="mb-4">
+        <h4 className="text-sm font-semibold text-slate-300 mb-2">Weight Matrices <DimensionBadge text="4×4" /></h4>
+        <div className="flex items-start gap-3 flex-wrap">
+          <MatrixDisplay
+            matrix={data.wQ} label="W_Q" rows={4} cols={4}
+            glow={fineTuned ? 'ft' : null}
+            showDiff={fineTuned} highlightOld={fineTuned ? W_Q : null}
+            tooltip={fineTuned ? "Query weights — updated by fine-tuning (pulsing cells show changes)" : "Query weights — projects input to query space"}
+          />
+          <MatrixDisplay
+            matrix={data.wK} label="W_K" rows={4} cols={4}
+            tooltip={fineTuned ? "Key weights — NOT modified by fine-tuning in this example" : "Key weights — projects input to key space"}
+          />
+          <MatrixDisplay
+            matrix={data.wV} label="W_V" rows={4} cols={4}
+            glow={fineTuned ? 'ft' : null}
+            showDiff={fineTuned} highlightOld={fineTuned ? W_V : null}
+            tooltip={fineTuned ? "Value weights — updated by fine-tuning (pulsing cells show changes)" : "Value weights — projects input to value space"}
+          />
+        </div>
+        {fineTuned && (
+          <div className="mt-2 bg-amber-900/30 border border-amber-600/40 rounded-lg px-3 py-2 text-[11px] text-amber-300 max-w-xl">
+            <strong>Fine-Tuning Active:</strong> W_Q and W_V are updated (glowing). Pulsing cells show changed values. These small numerical shifts redirect the model's attention flow.
+          </div>
+        )}
+      </div>
+
+      <div className="mb-3">
+        <h4 className="text-sm font-semibold text-slate-300 mb-2">Projected Matrices <DimensionBadge text="X[3×4] × W[4×4] = [3×4]" /></h4>
+        <div className="flex items-center gap-3 flex-wrap">
+          <MatrixDisplay matrix={data.Q_full} label="Q = X·W_Q" rows={3} cols={4} glow="blue" tooltip="Query: what each token is looking for" />
+          <MatrixDisplay matrix={data.K_full} label="K = X·W_K" rows={3} cols={4} glow="green" tooltip="Key: what each token offers" />
+          <MatrixDisplay matrix={data.V_full} label="V = X·W_V" rows={3} cols={4} glow="orange" tooltip="Value: the content each token carries" />
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-sm font-semibold text-slate-300 mb-2">Split into 2 Heads <DimensionBadge text="[3×4] → 2 × [3×2]" /></h4>
+        <div className="flex gap-6 flex-wrap">
+          <div className="border border-dashed border-blue-500/30 rounded-xl p-3">
+            <span className="text-[11px] text-blue-400 font-semibold mb-2 block">Head 1 (cols 0-1)</span>
+            <div className="flex gap-2">
+              <MatrixDisplay matrix={data.Q1} label="Q₁" rows={3} cols={2} compact tooltip="d_head=2" />
+              <MatrixDisplay matrix={data.K1} label="K₁" rows={3} cols={2} compact tooltip="d_head=2" />
+              <MatrixDisplay matrix={data.V1} label="V₁" rows={3} cols={2} compact tooltip="d_head=2" />
+            </div>
+          </div>
+          <div className="border border-dashed border-purple-500/30 rounded-xl p-3">
+            <span className="text-[11px] text-purple-400 font-semibold mb-2 block">Head 2 (cols 2-3)</span>
+            <div className="flex gap-2">
+              <MatrixDisplay matrix={data.Q2} label="Q₂" rows={3} cols={2} compact tooltip="d_head=2" />
+              <MatrixDisplay matrix={data.K2} label="K₂" rows={3} cols={2} compact tooltip="d_head=2" />
+              <MatrixDisplay matrix={data.V2} label="V₂" rows={3} cols={2} compact tooltip="d_head=2" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <MathCallout text="Q = X·W_Q, K = X·W_K, V = X·W_V. Each [3×4] result is split column-wise into 2 heads of [3×2]. Each head attends independently with d_k=2." />
+    </div>
+  );
+}
+
+function Step3_Attention({ data, fineTuned }) {
+  return (
+    <div className="fade-in">
+      <h3 className="text-lg font-bold text-white mb-1">Step 4: Self-Attention</h3>
+      <p className="text-sm text-slate-400 mb-4">
+        Each head computes attention scores independently: how much each token should attend to every other token.
+      </p>
+
+      <div className="flex gap-8 flex-wrap">
+        <div className="border border-blue-500/20 rounded-xl p-4 bg-blue-950/10">
+          <h4 className="text-sm font-bold text-blue-400 mb-3">Head 1</h4>
+          <div className="flex items-center gap-3 mb-3 flex-wrap">
+            <MatrixDisplay matrix={data.QK1_raw} label="Q₁·K₁ᵀ" rows={3} cols={3} compact tooltip="Raw dot product scores" />
+            <FlowArrow label="÷√d_k" />
+            <MatrixDisplay matrix={data.QK1_scaled} label="Scaled" rows={3} cols={3} compact tooltip="Divided by √2 ≈ 1.414" />
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <FlowArrow label="softmax" />
+            <HeatmapMatrix matrix={data.A1} label="Attention Scores" tokens={TOKENS} tooltip="Softmax normalizes each row to sum to 1. Brighter = more attention." />
+          </div>
+          <div className="flex items-center gap-3 mt-3 flex-wrap">
+            <span className="text-[11px] text-slate-400">Attn₁ × V₁ =</span>
+            <MatrixDisplay matrix={data.O1} label="Head 1 Output" rows={3} cols={2} glow="blue" compact tooltip="Weighted combination of values" />
+          </div>
+        </div>
+
+        <div className="border border-purple-500/20 rounded-xl p-4 bg-purple-950/10">
+          <h4 className="text-sm font-bold text-purple-400 mb-3">Head 2</h4>
+          <div className="flex items-center gap-3 mb-3 flex-wrap">
+            <MatrixDisplay matrix={data.QK2_raw} label="Q₂·K₂ᵀ" rows={3} cols={3} compact tooltip="Raw dot product scores" />
+            <FlowArrow label="÷√d_k" />
+            <MatrixDisplay matrix={data.QK2_scaled} label="Scaled" rows={3} cols={3} compact tooltip="Divided by √2 ≈ 1.414" />
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <FlowArrow label="softmax" />
+            <HeatmapMatrix matrix={data.A2} label="Attention Scores" tokens={TOKENS} tooltip="Each head learns different attention patterns" />
+          </div>
+          <div className="flex items-center gap-3 mt-3 flex-wrap">
+            <span className="text-[11px] text-slate-400">Attn₂ × V₂ =</span>
+            <MatrixDisplay matrix={data.O2} label="Head 2 Output" rows={3} cols={2} glow="purple" compact tooltip="Weighted combination of values" />
+          </div>
+        </div>
+      </div>
+
+      {/* Softmax explainer using Head 1 row 0 */}
+      <SoftmaxExplainer scaled={data.QK1_scaled} />
+
+      <MathCallout text="Attention(Q,K,V) = softmax(Q·Kᵀ / √d_k) · V. The dot product Q·Kᵀ measures token relevance. Softmax normalizes scores to a probability distribution. Each row sums to 1." />
+
+      <div className="mt-3 bg-amber-900/20 border border-amber-700/40 rounded-lg px-3 py-2 text-[11px] text-amber-300/80 max-w-xl">
+        <strong>Simplification:</strong> Real autoregressive (GPT-style) models apply a <strong>causal mask</strong> before softmax — each token can only attend to itself and earlier tokens (upper-right triangle is set to −∞). We omit it here for clarity. The last token ("fast") is unaffected by causal masking since it's already the final position, so the next-token prediction remains correct.
+      </div>
+    </div>
+  );
+}
+
+function SoftmaxExplainer({ scaled }) {
+  // Use row 0 (the "AI" token's attention over all tokens) as the worked example
+  const row = scaled[0];
+  const exps = row.map(v => Math.exp(v));
+  const sumExp = exps.reduce((a, b) => a + b, 0);
+  const probs = exps.map(v => v / sumExp);
+
+  return (
+    <div className="mt-4 rounded-xl border border-indigo-500/30 bg-indigo-950/15 p-4 max-w-2xl fade-in">
+      <h4 className="text-sm font-bold text-indigo-300 mb-2">How Softmax Works — Row-by-row walkthrough</h4>
+      <p className="text-[11px] text-slate-400 mb-3">
+        Taking <strong className="text-blue-300">Head 1, row 0</strong> (how "AI" attends to each token) as an example:
+      </p>
+
+      {/* Formula */}
+      <div className="bg-slate-900/60 rounded-lg px-3 py-2 mb-3 border border-slate-700">
+        <div className="mono text-[11px] text-slate-300 text-center">
+          softmax(x<sub>i</sub>) = e<sup>x<sub>i</sub></sup> / (e<sup>x<sub>1</sub></sup> + e<sup>x<sub>2</sub></sup> + e<sup>x<sub>3</sub></sup>)
+        </div>
+      </div>
+
+      {/* Step-by-step */}
+      <div className="space-y-2 text-[11px]">
+        {/* Scaled scores */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-slate-400 w-28">Scaled scores:</span>
+          <div className="flex gap-1">
+            {TOKENS.map((t, i) => (
+              <div key={i} className="mono bg-slate-800 rounded px-2 py-1 text-slate-300 text-center min-w-[60px]">
+                <div className="text-[9px] text-slate-500">{t}</div>
+                {fmt(row[i])}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* e^x */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-slate-400 w-28">e<sup>x</sup> for each:</span>
+          <div className="flex gap-1">
+            {TOKENS.map((t, i) => (
+              <div key={i} className="mono bg-indigo-900/30 rounded px-2 py-1 text-indigo-300 text-center min-w-[60px]">
+                <div className="text-[9px] text-indigo-400/60">e<sup>{fmt(row[i])}</sup></div>
+                {fmt(exps[i])}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Sum */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-slate-400 w-28">Sum of e<sup>x</sup>:</span>
+          <div className="mono bg-slate-800 rounded px-2 py-1 text-slate-200">
+            {exps.map((v, i) => fmt(v)).join(' + ')} = <strong>{fmt(sumExp)}</strong>
+          </div>
+        </div>
+
+        {/* Final probabilities */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-slate-400 w-28">Divide each:</span>
+          <div className="flex gap-1">
+            {TOKENS.map((t, i) => (
+              <div key={i} className="mono bg-purple-900/30 rounded px-2 py-1 text-purple-300 text-center min-w-[60px]">
+                <div className="text-[9px] text-purple-400/60">{fmt(exps[i])}/{fmt(sumExp)}</div>
+                <strong>{fmt(probs[i])}</strong>
+              </div>
+            ))}
+          </div>
+          <span className="text-slate-500 mono text-[10px]">sum = {fmt(probs.reduce((a,b) => a+b, 0))}</span>
+        </div>
+      </div>
+
+      <div className="mt-3 text-[10px] text-slate-500">
+        The exponential ensures all values are positive. Dividing by the sum guarantees the row sums to 1.0 — a valid probability distribution. Higher input scores get exponentially more weight.
+        In practice, implementations subtract the row max before exponentiating (e<sup>x−max</sup>) for numerical stability — the final probabilities are identical.
+      </div>
+    </div>
+  );
+}
+
+function Step4_Concat({ data }) {
+  return (
+    <div className="fade-in">
+      <h3 className="text-lg font-bold text-white mb-1">Step 5: Multi-Head Concatenation</h3>
+      <p className="text-sm text-slate-400 mb-4">
+        Head outputs are concatenated back to d_model width, then projected through W_O.
+      </p>
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <MatrixDisplay matrix={data.O1} label="Head 1" rows={3} cols={2} glow="blue" compact />
+        <div className="text-2xl text-slate-500 mx-1">‖</div>
+        <MatrixDisplay matrix={data.O2} label="Head 2" rows={3} cols={2} glow="purple" compact />
+        <FlowArrow label="concat" />
+        <MatrixDisplay matrix={data.concat} label="Concat" rows={3} cols={4} glow="green" tooltip="[3×2] ‖ [3×2] = [3×4]" />
+        <FlowArrow label="× W_O" />
+        <MatrixDisplay matrix={data.multiHead} label="MultiHead Output" rows={3} cols={4} glow="orange" tooltip="Final projection back to d_model space" />
+      </div>
+
+      <div className="mt-4">
+        <h4 className="text-sm font-semibold text-slate-300 mb-2">+ Residual Connection</h4>
+        <div className="flex items-center gap-3 flex-wrap">
+          <MatrixDisplay matrix={data.X} label="Original X" rows={3} cols={4} compact />
+          <div className="text-2xl text-slate-500">+</div>
+          <MatrixDisplay matrix={data.multiHead} label="MultiHead" rows={3} cols={4} compact />
+          <FlowArrow label="add" />
+          <MatrixDisplay matrix={data.residual} label="Residual Sum" rows={3} cols={4} glow="green" tooltip="Skip connection: helps gradient flow during training" />
+        </div>
+      </div>
+
+      <MathCallout text="MultiHead(Q,K,V) = Concat(head₁, head₂) · W_O. The residual connection adds the original input back: output = X + MultiHead(X). Shape preserved: [3×4] throughout." />
+    </div>
+  );
+}
+
+function Step5_FFN({ data }) {
+  return (
+    <div className="fade-in">
+      <h3 className="text-lg font-bold text-white mb-1">Step 6: Feed-Forward Network</h3>
+      <p className="text-sm text-slate-400 mb-4">
+        Each token is independently transformed through a 2-layer network with ReLU activation.
+      </p>
+
+      <div className="flex items-center gap-3 flex-wrap mb-4">
+        <MatrixDisplay matrix={data.residual} label="Input" rows={3} cols={4} compact />
+        <FlowArrow label="× W₁ [4×8]" />
+        <div className="flex flex-col items-center">
+          <span className="text-[10px] text-orange-400 mb-1">ReLU(X·W₁)</span>
+          <MatrixDisplay matrix={data.hidden} label="Hidden Layer" rows={3} cols={8} compact glow="orange" tooltip="ReLU zeroes out negative values. Expands to 8 dims (2× expansion)." />
+        </div>
+        <FlowArrow label="× W₂ [8×4]" />
+        <MatrixDisplay matrix={data.ffnOut} label="FFN Output" rows={3} cols={4} compact glow="blue" tooltip="Projects back down to d_model=4" />
+      </div>
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <MatrixDisplay matrix={data.residual} label="Residual Input" rows={3} cols={4} compact />
+        <div className="text-2xl text-slate-500">+</div>
+        <MatrixDisplay matrix={data.ffnOut} label="FFN Output" rows={3} cols={4} compact />
+        <FlowArrow label="add" />
+        <MatrixDisplay matrix={data.output} label="Layer Output" rows={3} cols={4} glow="green" tooltip="Final token representations after one Transformer layer" rowLabels={TOKENS} />
+      </div>
+
+      <MathCallout text="FFN(x) = ReLU(x·W₁)·W₂. Expansion: [3×4]→[3×8]→[3×4]. Another residual: output = residual + FFN(residual). The FFN adds non-linear feature mixing per token." />
+    </div>
+  );
+}
+
+// ── Step 6: Next Token Prediction ───────────────────────────────────────────
+
+function Step6_NextToken({ data }) {
+  const maxProb = Math.max(...data.probs);
+
+  return (
+    <div className="fade-in">
+      <h3 className="text-lg font-bold text-white mb-1">Step 7: Next Token Prediction</h3>
+      <p className="text-sm text-slate-400 mb-5">
+        To predict the next word after "AI is fast", we take the <strong className="text-cyan-300">last token's output vector</strong> ("fast"), project it to vocabulary-sized logits, and apply softmax to get a probability distribution over all possible next tokens.
+      </p>
+
+      {/* Extract last token */}
+      <div className="mb-5">
+        <h4 className="text-sm font-semibold text-slate-300 mb-3">7a. Extract the last token's representation</h4>
+        <div className="flex items-center gap-4 flex-wrap">
+          <MatrixDisplay
+            matrix={data.output}
+            label="Layer Output"
+            rows={3} cols={4}
+            rowLabels={TOKENS}
+            highlight={(i, j) => i === 2}
+            tooltip="We only need the last row for next-token prediction"
+          />
+          <FlowArrow label="last row" />
+          <div className="rounded-xl border border-cyan-500/50 bg-cyan-950/30 glow-cyan p-3">
+            <div className="text-xs font-semibold text-slate-300 mb-2">
+              Last Token Vector <span className="mono text-[10px] text-slate-500">[1×4]</span>
+            </div>
+            <div className="flex gap-0.5">
+              {data.lastTokenVec.map((v, i) => (
+                <div key={i} className="w-14 h-8 mono text-xs flex items-center justify-center rounded bg-cyan-900/40 text-cyan-200 font-medium">
+                  {fmt(v)}
+                </div>
+              ))}
+            </div>
+            <div className="text-[10px] text-cyan-400/70 mt-1">← "fast" after 1 Transformer layer</div>
+          </div>
+        </div>
+        <MathCallout text='In autoregressive (GPT-style) models, only the last position predicts the next token. "fast" has attended to "AI" and "is" via self-attention, so its vector encodes the full context.' />
+      </div>
+
+      {/* Unembedding projection */}
+      <div className="mb-5">
+        <h4 className="text-sm font-semibold text-slate-300 mb-3">7b. Project to vocabulary logits via W_unembed <span className="text-[10px] text-cyan-400 font-normal">(= Embedding Tableᵀ, weight tying)</span></h4>
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="rounded-xl border border-cyan-500/50 bg-cyan-950/20 p-2">
+            <div className="text-[10px] text-slate-400 mb-1">last_token_vec [1×4]</div>
+            <div className="flex gap-0.5">
+              {data.lastTokenVec.map((v, i) => (
+                <div key={i} className="w-12 h-7 mono text-[10px] flex items-center justify-center rounded bg-slate-900/60 text-cyan-300">
+                  {fmt(v)}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <span className="text-slate-500 text-lg">×</span>
+
+          <MatrixDisplay
+            matrix={W_UNEMBED}
+            label="W_unembed"
+            rows={4} cols={10}
+            compact
+            glow="rose"
+            tooltip="W_unembed = transpose(EmbeddingTable). This is weight tying — the same learned vectors used for embedding are reused in reverse for prediction."
+            colLabels={VOCAB_WORDS}
+          />
+
+          <FlowArrow label="matmul" />
+
+          <div className="rounded-xl border border-orange-500/50 bg-orange-950/30 p-3">
+            <div className="text-xs font-semibold text-slate-300 mb-2">
+              Logits <span className="mono text-[10px] text-slate-500">[1×10]</span>
+              <Tooltip text="Raw unnormalized scores before softmax. Higher = more likely.">
+                <span className="text-[10px] text-slate-500 cursor-help border border-slate-600 rounded-full w-4 h-4 inline-flex items-center justify-center ml-1">?</span>
+              </Tooltip>
+            </div>
+            <div className="flex gap-0.5 flex-wrap">
+              {data.logits.map((v, i) => (
+                <div key={i} className="flex flex-col items-center">
+                  <div className="w-12 h-7 mono text-[10px] flex items-center justify-center rounded bg-slate-900/60 text-orange-300">
+                    {fmt(v)}
+                  </div>
+                  <div className="text-[8px] text-slate-500 mt-0.5">{VOCAB_WORDS[i]}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Softmax → probabilities */}
+      <div className="mb-5">
+        <h4 className="text-sm font-semibold text-slate-300 mb-3">7c. Softmax → probability distribution over vocabulary</h4>
+        <div className="flex items-start gap-6 flex-wrap">
+          <div className="rounded-xl border border-green-500/40 bg-green-950/20 p-4 min-w-[340px]">
+            <div className="text-xs font-semibold text-slate-300 mb-3">
+              Token Probabilities
+              <Tooltip text="softmax(logits) — converts raw scores to probabilities that sum to 1">
+                <span className="text-[10px] text-slate-500 cursor-help border border-slate-600 rounded-full w-4 h-4 inline-flex items-center justify-center ml-1">?</span>
+              </Tooltip>
+            </div>
+            {data.probs.map((p, i) => {
+              const isWinner = p === maxProb;
+              const pct = (p * 100).toFixed(1);
+              const barWidth = Math.max(2, p / maxProb * 100);
+              return (
+                <div key={i} className={`flex items-center gap-2 py-1 px-2 rounded ${isWinner ? 'winner' : ''}`}>
+                  <span className={`mono text-[11px] w-10 text-right ${isWinner ? 'text-green-300 font-bold' : 'text-slate-400'}`}>
+                    {VOCAB_WORDS[i]}
+                  </span>
+                  <div className="flex-1 h-5 bg-slate-800 rounded-full overflow-hidden relative">
+                    <div
+                      className={`h-full rounded-full prob-bar ${isWinner ? 'bg-green-500' : 'bg-slate-600'}`}
+                      style={{ width: `${barWidth}%` }}
+                    />
+                  </div>
+                  <span className={`mono text-[11px] w-14 text-right ${isWinner ? 'text-green-300 font-bold' : 'text-slate-500'}`}>
+                    {pct}%
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Predicted token */}
+          <div className="flex flex-col items-center justify-center pt-4">
+            <div className="text-[11px] text-slate-400 mb-2">argmax → predicted next token</div>
+            <div className="rounded-2xl border-2 border-green-500/60 bg-green-950/30 glow-green px-8 py-5 text-center">
+              <div className="text-[10px] text-green-400/70 mb-1">Next token:</div>
+              <div className="mono text-3xl font-bold text-green-300">{VOCAB_WORDS[data.predictedId]}</div>
+              <div className="text-[10px] text-slate-500 mt-1">ID: {data.predictedId} · P = {(data.probs[data.predictedId] * 100).toFixed(1)}%</div>
+            </div>
+            <div className="mt-4 text-center max-w-[200px]">
+              <div className="text-[11px] text-slate-400">Full output:</div>
+              <div className="mono text-sm text-slate-200 mt-1">
+                "AI is fast <span className="text-green-300 font-bold">{VOCAB_WORDS[data.predictedId]}</span>"
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <MathCallout text="P(next_token) = softmax(output_last · W_unembed). The model picks the highest-probability token (greedy decoding). Alternatives: top-k sampling, nucleus sampling, temperature scaling." />
+      </div>
+
+      {/* Autoregressive loop explanation */}
+      <div className="rounded-xl border border-slate-600 bg-slate-800/50 p-4 max-w-2xl">
+        <h4 className="text-sm font-bold text-slate-200 mb-3">How this becomes the next input (autoregressive generation)</h4>
+        <div className="flex items-center gap-2 flex-wrap mb-3">
+          {["AI", "is", "fast"].map((t, i) => (
+            <div key={i} className="bg-blue-900/30 border border-blue-700/40 rounded px-2.5 py-1 mono text-xs text-blue-300">{t}</div>
+          ))}
+          <span className="text-slate-500">+</span>
+          <div className="bg-green-900/30 border border-green-500/40 rounded px-2.5 py-1 mono text-xs text-green-300 font-bold">
+            {VOCAB_WORDS[data.predictedId]}
+          </div>
+          <FlowArrow label="becomes new input" />
+          <div className="flex gap-1">
+            {["AI", "is", "fast", VOCAB_WORDS[data.predictedId]].map((t, i) => (
+              <div key={i} className={`rounded px-2 py-1 mono text-[10px] border ${
+                i === 3 ? 'bg-green-900/30 border-green-500/40 text-green-300' : 'bg-slate-800 border-slate-600 text-slate-300'
+              }`}>{t}</div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2 text-[11px] text-slate-400">
+          <div className="flex items-start gap-2">
+            <span className="text-cyan-400 font-bold mt-0.5">1.</span>
+            <span>The predicted token "<span className="text-green-300">{VOCAB_WORDS[data.predictedId]}</span>" is appended to the input sequence.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-cyan-400 font-bold mt-0.5">2.</span>
+            <span>The new 4-token sequence is tokenized → embedded → passed through the <em>same</em> Transformer layer again.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-cyan-400 font-bold mt-0.5">3.</span>
+            <span>The last token's output now predicts the <em>5th</em> token. This loop repeats until an end-of-sequence token is generated or a length limit is reached.</span>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-cyan-400 font-bold mt-0.5">4.</span>
+            <span>In a multi-layer Transformer (e.g. GPT-3 has 96 layers), the output of layer 1 feeds into layer 2, then layer 3, etc. Only the <em>final</em> layer's output goes through W_unembed.</span>
+          </div>
+        </div>
+
+        <div className="mt-3 border-t border-slate-700 pt-3">
+          <div className="text-[11px] text-slate-500">
+            <strong className="text-slate-400">Key insight:</strong> The Transformer is a function <span className="mono">f(tokens) → next_token_probabilities</span>.
+            Generation is just calling this function in a loop, feeding its output back as input each time.
+            All the "intelligence" lives in the weight matrices (W_Q, W_K, W_V, W_O, W_FFN, W_unembed) — fine-tuning updates these numbers to change the model's behavior.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FineTuneComparison({ dataBefore, dataAfter }) {
+  return (
+    <div className="mt-6 border border-amber-500/30 rounded-xl p-4 bg-amber-950/10 fade-in">
+      <h4 className="text-sm font-bold text-amber-400 mb-3">Before vs. After Fine-Tuning: W_Q Weight Matrix</h4>
+      <div className="flex items-center gap-4 flex-wrap">
+        <div>
+          <span className="text-[11px] text-slate-400 block mb-1">Before (Pre-trained)</span>
+          <MatrixDisplay matrix={W_Q} label="W_Q original" rows={4} cols={4} compact />
+        </div>
+        <div className="text-2xl text-amber-500">→</div>
+        <div>
+          <span className="text-[11px] text-amber-400 block mb-1">After (Fine-tuned)</span>
+          <MatrixDisplay matrix={dataAfter.wQ} label="W_Q fine-tuned" rows={4} cols={4} compact glow="ft" showDiff highlightOld={W_Q} />
+        </div>
+      </div>
+      <div className="mt-3 text-[11px] text-slate-400 max-w-xl">
+        <strong className="text-amber-300">What changed?</strong> Each value shifted by a small delta (±0.01 to ±0.08). These tiny updates, learned via backpropagation, alter which tokens attend to each other — effectively teaching the model a new task without retraining from scratch.
+      </div>
+
+      <h4 className="text-sm font-bold text-amber-400 mt-4 mb-3">Impact on Attention: Head 1</h4>
+      <div className="flex items-center gap-4 flex-wrap">
+        <HeatmapMatrix matrix={dataBefore.A1} label="Attention Before" tokens={TOKENS} />
+        <div className="text-2xl text-amber-500">→</div>
+        <HeatmapMatrix matrix={dataAfter.A1} label="Attention After" tokens={TOKENS} />
+      </div>
+      <div className="mt-2 text-[11px] text-slate-400 max-w-xl">
+        Notice how the attention distribution shifted. Fine-tuning W_Q and W_V changes <em>which tokens attend to which</em>, redirecting the information flow through the network.
+      </div>
+
+      {/* Impact on prediction */}
+      <h4 className="text-sm font-bold text-amber-400 mt-4 mb-3">Impact on Next Token Prediction</h4>
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="text-center">
+          <div className="text-[11px] text-slate-400 mb-1">Before fine-tuning predicts:</div>
+          <div className="mono text-lg font-bold text-slate-300">"{VOCAB_WORDS[dataBefore.predictedId]}"</div>
+          <div className="text-[10px] text-slate-500">P = {(dataBefore.probs[dataBefore.predictedId] * 100).toFixed(1)}%</div>
+        </div>
+        <div className="text-2xl text-amber-500">→</div>
+        <div className="text-center">
+          <div className="text-[11px] text-amber-400 mb-1">After fine-tuning predicts:</div>
+          <div className="mono text-lg font-bold text-amber-300">"{VOCAB_WORDS[dataAfter.predictedId]}"</div>
+          <div className="text-[10px] text-slate-500">P = {(dataAfter.probs[dataAfter.predictedId] * 100).toFixed(1)}%</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main App ────────────────────────────────────────────────────────────────
+function App() {
+  const [step, setStep] = useState(0);
+  const [fineTuned, setFineTuned] = useState(false);
+
+  const steps = [
+    "Tokenization",
+    "Pos. Encoding",
+    "QKV Projection",
+    "Self-Attention",
+    "Multi-Head",
+    "Feed-Forward",
+    "Next Token",
+  ];
+
+  const data = useMemo(() => computePipeline(fineTuned), [fineTuned]);
+  const dataBase = useMemo(() => computePipeline(false), []);
+  const dataFT = useMemo(() => computePipeline(true), []);
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-6">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-bold text-white mb-1">Transformer Interactive Explainer</h1>
+        <p className="text-sm text-slate-400">
+          Single-layer, 2-head Transformer · Input: <span className="mono text-blue-400">"AI is fast"</span> · vocab=10, d_model=4, d_head=2
+        </p>
+      </div>
+
+      {/* Fine-tune toggle */}
+      <div className="flex justify-center mb-6">
+        <button
+          onClick={() => setFineTuned(!fineTuned)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
+            fineTuned
+              ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 glow-ft'
+              : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600'
+          }`}
+        >
+          <div className={`w-8 h-4 rounded-full relative transition-all ${fineTuned ? 'bg-amber-500' : 'bg-slate-600'}`}>
+            <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-all ${fineTuned ? 'left-4.5 ml-1' : 'left-0.5'}`} />
+          </div>
+          {fineTuned ? 'Fine-Tuning ON' : 'Fine-Tuning OFF'}
+        </button>
+      </div>
+
+      {/* Step indicator */}
+      <StepIndicator steps={steps} current={step} onStep={setStep} />
+
+      {/* Content */}
+      <div className="min-h-[500px] overflow-x-auto pb-4">
+        {step === 0 && <Step0_Tokenization />}
+        {step === 1 && <Step1_Embedding data={data} />}
+        {step === 2 && <Step2_QKV data={data} fineTuned={fineTuned} />}
+        {step === 3 && <Step3_Attention data={data} fineTuned={fineTuned} />}
+        {step === 4 && <Step4_Concat data={data} />}
+        {step === 5 && <Step5_FFN data={data} />}
+        {step === 6 && <Step6_NextToken data={data} />}
+
+        {fineTuned && step >= 2 && step <= 3 && (
+          <FineTuneComparison dataBefore={dataBase} dataAfter={dataFT} />
+        )}
+        {fineTuned && step === 6 && (
+          <FineTuneComparison dataBefore={dataBase} dataAfter={dataFT} />
+        )}
+      </div>
+
+      {/* Navigation */}
+      <div className="flex justify-between mt-6 pt-4 border-t border-slate-800">
+        <button
+          onClick={() => setStep(Math.max(0, step - 1))}
+          disabled={step === 0}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            step === 0
+              ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+          }`}
+        >
+          ← Previous
+        </button>
+        <span className="text-xs text-slate-500 self-center">Step {step + 1} of {steps.length}</span>
+        <button
+          onClick={() => setStep(Math.min(steps.length - 1, step + 1))}
+          disabled={step === steps.length - 1}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            step === steps.length - 1
+              ? 'bg-slate-800 text-slate-600 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/20'
+          }`}
+        >
+          Next →
+        </button>
+      </div>
+
+      {/* Dimension reference */}
+      <div className="mt-6 border border-slate-800 rounded-xl p-3 bg-slate-900/50">
+        <h4 className="text-[11px] font-semibold text-slate-500 mb-2 uppercase tracking-wider">Dimension Reference</h4>
+        <div className="flex gap-4 flex-wrap text-[11px] mono text-slate-500">
+          <span>vocab_size = 10</span>
+          <span>tokens = 3</span>
+          <span>d_model = 4</span>
+          <span>num_heads = 2</span>
+          <span>d_k = d_v = 2</span>
+          <span>d_ff = 8</span>
+          <span>Embed Table: [10×4]</span>
+          <span>Input: [3×4]</span>
+          <span>W_Q,K,V: [4×4]</span>
+          <span>Per-head Q,K,V: [3×2]</span>
+          <span>Attention: [3×3]</span>
+          <span>W_FFN1: [4×8]</span>
+          <span>W_FFN2: [8×4]</span>
+          <span>W_unembed: [4×10]</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QLoRA Fine-Tuning Explainer — Step by Step</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .glow-blue { box-shadow: 0 0 12px 2px rgba(59,130,246,0.4); }
+  .glow-orange { box-shadow: 0 0 12px 2px rgba(249,115,22,0.4); }
+  .glow-green { box-shadow: 0 0 12px 2px rgba(34,197,94,0.4); }
+  .glow-purple { box-shadow: 0 0 12px 2px rgba(168,85,247,0.4); }
+  .glow-cyan { box-shadow: 0 0 12px 2px rgba(6,182,212,0.4); }
+  .glow-rose { box-shadow: 0 0 12px 2px rgba(244,63,94,0.4); }
+  .glow-amber { box-shadow: 0 0 12px 2px rgba(251,191,36,0.4); }
+  .glow-ft { animation: ftpulse 2s ease-in-out infinite; }
+  @keyframes ftpulse {
+    0%, 100% { box-shadow: 0 0 8px 2px rgba(251,191,36,0.3); }
+    50% { box-shadow: 0 0 20px 6px rgba(251,191,36,0.6); }
+  }
+  .frozen-overlay {
+    position: relative;
+  }
+  .frozen-overlay::after {
+    content: '❄ FROZEN';
+    position: absolute; top: 4px; right: 6px;
+    font-size: 8px; color: #94a3b8; background: rgba(30,41,59,0.8);
+    padding: 1px 5px; border-radius: 4px; letter-spacing: 0.5px;
+  }
+  .adapter-badge {
+    position: relative;
+  }
+  .adapter-badge::after {
+    content: '✎ TRAINABLE';
+    position: absolute; top: 4px; right: 6px;
+    font-size: 8px; color: #fbbf24; background: rgba(120,53,15,0.6);
+    padding: 1px 5px; border-radius: 4px; letter-spacing: 0.5px;
+  }
+  .fade-in { animation: fadeIn 0.3s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #1e293b; }
+  ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+  .tooltip-container:hover .tooltip-content { display: block; }
+  .tooltip-content { display: none; }
+  .arrow-flow { stroke-dasharray: 8 4; animation: flowDash 1s linear infinite; }
+  @keyframes flowDash { to { stroke-dashoffset: -12; } }
+</style>
+</head>
+<body class="min-h-screen">
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo } = React;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MATH UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════
+
+function matMul(A, B) {
+  const rows = A.length, cols = B[0].length, inner = B.length;
+  const C = Array.from({ length: rows }, () => Array(cols).fill(0));
+  for (let i = 0; i < rows; i++)
+    for (let j = 0; j < cols; j++)
+      for (let k = 0; k < inner; k++)
+        C[i][j] += A[i][k] * B[k][j];
+  return C;
+}
+function transpose(A) { return A[0].map((_, j) => A.map(row => row[j])); }
+function scalarDiv(A, s) { return A.map(row => row.map(v => v / s)); }
+function softmaxRows(A) {
+  return A.map(row => {
+    const mx = Math.max(...row);
+    const exps = row.map(v => Math.exp(v - mx));
+    const s = exps.reduce((a, b) => a + b, 0);
+    return exps.map(v => v / s);
+  });
+}
+function softmax1D(arr) {
+  const mx = Math.max(...arr);
+  const exps = arr.map(v => Math.exp(v - mx));
+  const s = exps.reduce((a, b) => a + b, 0);
+  return exps.map(v => v / s);
+}
+function relu(A) { return A.map(row => row.map(v => Math.max(0, v))); }
+function addMat(A, B) { return A.map((row, i) => row.map((v, j) => v + B[i][j])); }
+function concatCols(A, B) { return A.map((row, i) => [...row, ...B[i]]); }
+function splitCols(A, start, end) { return A.map(row => row.slice(start, end)); }
+function vecMatMul(vec, mat) { return mat[0].map((_, j) => vec.reduce((sum, v, i) => sum + v * mat[i][j], 0)); }
+function deepCopy(arr) { return arr.map(row => [...row]); }
+function scalarMulMat(s, A) { return A.map(row => row.map(v => s * v)); }
+function r(v) { return Math.round(v * 100000) / 100000; }
+function fmt(v) { return r(v).toFixed(4); }
+function fmt2(v) { return r(v).toFixed(3); }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODEL CONSTANTS — ALL FROZEN (never modified during fine-tuning)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const VOCAB = ["AI","is","fast","slow","the","very","not","and","good","new"];
+
+const EMBEDDING_TABLE = [
+  [1.0, 0.5, 0.3, 0.8],
+  [0.2, 0.9, 0.6, 0.1],
+  [0.7, 0.4, 1.0, 0.5],
+  [0.3, 0.2, 0.4, 0.2],
+  [0.1, 0.4, 0.1, 0.3],
+  [0.2, 0.3, 0.2, 0.2],
+  [0.2, 0.3, 0.2, 0.3],
+  [1.0, 0.9, 1.0, 0.9],
+  [0.4, 0.1, 0.3, 0.1],
+  [0.4, 0.2, 0.1, 0.3],
+];
+
+const POS_ENC = [
+  [0.00, 0.10, 0.00, 0.10],
+  [0.08, 0.00, 0.08, 0.00],
+  [0.01, 0.10, 0.01, 0.10],
+];
+
+// Frozen pre-trained weights
+const W_Q_FROZEN = [
+  [0.2, 0.1, 0.3, 0.0],
+  [0.0, 0.3, 0.1, 0.2],
+  [0.1, 0.0, 0.2, 0.3],
+  [0.3, 0.2, 0.0, 0.1],
+];
+const W_K_FROZEN = [
+  [0.1, 0.3, 0.2, 0.1],
+  [0.2, 0.0, 0.1, 0.3],
+  [0.3, 0.1, 0.0, 0.2],
+  [0.0, 0.2, 0.3, 0.0],
+];
+const W_V_FROZEN = [
+  [0.3, 0.1, 0.0, 0.2],
+  [0.1, 0.2, 0.3, 0.0],
+  [0.0, 0.3, 0.1, 0.1],
+  [0.2, 0.0, 0.2, 0.3],
+];
+const W_O_FROZEN = [
+  [0.2, 0.1, 0.3, 0.1],
+  [0.1, 0.3, 0.0, 0.2],
+  [0.3, 0.0, 0.2, 0.1],
+  [0.0, 0.2, 0.1, 0.3],
+];
+const W_FFN1_FROZEN = [
+  [0.1, 0.2, 0.0, 0.3, 0.1, 0.2, 0.0, 0.1],
+  [0.2, 0.0, 0.3, 0.1, 0.0, 0.1, 0.3, 0.2],
+  [0.0, 0.3, 0.1, 0.2, 0.2, 0.0, 0.1, 0.3],
+  [0.3, 0.1, 0.2, 0.0, 0.3, 0.1, 0.2, 0.0],
+];
+const W_FFN2_FROZEN = [
+  [0.2, 0.1, 0.0, 0.3],
+  [0.0, 0.3, 0.2, 0.1],
+  [0.1, 0.0, 0.3, 0.2],
+  [0.3, 0.2, 0.1, 0.0],
+  [0.1, 0.1, 0.2, 0.2],
+  [0.2, 0.0, 0.1, 0.3],
+  [0.0, 0.3, 0.0, 0.1],
+  [0.3, 0.2, 0.3, 0.0],
+];
+const W_UNEMBED = transpose(EMBEDDING_TABLE);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LoRA CONFIGURATION
+//
+// LoRA decomposes the weight update ΔW into two low-rank matrices:
+//   ΔW = B × A   where  B: [d×r]  and  A: [r×d]
+//
+// Effective weight during inference:
+//   W_effective = W_frozen + (α/r) × B × A
+//
+// For our 4×4 weight matrices with rank r=2:
+//   A: [2×4]  (initialized small random, trained)
+//   B: [4×2]  (initialized to small random values, trained)
+//
+// Only A and B are trained. W_frozen never changes.
+// ═══════════════════════════════════════════════════════════════════════════
+
+const LORA_RANK = 2;        // rank of the low-rank decomposition
+const LORA_ALPHA = 4;       // scaling factor
+const LORA_SCALING = LORA_ALPHA / LORA_RANK;  // = 2.0
+
+const LEARNING_RATE = 1.0;  // Exaggerated lr for visualization — real QLoRA uses ~2e-4 with Adam
+const EPSILON = 0.01;       // Larger epsilon for stable numerical gradients on small model
+
+// Initial LoRA adapters
+// A matrices: [r×d] = [2×4], initialized with small random values (Kaiming-style)
+// B matrices: [d×r] = [4×2], initialized to small random values (so initial ΔW ≈ 0)
+const INIT_A_Q = [
+  [ 0.10, -0.05,  0.08, -0.03],
+  [-0.04,  0.07,  0.02,  0.06],
+];
+const INIT_B_Q = [
+  [ 0.05, -0.03],
+  [-0.02,  0.04],
+  [ 0.03, -0.01],
+  [-0.04,  0.02],
+];
+const INIT_A_V = [
+  [ 0.06, -0.08,  0.05,  0.03],
+  [-0.02,  0.09, -0.04,  0.07],
+];
+const INIT_B_V = [
+  [ 0.03, -0.02],
+  [-0.01,  0.05],
+  [ 0.04, -0.03],
+  [-0.02,  0.01],
+];
+
+// Training data
+const BATCHES = [
+  { inputIds: [0, 1, 2], targetId: 7, inputWords: ["AI","is","fast"], targetWord: "and" },
+  { inputIds: [9, 0, 1], targetId: 2, inputWords: ["new","AI","is"], targetWord: "fast" },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// QLoRA QUANTIZATION SIMULATION
+// Quantize frozen weights to 4-bit (NormalFloat4) for memory savings.
+// We simulate this by quantizing to 16 discrete levels.
+// ═══════════════════════════════════════════════════════════════════════════
+
+function quantize4bit(matrix) {
+  // Find min/max for the block
+  const flat = matrix.flat();
+  const min = Math.min(...flat);
+  const max = Math.max(...flat);
+  const range = max - min || 1;
+  const levels = 15; // 4-bit = 16 levels (0-15)
+  return {
+    quantized: matrix.map(row => row.map(v => {
+      const idx = Math.round(((v - min) / range) * levels);
+      return min + (idx / levels) * range; // dequantized value
+    })),
+    min, max, bits: 4
+  };
+}
+
+// Pre-quantize the frozen weights (QLoRA stores these in 4-bit)
+const W_Q_QUANT = quantize4bit(W_Q_FROZEN);
+const W_V_QUANT = quantize4bit(W_V_FROZEN);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FORWARD PASS with LoRA adapters
+//
+// W_effective_Q = W_Q_frozen_quantized + scaling * (B_Q × A_Q)
+// W_effective_V = W_V_frozen_quantized + scaling * (B_V × A_V)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function computeEffectiveWeight(W_frozen_q, B, A) {
+  const BA = matMul(B, A);  // [4×2] × [2×4] = [4×4]
+  const scaled = scalarMulMat(LORA_SCALING, BA);
+  return addMat(W_frozen_q, scaled);
+}
+
+function forwardPass(aQ, bQ, aV, bV, inputIds) {
+  const embeddings = inputIds.map(id => [...EMBEDDING_TABLE[id]]);
+  const X = addMat(embeddings, POS_ENC);
+
+  // Compute effective weights: W_frozen_quantized + scaling * B×A
+  const deltaQ = scalarMulMat(LORA_SCALING, matMul(bQ, aQ)); // ΔW_Q
+  const deltaV = scalarMulMat(LORA_SCALING, matMul(bV, aV)); // ΔW_V
+  const wQ_eff = addMat(W_Q_QUANT.quantized, deltaQ);
+  const wV_eff = addMat(W_V_QUANT.quantized, deltaV);
+
+  const Q_full = matMul(X, wQ_eff);
+  const K_full = matMul(X, W_K_FROZEN);
+  const V_full = matMul(X, wV_eff);
+
+  const Q1 = splitCols(Q_full, 0, 2), Q2 = splitCols(Q_full, 2, 4);
+  const K1 = splitCols(K_full, 0, 2), K2 = splitCols(K_full, 2, 4);
+  const V1 = splitCols(V_full, 0, 2), V2 = splitCols(V_full, 2, 4);
+  const scale = Math.sqrt(2);
+
+  const A1 = softmaxRows(scalarDiv(matMul(Q1, transpose(K1)), scale));
+  const O1 = matMul(A1, V1);
+  const A2 = softmaxRows(scalarDiv(matMul(Q2, transpose(K2)), scale));
+  const O2 = matMul(A2, V2);
+
+  const concat = concatCols(O1, O2);
+  const multiHead = matMul(concat, W_O_FROZEN);
+  const residual = addMat(X, multiHead);
+  const hidden = relu(matMul(residual, W_FFN1_FROZEN));
+  const ffnOut = matMul(hidden, W_FFN2_FROZEN);
+  const output = addMat(residual, ffnOut);
+
+  const lastVec = output[output.length - 1];
+  const logits = vecMatMul(lastVec, W_UNEMBED);
+  const probs = softmax1D(logits);
+
+  return { X, output, lastVec, logits, probs, wQ_eff, wV_eff, deltaQ, deltaV, A1, A2 };
+}
+
+function computeLoss(aQ, bQ, aV, bV, inputIds, targetId) {
+  const { probs } = forwardPass(aQ, bQ, aV, bV, inputIds);
+  return -Math.log(Math.max(probs[targetId], 1e-15));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NUMERICAL GRADIENTS for LoRA matrices A and B
+// We compute gradients for A_Q, B_Q, A_V, B_V independently
+// ═══════════════════════════════════════════════════════════════════════════
+
+function numericalGradient(aQ, bQ, aV, bV, inputIds, targetId, which) {
+  // which: 'aQ', 'bQ', 'aV', 'bV'
+  const target =
+    which === 'aQ' ? aQ : which === 'bQ' ? bQ :
+    which === 'aV' ? aV : bV;
+
+  return target.map((row, i) => row.map((_, j) => {
+    const plus = deepCopy(target); plus[i][j] += EPSILON;
+    const minus = deepCopy(target); minus[i][j] -= EPSILON;
+
+    const args = (mod) => [
+      which === 'aQ' ? mod : deepCopy(aQ),
+      which === 'bQ' ? mod : deepCopy(bQ),
+      which === 'aV' ? mod : deepCopy(aV),
+      which === 'bV' ? mod : deepCopy(bV),
+      inputIds, targetId
+    ];
+
+    const lPlus = computeLoss(...args(plus));
+    const lMinus = computeLoss(...args(minus));
+    return (lPlus - lMinus) / (2 * EPSILON);
+  }));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PRE-COMPUTE ALL TRAINING STEPS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function precomputeTraining() {
+  let aQ = deepCopy(INIT_A_Q), bQ = deepCopy(INIT_B_Q);
+  let aV = deepCopy(INIT_A_V), bV = deepCopy(INIT_B_V);
+
+  const initL1 = computeLoss(aQ, bQ, aV, bV, BATCHES[0].inputIds, BATCHES[0].targetId);
+  const initL2 = computeLoss(aQ, bQ, aV, bV, BATCHES[1].inputIds, BATCHES[1].targetId);
+  const lossHistory = [{ b1: initL1, b2: initL2 }];
+  const steps = [];
+
+  for (let epoch = 0; epoch < 2; epoch++) {
+    for (let bIdx = 0; bIdx < BATCHES.length; bIdx++) {
+      const batch = BATCHES[bIdx];
+      const aQ_b = deepCopy(aQ), bQ_b = deepCopy(bQ);
+      const aV_b = deepCopy(aV), bV_b = deepCopy(bV);
+
+      const fwd = forwardPass(aQ, bQ, aV, bV, batch.inputIds);
+      const loss = -Math.log(Math.max(fwd.probs[batch.targetId], 1e-15));
+      const targetProb = fwd.probs[batch.targetId];
+
+      // Gradients for all 4 LoRA matrices
+      const gAQ = numericalGradient(aQ, bQ, aV, bV, batch.inputIds, batch.targetId, 'aQ');
+      const gBQ = numericalGradient(aQ, bQ, aV, bV, batch.inputIds, batch.targetId, 'bQ');
+      const gAV = numericalGradient(aQ, bQ, aV, bV, batch.inputIds, batch.targetId, 'aV');
+      const gBV = numericalGradient(aQ, bQ, aV, bV, batch.inputIds, batch.targetId, 'bV');
+
+      // SGD update on adapter matrices ONLY
+      const aQ_a = aQ.map((row, i) => row.map((v, j) => v - LEARNING_RATE * gAQ[i][j]));
+      const bQ_a = bQ.map((row, i) => row.map((v, j) => v - LEARNING_RATE * gBQ[i][j]));
+      const aV_a = aV.map((row, i) => row.map((v, j) => v - LEARNING_RATE * gAV[i][j]));
+      const bV_a = bV.map((row, i) => row.map((v, j) => v - LEARNING_RATE * gBV[i][j]));
+
+      const fwd_after = forwardPass(aQ_a, bQ_a, aV_a, bV_a, batch.inputIds);
+      const loss_after = -Math.log(Math.max(fwd_after.probs[batch.targetId], 1e-15));
+      const targetProb_after = fwd_after.probs[batch.targetId];
+
+      const lb1 = computeLoss(aQ_a, bQ_a, aV_a, bV_a, BATCHES[0].inputIds, BATCHES[0].targetId);
+      const lb2 = computeLoss(aQ_a, bQ_a, aV_a, bV_a, BATCHES[1].inputIds, BATCHES[1].targetId);
+      lossHistory.push({ b1: lb1, b2: lb2 });
+
+      // Compute ΔW = scaling * B×A before and after
+      const deltaQ_before = scalarMulMat(LORA_SCALING, matMul(bQ_b, aQ_b));
+      const deltaV_before = scalarMulMat(LORA_SCALING, matMul(bV_b, aV_b));
+      const deltaQ_after = scalarMulMat(LORA_SCALING, matMul(bQ_a, aQ_a));
+      const deltaV_after = scalarMulMat(LORA_SCALING, matMul(bV_a, aV_a));
+
+      steps.push({
+        epoch, bIdx, batch,
+        aQ_before: aQ_b, bQ_before: bQ_b, aV_before: aV_b, bV_before: bV_b,
+        aQ_after: aQ_a, bQ_after: bQ_a, aV_after: aV_a, bV_after: bV_a,
+        deltaQ_before, deltaV_before, deltaQ_after, deltaV_after,
+        fwd, loss, targetProb,
+        gAQ, gBQ, gAV, gBV,
+        fwd_after, loss_after, targetProb_after,
+      });
+
+      aQ = deepCopy(aQ_a); bQ = deepCopy(bQ_a);
+      aV = deepCopy(aV_a); bV = deepCopy(bV_a);
+    }
+  }
+  return { steps, lossHistory };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UI COMPONENTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function Tooltip({ text, children }) {
+  return (
+    <span className="tooltip-container relative inline-block">
+      {children}
+      <span className="tooltip-content absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-700 text-xs text-slate-200 rounded-lg shadow-xl border border-slate-600 max-w-xs whitespace-normal">{text}</span>
+    </span>
+  );
+}
+
+function FlowArrow({ label }) {
+  return (
+    <div className="flex flex-col items-center justify-center mx-1.5 min-w-[32px]">
+      <svg width="32" height="18" viewBox="0 0 32 18">
+        <line x1="0" y1="9" x2="24" y2="9" stroke="#64748b" strokeWidth="2" className="arrow-flow" />
+        <polygon points="24,4 32,9 24,14" fill="#64748b" />
+      </svg>
+      {label && <span className="text-[8px] text-slate-500 mt-0.5 whitespace-nowrap">{label}</span>}
+    </div>
+  );
+}
+
+function Matrix({ matrix, label, rows, cols, glow, tooltip, compact, gradientColor, rowLabels, colLabels, oldMatrix, frozen, adapter }) {
+  const glowCls = glow ? `glow-${glow}` : '';
+  const borderCls =
+    glow === 'blue' ? 'border-blue-500/40 bg-blue-950/20' :
+    glow === 'orange' ? 'border-orange-500/40 bg-orange-950/20' :
+    glow === 'green' ? 'border-green-500/40 bg-green-950/20' :
+    glow === 'purple' ? 'border-purple-500/40 bg-purple-950/20' :
+    glow === 'cyan' ? 'border-cyan-500/40 bg-cyan-950/20' :
+    glow === 'rose' ? 'border-rose-500/40 bg-rose-950/20' :
+    glow === 'amber' ? 'border-amber-500/40 bg-amber-950/20' :
+    frozen ? 'border-slate-600/50 bg-slate-800/30' :
+    adapter ? 'border-amber-500/40 bg-amber-950/15' :
+    'border-slate-700 bg-slate-800/40';
+  const cell = compact ? 'w-[58px] h-6 text-[8px]' : 'w-[64px] h-7 text-[9px]';
+  let maxAbs = 0;
+  if (gradientColor) { matrix.forEach(row => row.forEach(v => { if (Math.abs(v) > maxAbs) maxAbs = Math.abs(v); })); if (maxAbs === 0) maxAbs = 1; }
+
+  return (
+    <div className={`rounded-xl border p-2.5 ${borderCls} ${glowCls} fade-in inline-block ${frozen ? 'frozen-overlay opacity-70' : ''} ${adapter ? 'adapter-badge' : ''}`}>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span className="text-[11px] font-semibold text-slate-300">{label}</span>
+        {tooltip && <Tooltip text={tooltip}><span className="text-[9px] text-slate-500 cursor-help border border-slate-600 rounded-full w-3.5 h-3.5 flex items-center justify-center">?</span></Tooltip>}
+        {rows != null && cols != null && <span className="mono text-[9px] text-slate-500">[{rows}×{cols}]</span>}
+      </div>
+      {colLabels && (
+        <div className={`flex gap-0.5 mb-0.5 ${rowLabels ? 'ml-10' : ''}`}>
+          {colLabels.map((l, i) => <div key={i} className={`${compact ? 'w-[50px]' : 'w-[56px]'} text-center text-[8px] text-slate-500`}>{l}</div>)}
+        </div>
+      )}
+      <div className="flex flex-col gap-0.5">
+        {matrix.map((row, i) => (
+          <div key={i} className="flex gap-0.5 items-center">
+            {rowLabels && <span className="text-[8px] text-slate-500 w-9 text-right mr-0.5 truncate">{rowLabels[i]}</span>}
+            {row.map((val, j) => {
+              let cellBg = 'bg-slate-900/50 text-slate-300';
+              let bgStyle = undefined;
+              if (gradientColor) {
+                const norm = val / maxAbs;
+                cellBg = norm > 0 ? 'text-rose-300' : norm < 0 ? 'text-emerald-300' : 'text-slate-400';
+                const intensity = Math.min(Math.abs(norm) * 0.5, 0.5);
+                bgStyle = { backgroundColor: norm > 0 ? `rgba(244,63,94,${intensity})` : `rgba(34,197,94,${intensity})` };
+              }
+              let changed = false;
+              if (oldMatrix) changed = Math.abs(r(val) - r(oldMatrix[i][j])) > 0.0001;
+              return (
+                <div key={j}
+                  className={`${cell} mono flex items-center justify-center rounded ${
+                    gradientColor ? cellBg :
+                    changed ? 'bg-amber-600/25 text-amber-300 font-semibold' :
+                    frozen ? 'bg-slate-900/40 text-slate-500' : cellBg
+                  }`}
+                  style={bgStyle}
+                >
+                  {gradientColor ? (val >= 0 ? '+' : '') + fmt(val) : fmt2(val)}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LossCurve({ lossHistory, currentStep }) {
+  const width = 300, height = 110, pad = 28;
+  const n = lossHistory.length;
+  const allVals = lossHistory.flatMap(h => [h.b1, h.b2]);
+  const maxL = Math.max(...allVals) * 1.05;
+  const minL = Math.min(...allVals) * 0.95;
+  const range = maxL - minL || 1;
+  const xScale = (i) => pad + (i / (n - 1)) * (width - 2 * pad);
+  const yScale = (v) => pad + (1 - (v - minL) / range) * (height - 2 * pad);
+  const line = (key) => lossHistory.map((h, i) => `${i===0?'M':'L'}${xScale(i).toFixed(1)},${yScale(h[key]).toFixed(1)}`).join(' ');
+  const labels = ['Init', 'E1B1', 'E1B2', 'E2B1', 'E2B2'];
+
+  return (
+    <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-3">
+      <div className="text-[10px] font-semibold text-slate-400 mb-1">Loss Over Training</div>
+      <svg width={width} height={height} className="overflow-visible">
+        {[0,1,2,3,4].map(i => <line key={i} x1={xScale(i)} y1={pad} x2={xScale(i)} y2={height-pad} stroke="#334155" strokeWidth="1" strokeDasharray="3 3" />)}
+        <path d={line('b1')} fill="none" stroke="#60a5fa" strokeWidth="2" />
+        <path d={line('b2')} fill="none" stroke="#a78bfa" strokeWidth="2" />
+        {lossHistory.map((h, i) => (
+          <React.Fragment key={i}>
+            <circle cx={xScale(i)} cy={yScale(h.b1)} r={i<=currentStep+1?4:2} fill={i<=currentStep+1?'#60a5fa':'#334155'} stroke="#1e293b" strokeWidth="1" />
+            <circle cx={xScale(i)} cy={yScale(h.b2)} r={i<=currentStep+1?4:2} fill={i<=currentStep+1?'#a78bfa':'#334155'} stroke="#1e293b" strokeWidth="1" />
+          </React.Fragment>
+        ))}
+        {currentStep >= 0 && <rect x={xScale(currentStep+1)-1} y={pad-4} width="2" height={height-2*pad+8} fill="#fbbf24" opacity="0.4" rx="1" />}
+        {labels.map((l, i) => <text key={i} x={xScale(i)} y={height-4} textAnchor="middle" className="text-[8px] fill-slate-500">{l}</text>)}
+      </svg>
+      <div className="flex gap-3 mt-1 text-[9px]">
+        <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-blue-400 inline-block rounded"></span><span className="text-slate-400">Batch 1</span></span>
+        <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-purple-400 inline-block rounded"></span><span className="text-slate-400">Batch 2</span></span>
+      </div>
+    </div>
+  );
+}
+
+function ProbBars({ probs, targetId, label }) {
+  const maxP = Math.max(...probs);
+  return (
+    <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-3 min-w-[240px]">
+      <div className="text-[10px] font-semibold text-slate-400 mb-1.5">{label}</div>
+      {probs.map((p, i) => {
+        const isT = i === targetId;
+        return (
+          <div key={i} className={`flex items-center gap-1 py-0.5 px-1 rounded ${isT ? 'bg-green-900/20' : ''}`}>
+            <span className={`mono text-[9px] w-8 text-right ${isT ? 'text-green-300 font-bold' : 'text-slate-500'}`}>{VOCAB[i]}</span>
+            <div className="flex-1 h-3.5 bg-slate-900 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${isT ? 'bg-green-500' : 'bg-slate-600'}`} style={{ width: `${Math.max(2, p/maxP*100)}%` }} />
+            </div>
+            <span className={`mono text-[9px] w-12 text-right ${isT ? 'text-green-300 font-bold' : 'text-slate-500'}`}>{(p*100).toFixed(1)}%</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SUB-STEP VIEWS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function Sub_Architecture() {
+  return (
+    <div className="fade-in">
+      <h4 className="text-base font-bold text-white mb-3">1. QLoRA Architecture — Adapter Setup</h4>
+      <p className="text-[11px] text-slate-400 mb-4">
+        QLoRA does <strong className="text-amber-300">not</strong> modify the original model weights. Instead, it creates tiny <strong className="text-amber-300">adapter matrices (A and B)</strong> that sit alongside the frozen weights.
+        The original weights are also <strong className="text-cyan-300">quantized to 4-bit</strong> to save memory.
+      </p>
+
+      {/* The key equation */}
+      <div className="bg-slate-800/80 border border-amber-500/30 rounded-xl p-4 mb-5 max-w-2xl">
+        <div className="text-[11px] font-semibold text-amber-300 mb-2">Core LoRA Equation</div>
+        <div className="mono text-sm text-center text-slate-200 bg-slate-900/50 rounded-lg py-3 mb-3">
+          W_effective = W_frozen<sub className="text-cyan-300">4bit</sub> + (α/r) × B × A
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-400">
+          <div><span className="mono text-slate-300">W_frozen</span> — original pre-trained weight [4×4], quantized to 4-bit, <strong className="text-cyan-300">never updated</strong></div>
+          <div><span className="mono text-amber-300">B</span> — adapter matrix [4×2], <strong className="text-amber-300">initialized to small random values</strong>, trained</div>
+          <div><span className="mono text-amber-300">A</span> — adapter matrix [2×4], initialized with small random values, trained</div>
+          <div><span className="mono text-slate-300">α/r</span> — scaling factor = {LORA_ALPHA}/{LORA_RANK} = {LORA_SCALING}</div>
+        </div>
+      </div>
+
+      {/* Visual: frozen vs adapter */}
+      <div className="flex gap-4 flex-wrap mb-4">
+        <div>
+          <div className="text-[10px] text-cyan-400 font-semibold mb-2">Frozen Weights (4-bit quantized, NOT updated)</div>
+          <div className="flex gap-2 flex-wrap">
+            <Matrix matrix={W_Q_QUANT.quantized} label="W_Q frozen" rows={4} cols={4} compact frozen
+              tooltip={`Quantized from 32-bit to 4-bit (${W_Q_QUANT.bits}-bit). Saves ~8× memory. Small precision loss is acceptable.`} />
+            <Matrix matrix={W_V_QUANT.quantized} label="W_V frozen" rows={4} cols={4} compact frozen />
+          </div>
+        </div>
+
+        <div className="flex items-center text-2xl text-slate-500">+</div>
+
+        <div>
+          <div className="text-[10px] text-amber-400 font-semibold mb-2">New LoRA Adapters (THESE are what we train)</div>
+          <div className="flex gap-3 flex-wrap">
+            <div className="border border-dashed border-amber-500/30 rounded-xl p-2.5">
+              <div className="text-[9px] text-amber-400 mb-1.5">W_Q adapter</div>
+              <div className="flex items-center gap-1">
+                <Matrix matrix={INIT_B_Q} label="B_Q" rows={4} cols={2} compact adapter tooltip="Initialized to small random values — so ΔW starts near zero (model nearly unchanged at start)" />
+                <span className="text-slate-500 text-xs">×</span>
+                <Matrix matrix={INIT_A_Q} label="A_Q" rows={2} cols={4} compact adapter tooltip="Initialized with small random values" />
+              </div>
+              <div className="mono text-[9px] text-slate-500 mt-1">ΔW_Q = {LORA_SCALING} × B_Q×A_Q = [4×4] (near zero initially)</div>
+            </div>
+            <div className="border border-dashed border-amber-500/30 rounded-xl p-2.5">
+              <div className="text-[9px] text-amber-400 mb-1.5">W_V adapter</div>
+              <div className="flex items-center gap-1">
+                <Matrix matrix={INIT_B_V} label="B_V" rows={4} cols={2} compact adapter />
+                <span className="text-slate-500 text-xs">×</span>
+                <Matrix matrix={INIT_A_V} label="A_V" rows={2} cols={4} compact adapter />
+              </div>
+              <div className="mono text-[9px] text-slate-500 mt-1">ΔW_V = {LORA_SCALING} × B_V×A_V = [4×4] (near zero initially)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Parameter count comparison */}
+      <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-3 max-w-lg mb-3">
+        <div className="text-[10px] font-semibold text-slate-300 mb-2">Parameter Count Comparison</div>
+        <div className="space-y-1.5 text-[10px]">
+          <div className="flex justify-between">
+            <span className="text-slate-400">Full fine-tuning (W_Q + W_V):</span>
+            <span className="mono text-slate-300">4×4 + 4×4 = <strong>32 parameters</strong></span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-amber-400">LoRA adapters (A_Q + B_Q + A_V + B_V):</span>
+            <span className="mono text-amber-300">2×4 + 4×2 + 2×4 + 4×2 = <strong>32 parameters</strong></span>
+          </div>
+          <div className="text-[9px] text-slate-500 mt-1 pt-1 border-t border-slate-700">
+            In our tiny example, counts are similar. In real models: GPT-3 has 175B parameters but LoRA with rank=8 trains only ~0.01% of them. The savings come from rank ≪ d_model (e.g. r=8 vs d_model=12,288).
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-slate-800/50 rounded-lg p-3 text-[10px] text-slate-500 max-w-lg">
+        <strong className="text-amber-300">Key insight:</strong> Both A and B are initialized with small random values, so ΔW = scaling × B×A starts near zero — the model begins with nearly the same behavior as the pre-trained model. Training adjusts A and B to learn task-specific modifications without ever touching the original frozen weights.
+        <div className="mt-1.5 text-[9px] text-slate-600">
+          <strong>Note:</strong> The original LoRA paper initializes B to zeros (so ΔW is exactly 0 at start). We use small random values here so both A and B receive meaningful gradients from step 1, making the training dynamics visible in just 4 steps. We also use an exaggerated learning rate (lr={LEARNING_RATE}) — real QLoRA uses lr ≈ 2×10⁻⁴ with the Adam optimizer over thousands of steps.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Sub_Data({ step }) {
+  return (
+    <div className="fade-in">
+      <h4 className="text-base font-bold text-white mb-3">2. Training Data</h4>
+      <div className="flex items-center gap-4 flex-wrap mb-4">
+        <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/15 p-4">
+          <div className="text-[10px] text-cyan-400 mb-2 font-semibold">Input Sequence</div>
+          <div className="flex gap-2">
+            {step.batch.inputWords.map((w, i) => (
+              <div key={i} className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-center">
+                <div className="mono text-sm text-cyan-300">"{w}"</div>
+                <div className="text-[9px] text-slate-500">id: {step.batch.inputIds[i]}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <FlowArrow label="predict" />
+        <div className="rounded-xl border border-green-500/30 bg-green-950/15 p-4">
+          <div className="text-[10px] text-green-400 mb-2 font-semibold">Target Token</div>
+          <div className="bg-green-900/30 border border-green-500/40 rounded-lg px-4 py-2 text-center">
+            <div className="mono text-lg font-bold text-green-300">"{step.batch.targetWord}"</div>
+            <div className="text-[9px] text-slate-500">id: {step.batch.targetId}</div>
+          </div>
+        </div>
+      </div>
+      <div className="bg-slate-800/60 rounded-lg p-3 text-[11px] text-slate-400 max-w-xl">
+        <strong className="text-slate-300">Epoch {step.epoch + 1}, Batch {step.bIdx + 1}:</strong> Train the <span className="text-amber-300">LoRA adapters</span> (not the original weights) so the model predicts "<span className="text-green-300">{step.batch.targetWord}</span>" after "<span className="text-cyan-300">{step.batch.inputWords.join(' ')}</span>".
+      </div>
+    </div>
+  );
+}
+
+function Sub_Forward({ step }) {
+  return (
+    <div className="fade-in">
+      <h4 className="text-base font-bold text-white mb-3">3. Forward Pass (with LoRA)</h4>
+      <p className="text-[11px] text-slate-400 mb-4">
+        During forward pass, the effective weight is computed on-the-fly: <span className="mono text-slate-200">W_eff = W_frozen<sub>4bit</sub> + (α/r) × B×A</span>
+      </p>
+
+      {/* Show effective weight construction */}
+      <div className="mb-4">
+        <div className="text-[10px] text-slate-300 font-semibold mb-2">Building W_Q effective:</div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Matrix matrix={W_Q_QUANT.quantized} label="W_Q frozen" rows={4} cols={4} compact frozen />
+          <span className="text-slate-500 text-lg">+</span>
+          <div className="border border-dashed border-amber-500/30 rounded-lg p-1.5 flex items-center gap-1">
+            <span className="text-[9px] text-amber-400">{LORA_SCALING}×</span>
+            <Matrix matrix={step.bQ_before} label="B_Q" rows={4} cols={2} compact adapter />
+            <span className="text-slate-500 text-xs">×</span>
+            <Matrix matrix={step.aQ_before} label="A_Q" rows={2} cols={4} compact adapter />
+          </div>
+          <span className="text-slate-500 text-lg">=</span>
+          <Matrix matrix={step.fwd.wQ_eff} label="W_Q effective" rows={4} cols={4} compact glow="blue"
+            tooltip="This is what actually multiplies the input during forward pass" />
+        </div>
+        <div className="mt-1.5 text-[9px] text-slate-500">ΔW_Q (adapter contribution):</div>
+        <Matrix matrix={step.deltaQ_before} label="ΔW_Q = 2×B_Q×A_Q" rows={4} cols={4} compact
+          tooltip="The adapter's learned modification. Initially near zero (both A and B start small)." />
+      </div>
+
+      <div className="flex items-start gap-4 flex-wrap mb-4">
+        <Matrix matrix={step.fwd.output} label="Layer Output" rows={3} cols={4} glow="green" compact
+          rowLabels={step.batch.inputWords} />
+        <div>
+          <div className="text-[9px] text-slate-400 mb-1">Last token → logits → softmax:</div>
+          <ProbBars probs={step.fwd.probs} targetId={step.batch.targetId} label="Prediction" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Sub_Loss({ step }) {
+  return (
+    <div className="fade-in">
+      <h4 className="text-base font-bold text-white mb-3">4. Loss Computation</h4>
+      <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700 max-w-lg mb-4">
+        <div className="mono text-[12px] text-center text-slate-200 mb-3 bg-slate-900/50 rounded-lg py-2">
+          L = -log( P("{step.batch.targetWord}") )
+        </div>
+        <div className="space-y-1.5 text-[11px]">
+          <div className="flex gap-2"><span className="text-slate-400 w-28">P(target):</span><span className="mono text-cyan-300">{(step.targetProb*100).toFixed(2)}%</span></div>
+          <div className="flex gap-2"><span className="text-slate-400 w-28">Loss:</span><span className="mono text-orange-300 text-lg font-bold">{step.loss.toFixed(4)}</span></div>
+        </div>
+      </div>
+      <div className="bg-slate-800/50 rounded-lg p-3 text-[10px] text-slate-500 max-w-lg">
+        The loss measures how far the prediction is from the target. Gradients of this loss flow back through the network, but <strong className="text-amber-300">only update the LoRA adapter matrices (A, B)</strong> — the frozen weights have zero gradient by design.
+      </div>
+    </div>
+  );
+}
+
+function Sub_Gradients({ step }) {
+  return (
+    <div className="fade-in">
+      <h4 className="text-base font-bold text-white mb-3">5. Gradients — Computed for Adapters ONLY</h4>
+      <p className="text-[11px] text-slate-400 mb-4">
+        Backpropagation computes gradients <strong className="text-amber-300">only for the adapter matrices A and B</strong>.
+        The frozen model weights receive <strong className="text-cyan-300">no gradients</strong> — they are excluded from the computation graph.
+      </p>
+
+      {/* High-level gradient derivation explanation */}
+      <div className="bg-slate-800/80 border border-blue-500/25 rounded-xl p-4 mb-5 max-w-3xl">
+        <div className="text-[11px] font-semibold text-blue-300 mb-2">How are adapter gradients derived?</div>
+        <div className="text-[10px] text-slate-400 space-y-2">
+          <p>
+            The loss <span className="mono text-slate-300">L = −log P(target)</span> depends on the adapters through a long chain:
+          </p>
+          <div className="mono text-[9px] text-slate-300 bg-slate-900/50 rounded-lg py-2 px-3 text-center leading-6">
+            L ← softmax ← logits ← output ← attention ← Q, V ← <span className="text-amber-300">W_eff</span> = W_frozen + (α/r) × <span className="text-amber-300">B × A</span>
+          </div>
+          <p>
+            The <strong className="text-slate-300">chain rule</strong> propagates ∂L backwards through each stage until it reaches the effective weight W_eff.
+            Let <span className="mono text-slate-300">G = ∂L/∂W_eff</span> be the gradient of loss w.r.t. the effective weight (a 4×4 matrix computed by backprop through attention, softmax, etc.). Since <span className="mono text-slate-300">W_eff = W_frozen + (α/r) × B×A</span>, the adapter gradients follow from the chain rule on the matrix product B×A:
+          </p>
+          <div className="mono text-[9px] text-slate-200 bg-slate-900/50 rounded-lg py-2.5 px-3 space-y-1.5">
+            <div><span className="text-amber-300">∂L/∂B</span> = (α/r) × G × Aᵀ <span className="text-slate-500 ml-3">{"// [4×4] × [4×2] → [4×2], same shape as B"}</span></div>
+            <div><span className="text-amber-300">∂L/∂A</span> = (α/r) × Bᵀ × G <span className="text-slate-500 ml-3">{"// [2×4] × [4×4] → [2×4], same shape as A"}</span></div>
+          </div>
+          <p className="text-[9px] text-slate-500">
+            <strong className="text-slate-400">In short:</strong> backprop gives us G (how loss changes w.r.t. the effective weight), then the LoRA structure tells us how to split that into separate updates for B and A.
+            The frozen weights get the same G but it is <strong className="text-cyan-300">discarded</strong> — they are not in the optimizer's parameter list.
+            Below, we compute these gradients numerically (perturbing each entry by ±ε and measuring loss change) to verify the values.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-4 flex-wrap mb-4">
+        {/* W_Q adapters */}
+        <div className="border border-dashed border-blue-500/20 rounded-xl p-3">
+          <div className="text-[10px] text-blue-400 font-semibold mb-2">W_Q Adapter Gradients</div>
+          <div className="flex gap-2 flex-wrap">
+            <Matrix matrix={step.gBQ} label="∂L/∂B_Q" rows={4} cols={2} compact gradientColor
+              tooltip="Gradient for B_Q — derived as (α/r) × G_Q × A_Qᵀ, tells us how to update B_Q to reduce loss" />
+            <Matrix matrix={step.gAQ} label="∂L/∂A_Q" rows={2} cols={4} compact gradientColor
+              tooltip="Gradient for A_Q — derived as (α/r) × B_Qᵀ × G_Q" />
+          </div>
+        </div>
+        {/* W_V adapters */}
+        <div className="border border-dashed border-purple-500/20 rounded-xl p-3">
+          <div className="text-[10px] text-purple-400 font-semibold mb-2">W_V Adapter Gradients</div>
+          <div className="flex gap-2 flex-wrap">
+            <Matrix matrix={step.gBV} label="∂L/∂B_V" rows={4} cols={2} compact gradientColor
+              tooltip="Gradient for B_V — derived as (α/r) × G_V × A_Vᵀ" />
+            <Matrix matrix={step.gAV} label="∂L/∂A_V" rows={2} cols={4} compact gradientColor
+              tooltip="Gradient for A_V — derived as (α/r) × B_Vᵀ × G_V" />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-3 mb-3 text-[10px]">
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-rose-500/40 inline-block"></span><span className="text-slate-400">Positive → <strong className="text-rose-300">decrease</strong> weight</span></span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-500/40 inline-block"></span><span className="text-slate-400">Negative → <strong className="text-emerald-300">increase</strong> weight</span></span>
+      </div>
+
+      <div className="bg-slate-800/50 rounded-lg p-3 text-[10px] text-slate-500 max-w-xl">
+        <strong className="text-amber-300">No gradients for frozen weights:</strong> W_Q_frozen, W_V_frozen, W_K, W_O, W_FFN, and Embeddings all have <span className="text-cyan-300">zero gradient</span>. The optimizer doesn't even store momentum/state for them — this is where QLoRA's memory savings come from. Only the small adapter matrices (A: [2×4], B: [4×2]) consume optimizer memory.
+      </div>
+    </div>
+  );
+}
+
+function Sub_Update({ step }) {
+  return (
+    <div className="fade-in">
+      <h4 className="text-base font-bold text-white mb-3">6. Adapter Weight Update (SGD)</h4>
+      <p className="text-[11px] text-slate-400 mb-1">
+        <span className="mono text-slate-200">adapter_new = adapter_old − {LEARNING_RATE} × gradient</span>
+      </p>
+      <p className="text-[11px] text-amber-300/80 mb-4">
+        Only A and B matrices are modified. The original model weights remain untouched.
+      </p>
+
+      {/* B_Q update */}
+      <div className="mb-4">
+        <div className="text-[10px] text-amber-400 font-semibold mb-1.5">B_Q adapter update [4×2]</div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Matrix matrix={step.bQ_before} label="B_Q old" rows={4} cols={2} compact />
+          <span className="text-slate-500">−</span>
+          <span className="mono text-[10px] text-slate-400">{LEARNING_RATE}×</span>
+          <Matrix matrix={step.gBQ} label="∂L/∂B_Q" rows={4} cols={2} compact gradientColor />
+          <span className="text-slate-500">=</span>
+          <Matrix matrix={step.bQ_after} label="B_Q new" rows={4} cols={2} compact glow="amber" oldMatrix={step.bQ_before} adapter />
+        </div>
+      </div>
+      {/* A_Q update */}
+      <div className="mb-4">
+        <div className="text-[10px] text-amber-400 font-semibold mb-1.5">A_Q adapter update [2×4]</div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Matrix matrix={step.aQ_before} label="A_Q old" rows={2} cols={4} compact />
+          <span className="text-slate-500">−</span>
+          <span className="mono text-[10px] text-slate-400">{LEARNING_RATE}×</span>
+          <Matrix matrix={step.gAQ} label="∂L/∂A_Q" rows={2} cols={4} compact gradientColor />
+          <span className="text-slate-500">=</span>
+          <Matrix matrix={step.aQ_after} label="A_Q new" rows={2} cols={4} compact glow="amber" oldMatrix={step.aQ_before} adapter />
+        </div>
+      </div>
+      {/* B_V and A_V updates */}
+      <div className="mb-4">
+        <div className="text-[10px] text-amber-400 font-semibold mb-1.5">B_V adapter update [4×2]</div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Matrix matrix={step.bV_before} label="B_V old" rows={4} cols={2} compact />
+          <span className="text-slate-500">−</span>
+          <span className="mono text-[10px] text-slate-400">{LEARNING_RATE}×</span>
+          <Matrix matrix={step.gBV} label="∂L/∂B_V" rows={4} cols={2} compact gradientColor />
+          <span className="text-slate-500">=</span>
+          <Matrix matrix={step.bV_after} label="B_V new" rows={4} cols={2} compact glow="amber" oldMatrix={step.bV_before} adapter />
+        </div>
+      </div>
+      <div className="mb-4">
+        <div className="text-[10px] text-amber-400 font-semibold mb-1.5">A_V adapter update [2×4]</div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Matrix matrix={step.aV_before} label="A_V old" rows={2} cols={4} compact />
+          <span className="text-slate-500">−</span>
+          <span className="mono text-[10px] text-slate-400">{LEARNING_RATE}×</span>
+          <Matrix matrix={step.gAV} label="∂L/∂A_V" rows={2} cols={4} compact gradientColor />
+          <span className="text-slate-500">=</span>
+          <Matrix matrix={step.aV_after} label="A_V new" rows={2} cols={4} compact glow="amber" oldMatrix={step.aV_before} adapter />
+        </div>
+      </div>
+
+      {/* Impact: show how ΔW changed */}
+      <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-3 max-w-2xl">
+        <div className="text-[10px] font-semibold text-slate-300 mb-2">Resulting ΔW change (what the adapter contributes to the effective weight)</div>
+        <div className="flex gap-4 flex-wrap">
+          <div>
+            <div className="text-[9px] text-slate-400 mb-1">ΔW_Q = {LORA_SCALING} × B_Q × A_Q</div>
+            <div className="flex items-center gap-2">
+              <Matrix matrix={step.deltaQ_before} label="Before" rows={4} cols={4} compact />
+              <span className="text-amber-500">→</span>
+              <Matrix matrix={step.deltaQ_after} label="After" rows={4} cols={4} compact glow="amber" oldMatrix={step.deltaQ_before} />
+            </div>
+          </div>
+          <div>
+            <div className="text-[9px] text-slate-400 mb-1">ΔW_V = {LORA_SCALING} × B_V × A_V</div>
+            <div className="flex items-center gap-2">
+              <Matrix matrix={step.deltaV_before} label="Before" rows={4} cols={4} compact />
+              <span className="text-amber-500">→</span>
+              <Matrix matrix={step.deltaV_after} label="After" rows={4} cols={4} compact glow="amber" oldMatrix={step.deltaV_before} />
+            </div>
+          </div>
+        </div>
+        <div className="text-[9px] text-slate-500 mt-2">
+          The adapter's ΔW grows from near-zero as B learns. The frozen W_Q and W_V remain exactly the same throughout.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Sub_Verify({ step }) {
+  const improved = step.loss_after < step.loss;
+  return (
+    <div className="fade-in">
+      <h4 className="text-base font-bold text-white mb-3">7. Verify — Did the Adapter Improve the Prediction?</h4>
+      <div className="flex gap-4 flex-wrap mb-4">
+        <ProbBars probs={step.fwd.probs} targetId={step.batch.targetId} label="BEFORE adapter update" />
+        <div className="flex items-center"><FlowArrow label="update A,B" /></div>
+        <ProbBars probs={step.fwd_after.probs} targetId={step.batch.targetId} label="AFTER adapter update" />
+      </div>
+
+      <div className="rounded-xl border border-slate-700 bg-slate-800/40 p-4 max-w-md mb-4">
+        <div className="grid grid-cols-3 gap-2 text-[11px]">
+          <div className="text-slate-500 font-semibold">Metric</div>
+          <div className="text-slate-500 font-semibold text-center">Before</div>
+          <div className="text-slate-500 font-semibold text-center">After</div>
+          <div className="text-slate-400">P("{step.batch.targetWord}")</div>
+          <div className="mono text-center text-slate-300">{(step.targetProb*100).toFixed(2)}%</div>
+          <div className={`mono text-center font-bold ${step.targetProb_after > step.targetProb ? 'text-green-300' : 'text-rose-300'}`}>
+            {(step.targetProb_after*100).toFixed(2)}% {step.targetProb_after > step.targetProb ? '↑' : '↓'}
+          </div>
+          <div className="text-slate-400">Loss</div>
+          <div className="mono text-center text-slate-300">{step.loss.toFixed(4)}</div>
+          <div className={`mono text-center font-bold ${improved ? 'text-green-300' : 'text-rose-300'}`}>
+            {step.loss_after.toFixed(4)} {improved ? '↓' : '↑'}
+          </div>
+        </div>
+      </div>
+
+      {/* Emphasize: original weights unchanged */}
+      <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/10 p-3 max-w-xl">
+        <div className="text-[11px] font-semibold text-cyan-300 mb-2">Original Model = Untouched</div>
+        <div className="flex gap-2 flex-wrap items-center text-[10px] text-slate-400">
+          <span>W_Q_frozen:</span>
+          <span className="mono text-cyan-400">unchanged ❄</span>
+          <span className="text-slate-600">|</span>
+          <span>W_V_frozen:</span>
+          <span className="mono text-cyan-400">unchanged ❄</span>
+          <span className="text-slate-600">|</span>
+          <span>W_K, W_O, FFN, Embeddings:</span>
+          <span className="mono text-cyan-400">unchanged ❄</span>
+        </div>
+        <div className="text-[10px] text-slate-500 mt-2">
+          The adapter (A, B matrices) is a <strong className="text-amber-300">separate artifact</strong> you can save, share, or swap. You can load different adapters onto the same base model for different tasks — like interchangeable lenses on a camera.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════════════════════════
+
+function App() {
+  const [stepIdx, setStepIdx] = useState(0);
+  const [subStep, setSubStep] = useState(0);
+
+  const training = useMemo(() => precomputeTraining(), []);
+  const { steps, lossHistory } = training;
+  const step = steps[stepIdx];
+
+  const stepLabels = ['E1 Batch 1', 'E1 Batch 2', 'E2 Batch 1', 'E2 Batch 2'];
+  const subStepLabels = ['Architecture', 'Data', 'Forward', 'Loss', 'Gradients', 'Update', 'Verify'];
+
+  const goNext = () => {
+    if (subStep < 6) setSubStep(subStep + 1);
+    else if (stepIdx < 3) { setStepIdx(stepIdx + 1); setSubStep(1); } // skip architecture on subsequent steps
+  };
+  const goPrev = () => {
+    if (subStep > 0) setSubStep(subStep - 1);
+    else if (stepIdx > 0) { setStepIdx(stepIdx - 1); setSubStep(6); }
+  };
+  const isFirst = stepIdx === 0 && subStep === 0;
+  const isLast = stepIdx === 3 && subStep === 6;
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-6">
+      {/* Header */}
+      <div className="text-center mb-5">
+        <h1 className="text-2xl font-bold text-white mb-1">QLoRA Fine-Tuning Explainer</h1>
+        <p className="text-sm text-slate-400">
+          How LoRA adapters learn without modifying the original model — step by step
+        </p>
+        <p className="text-[11px] text-slate-500 mt-1">
+          Frozen model weights (4-bit quantized) + Trainable LoRA adapters (rank={LORA_RANK}, α={LORA_ALPHA}) · lr={LEARNING_RATE}
+        </p>
+      </div>
+
+      {/* Top bar */}
+      <div className="flex gap-4 mb-5 flex-wrap items-start">
+        <div className="flex-1 min-w-[280px]">
+          <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Training Step</div>
+          <div className="flex gap-2 mb-2.5">
+            {stepLabels.map((label, i) => (
+              <button key={i}
+                onClick={() => { setStepIdx(i); setSubStep(i === 0 ? 0 : 1); }}
+                className={`flex-1 px-2.5 py-2 rounded-lg text-[11px] font-medium transition-all border ${
+                  i === stepIdx ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 shadow-lg'
+                  : i < stepIdx ? 'bg-slate-700/50 border-slate-600 text-slate-300'
+                  : 'bg-slate-800 border-slate-700 text-slate-500'
+                }`}>
+                <div>{label}</div>
+                <div className="text-[9px] mt-0.5 opacity-70">{i < stepIdx ? '✓ done' : i === stepIdx ? `sub ${subStep+1}/7` : ''}</div>
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2.5">
+            {BATCHES.map((b, i) => (
+              <div key={i} className={`flex-1 rounded-lg border p-1.5 text-[9px] ${
+                step.bIdx === i ? 'border-cyan-500/40 bg-cyan-950/15 text-cyan-300' : 'border-slate-700 bg-slate-800/30 text-slate-500'
+              }`}>
+                <strong>Batch {i+1}:</strong> "{b.inputWords.join(' ')}" → "{b.targetWord}"
+              </div>
+            ))}
+          </div>
+        </div>
+        <LossCurve lossHistory={lossHistory} currentStep={stepIdx} />
+      </div>
+
+      {/* Sub-step tabs */}
+      <div className="flex gap-1 mb-5 flex-wrap">
+        {subStepLabels.map((label, i) => (
+          <button key={i} onClick={() => setSubStep(i)}
+            className={`px-2.5 py-1.5 rounded-lg text-[10px] font-medium transition-all ${
+              i === subStep ? 'bg-blue-600 text-white shadow-md'
+              : i < subStep ? 'bg-slate-700/50 text-slate-300 hover:bg-slate-600'
+              : 'bg-slate-800 text-slate-500 hover:bg-slate-700'
+            }`}>
+            {i < subStep ? '✓ ' : `${i+1}. `}{label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="min-h-[420px] overflow-x-auto pb-4">
+        {subStep === 0 && <Sub_Architecture />}
+        {subStep === 1 && <Sub_Data step={step} />}
+        {subStep === 2 && <Sub_Forward step={step} />}
+        {subStep === 3 && <Sub_Loss step={step} />}
+        {subStep === 4 && <Sub_Gradients step={step} />}
+        {subStep === 5 && <Sub_Update step={step} />}
+        {subStep === 6 && <Sub_Verify step={step} />}
+      </div>
+
+      {/* Navigation */}
+      <div className="flex justify-between mt-4 pt-4 border-t border-slate-800">
+        <button onClick={goPrev} disabled={isFirst}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            isFirst ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+          }`}>← Previous</button>
+        <span className="text-[10px] text-slate-500 self-center mono">
+          Step {stepIdx+1}/4 · Sub {subStep+1}/7
+        </span>
+        <button onClick={goNext} disabled={isLast}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            isLast ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/20'
+          }`}>Next →</button>
+      </div>
+
+      {/* Config reference */}
+      <div className="mt-5 border border-slate-800 rounded-xl p-3 bg-slate-900/50">
+        <h4 className="text-[10px] font-semibold text-slate-500 mb-1.5 uppercase tracking-wider">QLoRA Configuration</h4>
+        <div className="flex gap-3 flex-wrap text-[10px] mono text-slate-500">
+          <span>rank = {LORA_RANK}</span>
+          <span>α = {LORA_ALPHA}</span>
+          <span>scaling = α/r = {LORA_SCALING}</span>
+          <span>lr = {LEARNING_RATE}</span>
+          <span>quant = 4-bit NF4</span>
+          <span>target_modules = [W_Q, W_V]</span>
+          <span>B init = small random</span>
+          <span>A init = random</span>
+          <span>frozen = W_Q, W_V, W_K, W_O, FFN, Embed (all original weights)</span>
+          <span>trainable = A_Q[2×4], B_Q[4×2], A_V[2×4], B_V[4×2]</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
