@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyperparameter Tuning Plan — 10 Iterations to the Best Model</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,800;1,9..144,400&family=Source+Code+Pro:wght@400;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e1117;--bg2:#161b22;--bg3:#1c2333;
+  --text:#c9d1d9;--text-dim:#8b949e;--text-bright:#e6edf3;
+  --accent:#58a6ff;--accent2:#79c0ff;
+  --green:#3fb950;--green-bg:rgba(63,185,80,.12);
+  --red:#f85149;--red-bg:rgba(248,81,73,.12);
+  --yellow:#d29922;--yellow-bg:rgba(210,153,34,.12);
+  --purple:#bc8cff;--purple-bg:rgba(188,140,255,.12);
+  --orange:#f0883e;--orange-bg:rgba(240,136,62,.12);
+  --cyan:#3ddbd9;--cyan-bg:rgba(61,219,217,.12);
+  --pink:#f778ba;--pink-bg:rgba(247,120,186,.12);
+  --border:#30363d;--card:#161b22;--radius:12px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:17px;line-height:1.7;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")}
+.container{max-width:1140px;margin:0 auto;padding:0 24px}
+.section{padding:60px 0;border-bottom:1px solid var(--border)}
+.section-title{font-family:'Fraunces',serif;font-weight:800;font-size:2rem;color:var(--text-bright);text-align:center;margin-bottom:12px}
+.section-desc{text-align:center;color:var(--text-dim);margin-bottom:40px;max-width:750px;margin-left:auto;margin-right:auto}
+
+/* HERO */
+.hero{padding:80px 0 60px;text-align:center;background:linear-gradient(180deg,rgba(63,185,80,.06) 0%,transparent 100%);border-bottom:1px solid var(--border);position:relative}
+.hero::after{content:'';position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);width:120px;height:3px;background:linear-gradient(90deg,var(--green),var(--cyan));border-radius:2px}
+.hero h1{font-family:'Fraunces',serif;font-weight:800;font-size:clamp(1.8rem,4.5vw,3rem);color:var(--text-bright);letter-spacing:-.02em;margin-bottom:12px}
+.hero h1 span{background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero .subtitle{font-size:1.1rem;color:var(--text-dim);max-width:750px;margin:0 auto}
+.hero .tag{display:inline-block;margin-top:20px;padding:6px 16px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);font-family:'Source Code Pro',monospace;font-size:.85rem;color:var(--accent2)}
+
+/* EXAMPLE BOXES */
+.example-box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:16px}
+.example-box h4{font-family:'Source Code Pro',monospace;font-size:.85rem;color:var(--accent2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
+
+.formula-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px 24px;margin-top:16px;font-family:'Source Code Pro',monospace;font-size:.95rem;color:var(--accent2);text-align:center}
+.formula-box .result{color:var(--text-bright);font-weight:600;margin-top:6px}
+
+/* INSIGHT BANNER */
+.insight-banner{margin:32px 0;padding:24px 32px;border-radius:var(--radius);text-align:center}
+.insight-banner.info{background:linear-gradient(135deg,rgba(88,166,255,.08),rgba(188,140,255,.08));border:1px solid rgba(88,166,255,.2)}
+.insight-banner.warn{background:linear-gradient(135deg,rgba(248,81,73,.08),rgba(240,136,62,.08));border:1px solid rgba(248,81,73,.2)}
+.insight-banner.good{background:linear-gradient(135deg,rgba(63,185,80,.08),rgba(61,219,217,.08));border:1px solid rgba(63,185,80,.2)}
+.insight-banner h3{font-family:'Fraunces',serif;font-weight:600;color:var(--text-bright);margin-bottom:8px;font-size:1.2rem}
+.insight-banner p{color:var(--text);font-size:.95rem;max-width:750px;margin:0 auto}
+
+/* PARAM TABLE */
+.param-table{width:100%;border-collapse:collapse;margin:16px 0;font-size:.88rem;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.param-table th{padding:12px 16px;text-align:left;background:var(--bg3);font-family:'Source Code Pro',monospace;color:var(--accent2);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)}
+.param-table td{padding:12px 16px;border-bottom:1px solid rgba(48,54,61,.5);vertical-align:top}
+.param-table tr:last-child td{border-bottom:none}
+.param-table code{font-family:'Source Code Pro',monospace;font-size:.82rem;color:var(--accent2);background:var(--bg3);padding:2px 6px;border-radius:4px}
+
+/* ITERATION CARDS */
+.iter-card{margin-bottom:32px;padding:0;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;position:relative}
+.iter-header{padding:20px 28px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;cursor:pointer;user-select:none;transition:background .2s}
+.iter-header:hover{background:var(--bg3)}
+.iter-num{font-family:'Fraunces',serif;font-weight:800;font-size:1.8rem;width:52px;height:52px;display:flex;align-items:center;justify-content:center;border-radius:12px;flex-shrink:0}
+.iter-info{flex:1;min-width:200px}
+.iter-info h3{font-family:'Fraunces',serif;font-weight:600;font-size:1.15rem;color:var(--text-bright);margin-bottom:2px}
+.iter-info .strategy{font-family:'Source Code Pro',monospace;font-size:.78rem;padding:3px 10px;border-radius:6px;display:inline-block}
+.iter-arrow{font-size:1.2rem;color:var(--text-dim);transition:transform .3s;flex-shrink:0}
+.iter-card.open .iter-arrow{transform:rotate(180deg)}
+.iter-body{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.iter-card.open .iter-body{max-height:3000px}
+.iter-content{padding:0 28px 28px}
+
+/* Change table */
+.change-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.85rem}
+.change-table th{padding:10px 12px;text-align:left;background:var(--bg3);font-family:'Source Code Pro',monospace;color:var(--accent2);font-size:.75rem;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.change-table td{padding:10px 12px;border-bottom:1px solid rgba(48,54,61,.4);font-size:.85rem}
+.change-table tr:last-child td{border-bottom:none}
+.val-old{color:var(--text-dim);text-decoration:line-through;font-family:'Source Code Pro',monospace;font-size:.82rem}
+.val-new{color:var(--green);font-weight:600;font-family:'Source Code Pro',monospace;font-size:.82rem}
+.val-same{color:var(--text-dim);font-family:'Source Code Pro',monospace;font-size:.82rem}
+.rationale{font-size:.88rem;color:var(--text-dim);margin-top:12px;padding:12px 16px;background:var(--bg);border-radius:8px;border-left:3px solid var(--accent)}
+.rationale strong{color:var(--text-bright)}
+.expect{font-size:.88rem;margin-top:12px;padding:12px 16px;border-radius:8px}
+.expect.good{background:var(--green-bg);border:1px solid rgba(63,185,80,.2);color:var(--green)}
+.expect.warn{background:var(--yellow-bg);border:1px solid rgba(210,153,34,.2);color:var(--yellow)}
+.decision{font-size:.88rem;margin-top:12px;padding:12px 16px;background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.15);border-radius:8px;color:var(--text)}
+.decision strong{color:var(--accent)}
+
+/* Category colors */
+.cat-baseline{background:var(--bg3);color:var(--text-bright)}
+.cat-lr{background:rgba(188,140,255,.12);color:var(--purple)}
+.cat-lora{background:rgba(61,219,217,.12);color:var(--cyan)}
+.cat-reg{background:rgba(240,136,62,.12);color:var(--orange)}
+.cat-arch{background:rgba(247,120,186,.12);color:var(--pink)}
+.cat-final{background:var(--green-bg);color:var(--green)}
+.cat-data{background:rgba(210,153,34,.12);color:var(--yellow)}
+
+/* Phase markers */
+.phase-bar{padding:16px 28px;margin:32px 0 0;display:flex;align-items:center;gap:12px;border-radius:var(--radius);border:1px solid var(--border)}
+.phase-bar .phase-num{font-family:'Fraunces',serif;font-weight:800;font-size:1.3rem;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px;flex-shrink:0}
+.phase-bar h3{font-family:'Fraunces',serif;font-weight:600;color:var(--text-bright);font-size:1.1rem}
+.phase-bar p{font-size:.85rem;color:var(--text-dim)}
+
+/* Code block */
+.code-block{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px 20px;font-family:'Source Code Pro',monospace;font-size:.82rem;color:var(--accent2);overflow-x:auto;margin:12px 0;line-height:1.8;white-space:pre-wrap}
+.code-block .comment{color:var(--text-dim)}
+.code-block .changed{color:var(--green);font-weight:600}
+.code-block .highlight{background:rgba(63,185,80,.1);display:inline;padding:1px 4px;border-radius:3px}
+
+/* Summary comparison */
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:20px 0}
+.summary-card{padding:16px;border-radius:10px;background:var(--card);border:1px solid var(--border);text-align:center}
+.summary-card .label{font-family:'Source Code Pro',monospace;font-size:.72rem;color:var(--text-dim);text-transform:uppercase;margin-bottom:4px}
+.summary-card .val{font-family:'Fraunces',serif;font-weight:700;font-size:1.5rem}
+
+/* QUIZ */
+.game-section{padding:60px 0;border-top:1px solid var(--border)}
+.game-section h2{font-family:'Fraunces',serif;font-weight:800;font-size:2rem;color:var(--text-bright);text-align:center;margin-bottom:12px}
+.game-section .desc{text-align:center;color:var(--text-dim);margin-bottom:32px}
+.quiz-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;max-width:750px;margin:0 auto}
+.quiz-q{font-size:1.05rem;color:var(--text-bright);margin-bottom:20px;font-family:'Fraunces',serif;line-height:1.6}
+.quiz-options{display:flex;flex-direction:column;gap:10px}
+.quiz-opt{padding:14px 20px;border-radius:10px;background:var(--bg);border:2px solid var(--border);cursor:pointer;transition:all .2s;font-size:.93rem;color:var(--text)}
+.quiz-opt:hover{border-color:var(--accent);background:var(--bg3)}
+.quiz-opt.correct{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.quiz-opt.incorrect{border-color:var(--red);background:var(--red-bg);color:var(--red)}
+.quiz-nav{display:flex;justify-content:space-between;align-items:center;margin-top:24px}
+.quiz-btn{padding:10px 24px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-weight:600;font-size:.95rem;cursor:pointer;transition:opacity .2s}
+.quiz-btn:hover{opacity:.85}
+.quiz-btn:disabled{opacity:.4;cursor:not-allowed}
+.quiz-progress{font-family:'Source Code Pro',monospace;font-size:.85rem;color:var(--text-dim)}
+.quiz-feedback{margin-top:16px;padding:14px 18px;border-radius:8px;font-size:.93rem;display:none;line-height:1.6}
+.quiz-feedback.show{display:block}
+.quiz-feedback.right{background:var(--green-bg);color:var(--green);border:1px solid rgba(63,185,80,.3)}
+.quiz-feedback.wrong{background:var(--red-bg);color:var(--red);border:1px solid rgba(248,81,73,.3)}
+
+.toc{position:fixed;right:24px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px;z-index:100}
+@media(max-width:900px){.toc{display:none}}
+.toc a{width:10px;height:10px;border-radius:50%;background:var(--border);display:block;transition:all .3s}
+.toc a:hover,.toc a.active{background:var(--accent);transform:scale(1.4)}
+footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:.85rem}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{opacity:0;animation:fadeUp .6s ease forwards}
+.delay-1{animation-delay:.1s}.delay-2{animation-delay:.2s}
+</style>
+</head>
+<body>
+
+<nav class="toc" id="toc"></nav>
+
+<!-- =================== HERO =================== -->
+<section class="hero" id="s-hero">
+<div class="container">
+  <h1 class="fade-in">10 Iterations to the <span>Best Model</span></h1>
+  <p class="subtitle fade-in delay-1">A systematic hyperparameter tuning plan for your LoRA-based encoder SFT on phayathaibert, extracted directly from your training code</p>
+  <div class="tag fade-in delay-2">phayathaibert + LoRA &middot; ~285 samples &middot; 10 intents &middot; sequence classification</div>
+</div>
+</section>
+
+<!-- =================== YOUR CURRENT CONFIG =================== -->
+<section class="section" id="s-baseline">
+<div class="container">
+  <h2 class="section-title">Your Current Configuration (Baseline)</h2>
+  <p class="section-desc">These are the exact hyperparameters extracted from your training script. This is <strong>Iteration 0</strong> &mdash; the starting point everything else is measured against.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+    <div class="example-box" style="margin:0">
+      <h4 style="color:var(--purple)">LoRA Configuration</h4>
+      <table class="param-table" style="margin:0">
+        <tbody>
+          <tr><td>LoRA Rank (<code>r</code>)</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">16</td></tr>
+          <tr><td>LoRA Alpha</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">32 <span style="color:var(--text-dim)">(2 &times; r)</span></td></tr>
+          <tr><td>LoRA Dropout</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">0.05</td></tr>
+          <tr><td>Target Modules</td><td><code>query</code>, <code>value</code></td></tr>
+          <tr><td>Modules to Save</td><td><code>classifier</code></td></tr>
+          <tr><td>Bias</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">none</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="example-box" style="margin:0">
+      <h4 style="color:var(--orange)">Training Arguments</h4>
+      <table class="param-table" style="margin:0">
+        <tbody>
+          <tr><td>Learning Rate</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">2e-4</td></tr>
+          <tr><td>Batch Size</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">16</td></tr>
+          <tr><td>Grad Accumulation</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">1</td></tr>
+          <tr><td>Epochs</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">5</td></tr>
+          <tr><td>LR Scheduler</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">cosine</td></tr>
+          <tr><td>Warmup Ratio</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">0.1</td></tr>
+          <tr><td>Max Grad Norm</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">0.3</td></tr>
+          <tr><td>FP16</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">True</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="example-box" style="margin-top:24px">
+    <h4 style="color:var(--accent)">Data Setup</h4>
+    <table class="param-table" style="margin:0">
+      <tbody>
+        <tr><td>Total Samples</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">~285</td></tr>
+        <tr><td>Train / Val / Test Split</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">80% / 10% / 10% <span style="color:var(--text-dim)">(~228 / ~28 / ~29)</span></td></tr>
+        <tr><td>Max Sequence Length</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">512</td></tr>
+        <tr><td>Steps per Epoch</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">ceil(228/16) = ~15</td></tr>
+        <tr><td>Total Steps</td><td style="font-family:'Source Code Pro',monospace;color:var(--text-bright)">15 &times; 5 = ~75</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="insight-banner warn" style="margin-top:24px">
+    <h3>Baseline Results (from your eval run)</h3>
+    <p style="text-align:left;line-height:1.8">
+      Accuracy: <strong>0.74</strong> &nbsp;|&nbsp; Precision: <strong>0.64</strong> &nbsp;|&nbsp; Recall: <strong>0.74</strong> &nbsp;|&nbsp; F1: <strong>0.68</strong><br>
+      Overfitting detected at epoch 5. Best checkpoint was epoch 4.<br>
+      <strong>Goal: systematically improve these numbers across 10 iterations.</strong>
+    </p>
+  </div>
+</div>
+</section>
+
+<!-- =================== THE STRATEGY =================== -->
+<section class="section" id="s-strategy">
+<div class="container">
+  <h2 class="section-title">The Tuning Strategy</h2>
+  <p class="section-desc">We tune in <strong>4 phases</strong>, changing <strong>one variable at a time</strong> (or a tightly coupled pair). Each iteration builds on the best result from the previous one.</p>
+
+  <div class="example-box">
+    <h4>The Golden Rule of Hyperparameter Tuning</h4>
+    <p style="font-size:.95rem;line-height:1.8"><strong style="color:var(--text-bright)">Change one thing at a time.</strong> If you change learning rate AND LoRA rank simultaneously and the model improves, you don't know which change helped. Systematic tuning = isolate variables, measure impact, keep what works.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:24px">
+    <div style="padding:20px;border-radius:var(--radius);background:rgba(188,140,255,.06);border:1px solid rgba(188,140,255,.15)">
+      <div style="font-family:'Fraunces',serif;font-weight:700;color:var(--purple);margin-bottom:4px">Phase 1: Learning Rate</div>
+      <div style="font-size:.85rem;color:var(--text-dim)">Iterations 1-3</div>
+      <div style="font-size:.88rem;color:var(--text);margin-top:6px">The single most impactful hyperparameter. Sweep 3 values to find the sweet spot.</div>
+    </div>
+    <div style="padding:20px;border-radius:var(--radius);background:rgba(61,219,217,.06);border:1px solid rgba(61,219,217,.15)">
+      <div style="font-family:'Fraunces',serif;font-weight:700;color:var(--cyan);margin-bottom:4px">Phase 2: LoRA Architecture</div>
+      <div style="font-size:.85rem;color:var(--text-dim)">Iterations 4-6</div>
+      <div style="font-size:.88rem;color:var(--text);margin-top:6px">How many parameters to adapt? Which layers? Rank, alpha, and target modules.</div>
+    </div>
+    <div style="padding:20px;border-radius:var(--radius);background:rgba(240,136,62,.06);border:1px solid rgba(240,136,62,.15)">
+      <div style="font-family:'Fraunces',serif;font-weight:700;color:var(--orange);margin-bottom:4px">Phase 3: Regularization</div>
+      <div style="font-size:.85rem;color:var(--text-dim)">Iterations 7-8</div>
+      <div style="font-size:.88rem;color:var(--text);margin-top:6px">Fight overfitting: dropout, weight decay, epochs. Critical with only ~228 training samples.</div>
+    </div>
+    <div style="padding:20px;border-radius:var(--radius);background:rgba(63,185,80,.06);border:1px solid rgba(63,185,80,.15)">
+      <div style="font-family:'Fraunces',serif;font-weight:700;color:var(--green);margin-bottom:4px">Phase 4: Polish &amp; Combine</div>
+      <div style="font-size:.85rem;color:var(--text-dim)">Iterations 9-10</div>
+      <div style="font-size:.88rem;color:var(--text);margin-top:6px">Combine winners. Try batch size &amp; scheduler tweaks. Final best model.</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- =================== THE 10 ITERATIONS =================== -->
+<section class="section" id="s-iterations">
+<div class="container">
+  <h2 class="section-title">The 10 Iterations</h2>
+  <p class="section-desc">Click each iteration to expand the full details: what to change, the exact code, why, and what to look for.</p>
+
+  <!-- PHASE 1 -->
+  <div class="phase-bar" style="background:rgba(188,140,255,.06);border-color:rgba(188,140,255,.15)">
+    <div class="phase-num" style="background:var(--purple-bg);color:var(--purple)">P1</div>
+    <div>
+      <h3 style="color:var(--purple)">Phase 1: Learning Rate Sweep</h3>
+      <p>The learning rate has the largest impact on training. We try 3 values: lower, higher, and much lower.</p>
+    </div>
+  </div>
+
+  <!-- ITER 1 -->
+  <div class="iter-card" id="iter1">
+    <div class="iter-header" onclick="toggleIter('iter1')">
+      <div class="iter-num" style="background:var(--purple-bg);color:var(--purple)">1</div>
+      <div class="iter-info">
+        <h3>Lower the Learning Rate</h3>
+        <span class="strategy cat-lr">LEARNING RATE</span>
+      </div>
+      <span class="iter-arrow">&#9660;</span>
+    </div>
+    <div class="iter-body"><div class="iter-content">
+      <table class="change-table">
+        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>learning_rate</code></td>
+            <td class="val-old">2e-4</td>
+            <td class="val-new">5e-5</td>
+            <td style="font-size:.82rem">Baseline overfit at epoch 5. A lower LR makes smaller updates, potentially learning more carefully without memorizing.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="rationale"><strong>Why 5e-5?</strong> This is 4x lower than the baseline. The standard recommendation for BERT fine-tuning is 2e-5 to 5e-5. Since we're using LoRA (which adapts fewer parameters), we can afford a slightly higher LR than full fine-tuning, hence 5e-5 rather than 2e-5.</div>
+      <div class="code-block"><span class="comment"># Change only this line:</span>
+learning_rate=<span class="changed">5e-5</span>,  <span class="comment"># was 2e-4</span></div>
+      <div class="expect good">Expected: Less overfitting, possibly similar or slightly lower peak accuracy but better generalization. Eval loss should not rise at epoch 5.</div>
+      <div class="decision"><strong>Decision rule:</strong> If eval accuracy &ge; 0.74 AND no overfitting &rarr; this LR is better. If eval accuracy drops below 0.70 &rarr; LR is too low, skip to Iteration 2.</div>
+    </div></div>
+  </div>
+
+  <!-- ITER 2 -->
+  <div class="iter-card" id="iter2">
+    <div class="iter-header" onclick="toggleIter('iter2')">
+      <div class="iter-num" style="background:var(--purple-bg);color:var(--purple)">2</div>
+      <div class="iter-info">
+        <h3>Try a Higher Learning Rate</h3>
+        <span class="strategy cat-lr">LEARNING RATE</span>
+      </div>
+      <span class="iter-arrow">&#9660;</span>
+    </div>
+    <div class="iter-body"><div class="iter-content">
+      <table class="change-table">
+        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>learning_rate</code></td>
+            <td class="val-old">2e-4</td>
+            <td class="val-new">5e-4</td>
+            <td style="font-size:.82rem">LoRA adapters have far fewer parameters (~0.5% of the model). Some literature suggests higher LRs work well for LoRA since there's less risk of catastrophic forgetting.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="rationale"><strong>Why 5e-4?</strong> This is 2.5x higher than baseline. LoRA fine-tuning papers often use LRs in the 1e-4 to 1e-3 range. If the model converges faster without exploding, this could be a strong candidate.</div>
+      <div class="code-block"><span class="comment"># Change only this line:</span>
+learning_rate=<span class="changed">5e-4</span>,  <span class="comment"># was 2e-4</span></div>
+      <div class="expect warn">Expected: Faster convergence (peak accuracy reached earlier), but higher risk of instability. Watch grad_norm closely &mdash; spikes above 10 mean the LR is too aggressive.</div>
+      <div class="decision"><strong>Decision rule:</strong> If eval accuracy > baseline AND grad_norm stays stable &rarr; keep. If loss is erratic or grad_norm spikes &rarr; too aggressive, discard.</div>
+    </div></div>
+  </div>
+
+  <!-- ITER 3 -->
+  <div class="iter-card" id="iter3">
+    <div class="iter-header" onclick="toggleIter('iter3')">
+      <div class="iter-num" style="background:var(--purple-bg);color:var(--purple)">3</div>
+      <div class="iter-info">
+        <h3>The Conservative Learning Rate</h3>
+        <span class="strategy cat-lr">LEARNING RATE</span>
+      </div>
+      <span class="iter-arrow">&#9660;</span>
+    </div>
+    <div class="iter-body"><div class="iter-content">
+      <table class="change-table">
+        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>learning_rate</code></td>
+            <td class="val-old">2e-4</td>
+            <td class="val-new">1e-4</td>
+            <td style="font-size:.82rem">The midpoint between our low (5e-5) and baseline (2e-4). If Iter 1 underfit and Iter 2 overfit, this might be the Goldilocks zone.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="rationale"><strong>Why 1e-4?</strong> Half of the baseline. Often the best LR is found by halving or doubling. This is the "safe" experiment &mdash; close enough to baseline to likely work, but different enough to potentially improve.</div>
+      <div class="code-block"><span class="comment"># Change only this line:</span>
+learning_rate=<span class="changed">1e-4</span>,  <span class="comment"># was 2e-4</span></div>
+      <div class="expect good">Expected: A good balance between Iter 1 and baseline. Likely the winner of Phase 1.</div>
+      <div class="decision"><strong>Decision rule:</strong> Compare Iters 1, 2, 3 against baseline. Pick the LR with the <strong>highest eval accuracy at the best epoch</strong> AND no overfitting. This LR carries forward to Phase 2.</div>
+    </div></div>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="phase-bar" style="background:rgba(61,219,217,.06);border-color:rgba(61,219,217,.15)">
+    <div class="phase-num" style="background:var(--cyan-bg);color:var(--cyan)">P2</div>
+    <div>
+      <h3 style="color:var(--cyan)">Phase 2: LoRA Architecture</h3>
+      <p>Using the best LR from Phase 1, now tune how much of the model to adapt.</p>
+    </div>
+  </div>
+
+  <!-- ITER 4 -->
+  <div class="iter-card" id="iter4">
+    <div class="iter-header" onclick="toggleIter('iter4')">
+      <div class="iter-num" style="background:var(--cyan-bg);color:var(--cyan)">4</div>
+      <div class="iter-info">
+        <h3>Lower LoRA Rank (r=8)</h3>
+        <span class="strategy cat-lora">LORA ARCHITECTURE</span>
+      </div>
+      <span class="iter-arrow">&#9660;</span>
+    </div>
+    <div class="iter-body"><div class="iter-content">
+      <table class="change-table">
+        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>r</code></td>
+            <td class="val-old">16</td>
+            <td class="val-new">8</td>
+            <td style="font-size:.82rem">Fewer trainable parameters = less capacity to memorize. With only 228 training samples, a smaller rank may generalize better.</td>
+          </tr>
+          <tr>
+            <td><code>lora_alpha</code></td>
+            <td class="val-old">32</td>
+            <td class="val-new">16</td>
+            <td style="font-size:.82rem">Keep the alpha/r ratio = 2 (same effective scaling).</td>
+          </tr>
+          <tr>
+            <td><code>learning_rate</code></td>
+            <td class="val-old">2e-4</td>
+            <td class="val-new"><em>Best from Phase 1</em></td>
+            <td style="font-size:.82rem">Carry forward the winner.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="rationale"><strong>Why r=8?</strong> Your task has 10 classes with relatively clear intent boundaries. r=16 gives the model 16-dimensional adaptation matrices &mdash; that might be more capacity than needed for this task. r=8 halves the trainable parameters, which is a natural regularizer against overfitting.</div>
+      <div class="code-block">peft_config = LoraConfig(
+    task_type=TaskType.SEQ_CLS,
+    r=<span class="changed">8</span>,             <span class="comment"># was 16</span>
+    lora_alpha=<span class="changed">16</span>,      <span class="comment"># was 32 (keep ratio 2x)</span>
+    lora_dropout=0.05,
+    bias="none",
+    target_modules=["query", "value"],
+    modules_to_save=["classifier"]
+)</div>
+      <div class="expect good">Expected: Fewer trainable params, less overfitting, possibly comparable accuracy if the task doesn't need high-rank adaptation.</div>
+      <div class="decision"><strong>Decision rule:</strong> If accuracy is within 1-2% of r=16 &rarr; prefer r=8 (simpler, less overfitting). If accuracy drops >3% &rarr; the task needs more capacity.</div>
+    </div></div>
+  </div>
+
+  <!-- ITER 5 -->
+  <div class="iter-card" id="iter5">
+    <div class="iter-header" onclick="toggleIter('iter5')">
+      <div class="iter-num" style="background:var(--cyan-bg);color:var(--cyan)">5</div>
+      <div class="iter-info">
+        <h3>Higher LoRA Rank (r=32)</h3>
+        <span class="strategy cat-lora">LORA ARCHITECTURE</span>
+      </div>
+      <span class="iter-arrow">&#9660;</span>
+    </div>
+    <div class="iter-body"><div class="iter-content">
+      <table class="change-table">
+        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>r</code></td>
+            <td class="val-old">16</td>
+            <td class="val-new">32</td>
+            <td style="font-size:.82rem">More capacity for the model to learn intent-specific features. Worth testing to establish the upper bound.</td>
+          </tr>
+          <tr>
+            <td><code>lora_alpha</code></td>
+            <td class="val-old">32</td>
+            <td class="val-new">64</td>
+            <td style="font-size:.82rem">Keep alpha/r ratio = 2.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="rationale"><strong>Why r=32?</strong> Maybe the model struggles with similar intents (POSTPAID vs PREPAID) and needs more adaptation capacity. If r=32 improves accuracy significantly, it means the task is complex enough to warrant it. But beware: with 228 samples and more parameters, overfitting risk increases.</div>
+      <div class="code-block">r=<span class="changed">32</span>,             <span class="comment"># was 16</span>
+lora_alpha=<span class="changed">64</span>,      <span class="comment"># was 32 (keep ratio 2x)</span></div>
+      <div class="expect warn">Expected: Potentially higher peak accuracy, but higher overfitting risk. Watch the train-eval loss gap carefully.</div>
+      <div class="decision"><strong>Decision rule:</strong> Compare r=8, r=16, r=32. Pick the rank with the best eval accuracy AND smallest train-eval loss gap at the best epoch.</div>
+    </div></div>
+  </div>
+
+  <!-- ITER 6 -->
+  <div class="iter-card" id="iter6">
+    <div class="iter-header" onclick="toggleIter('iter6')">
+      <div class="iter-num" style="background:var(--cyan-bg);color:var(--cyan)">6</div>
+      <div class="iter-info">
+        <h3>Expand Target Modules</h3>
+        <span class="strategy cat-lora">LORA ARCHITECTURE</span>
+      </div>
+      <span class="iter-arrow">&#9660;</span>
+    </div>
+    <div class="iter-body"><div class="iter-content">
+      <table class="change-table">
+        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>target_modules</code></td>
+            <td class="val-old">["query", "value"]</td>
+            <td class="val-new">["query", "key", "value", "dense"]</td>
+            <td style="font-size:.82rem">Adapt all attention projections + the feed-forward dense layer. More of the transformer is fine-tuned.</td>
+          </tr>
+          <tr>
+            <td><code>r</code> &amp; <code>lora_alpha</code></td>
+            <td class="val-old">varies</td>
+            <td class="val-new"><em>Best from Iters 4-5</em></td>
+            <td style="font-size:.82rem">Carry forward the winner.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="rationale"><strong>Why add key and dense?</strong> Currently only query and value get adapted. Adding key means all three attention matrices participate in fine-tuning. Adding dense adapts the FFN layer too. This gives the model more "levers" to differentiate intents. BERT's key projection captures what to attend to &mdash; important for distinguishing "postpaid" vs "prepaid" signals in a sentence.</div>
+      <div class="code-block">target_modules=[<span class="changed">"query", "key", "value", "dense"</span>],  <span class="comment"># was ["query", "value"]</span></div>
+      <div class="expect good">Expected: More expressive adaptation, potentially better at subtle intent distinctions. Trainable param count roughly doubles.</div>
+      <div class="decision"><strong>Decision rule:</strong> If accuracy improves by &ge;2% over the best Iter 4-5 result &rarr; keep expanded modules. Otherwise, the added complexity isn't worth it.</div>
+    </div></div>
+  </div>
+
+  <!-- PHASE 3 -->
+  <div class="phase-bar" style="background:rgba(240,136,62,.06);border-color:rgba(240,136,62,.15)">
+    <div class="phase-num" style="background:var(--orange-bg);color:var(--orange)">P3</div>
+    <div>
+      <h3 style="color:var(--orange)">Phase 3: Regularization &amp; Overfitting Control</h3>
+      <p>Using the best LR + LoRA config, now fight the overfitting demon that plagued your baseline.</p>
+    </div>
+  </div>
+
+  <!-- ITER 7 -->
+  <div class="iter-card" id="iter7">
+    <div class="iter-header" onclick="toggleIter('iter7')">
+      <div class="iter-num" style="background:var(--orange-bg);color:var(--orange)">7</div>
+      <div class="iter-info">
+        <h3>Increase LoRA Dropout + Add Weight Decay</h3>
+        <span class="strategy cat-reg">REGULARIZATION</span>
+      </div>
+      <span class="iter-arrow">&#9660;</span>
+    </div>
+    <div class="iter-body"><div class="iter-content">
+      <table class="change-table">
+        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>lora_dropout</code></td>
+            <td class="val-old">0.05</td>
+            <td class="val-new">0.1</td>
+            <td style="font-size:.82rem">Double the dropout. Forces the model to not rely on any single feature, reducing memorization.</td>
+          </tr>
+          <tr>
+            <td><code>weight_decay</code></td>
+            <td class="val-old">0 <span style="color:var(--text-dim)">(default)</span></td>
+            <td class="val-new">0.01</td>
+            <td style="font-size:.82rem">Penalizes large weight values, preventing the model from "over-committing" to specific patterns.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="rationale"><strong>Why both?</strong> Dropout and weight decay attack overfitting from different angles. Dropout randomly "turns off" neurons during training, forcing redundancy. Weight decay keeps weights small, preventing the model from fitting noise. With only 228 samples, both are essential.</div>
+      <div class="code-block"><span class="comment"># LoRA config:</span>
+lora_dropout=<span class="changed">0.1</span>,    <span class="comment"># was 0.05</span>
+
+<span class="comment"># TrainingArguments:</span>
+weight_decay=<span class="changed">0.01</span>,   <span class="comment"># was 0 (default)</span></div>
+      <div class="expect good">Expected: Less overfitting. The train-eval loss gap should shrink. Accuracy might dip slightly at early epochs but should hold or improve at later epochs.</div>
+      <div class="decision"><strong>Decision rule:</strong> If the overfitting signal (eval loss rising) disappears or is delayed &rarr; keep these changes. If accuracy drops >5% &rarr; too much regularization.</div>
+    </div></div>
+  </div>
+
+  <!-- ITER 8 -->
+  <div class="iter-card" id="iter8">
+    <div class="iter-header" onclick="toggleIter('iter8')">
+      <div class="iter-num" style="background:var(--orange-bg);color:var(--orange)">8</div>
+      <div class="iter-info">
+        <h3>Reduce Epochs + Add Early Stopping</h3>
+        <span class="strategy cat-reg">REGULARIZATION</span>
+      </div>
+      <span class="iter-arrow">&#9660;</span>
+    </div>
+    <div class="iter-body"><div class="iter-content">
+      <table class="change-table">
+        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>num_train_epochs</code></td>
+            <td class="val-old">5</td>
+            <td class="val-new">10</td>
+            <td style="font-size:.82rem">Increase epochs BUT add early stopping. Let the model train longer only if it's still improving.</td>
+          </tr>
+          <tr>
+            <td><code>EarlyStoppingCallback</code></td>
+            <td class="val-old"><span style="color:var(--text-dim)">none</span></td>
+            <td class="val-new">patience=2</td>
+            <td style="font-size:.82rem">Stop if eval accuracy doesn't improve for 2 consecutive evaluations. Automatic overfitting prevention.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="rationale"><strong>Why 10 epochs with early stopping?</strong> With regularization from Iter 7, the model may need more epochs to converge. Setting 10 as the max but letting early stopping decide when to actually stop gives the best of both worlds: enough room to learn, automatic protection against overfitting.</div>
+      <div class="code-block"><span class="comment"># TrainingArguments:</span>
+num_train_epochs=<span class="changed">10</span>,              <span class="comment"># was 5</span>
+load_best_model_at_end=True,
+metric_for_best_model="accuracy",
+
+<span class="comment"># Add callback:</span>
+<span class="changed">from transformers import EarlyStoppingCallback</span>
+callbacks=[lineage_callback, <span class="changed">EarlyStoppingCallback(early_stopping_patience=2)</span>]</div>
+      <div class="expect good">Expected: Training auto-stops at the optimal epoch (likely epoch 4-7 with regularization). No more manual guessing.</div>
+      <div class="decision"><strong>Decision rule:</strong> Note which epoch early stopping triggers. This tells you the natural convergence point for your dataset size.</div>
+    </div></div>
+  </div>
+
+  <!-- PHASE 4 -->
+  <div class="phase-bar" style="background:rgba(63,185,80,.06);border-color:rgba(63,185,80,.15)">
+    <div class="phase-num" style="background:var(--green-bg);color:var(--green)">P4</div>
+    <div>
+      <h3 style="color:var(--green)">Phase 4: Polish &amp; Final Combination</h3>
+      <p>Combine all winners and try final tweaks to squeeze out the last percentage points.</p>
+    </div>
+  </div>
+
+  <!-- ITER 9 -->
+  <div class="iter-card" id="iter9">
+    <div class="iter-header" onclick="toggleIter('iter9')">
+      <div class="iter-num" style="background:var(--green-bg);color:var(--green)">9</div>
+      <div class="iter-info">
+        <h3>Effective Batch Size + Warmup Tuning</h3>
+        <span class="strategy cat-final">POLISH</span>
+      </div>
+      <span class="iter-arrow">&#9660;</span>
+    </div>
+    <div class="iter-body"><div class="iter-content">
+      <table class="change-table">
+        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>per_device_train_batch_size</code></td>
+            <td class="val-old">16</td>
+            <td class="val-new">8</td>
+            <td style="font-size:.82rem">Smaller batch = more steps per epoch = more weight updates = model sees data in more diverse combinations.</td>
+          </tr>
+          <tr>
+            <td><code>gradient_accumulation_steps</code></td>
+            <td class="val-old">1</td>
+            <td class="val-new">2</td>
+            <td style="font-size:.82rem">Keeps the effective batch size at 16 (8&times;2) for gradient stability, but doubles the steps. Best of both worlds.</td>
+          </tr>
+          <tr>
+            <td><code>warmup_ratio</code></td>
+            <td class="val-old">0.1</td>
+            <td class="val-new">0.06</td>
+            <td style="font-size:.82rem">With more total steps, 10% warmup may be excessive. 6% is often sufficient for short training runs.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="rationale"><strong>Why change batch size this way?</strong> With 228 samples / batch_size=16, you only get ~15 steps per epoch. That's very few weight updates per pass through the data. By using batch_size=8 with grad_accum=2, the effective batch stays at 16 BUT you get ~30 steps per epoch, meaning the model logs metrics more frequently and the LR scheduler has finer control.</div>
+      <div class="code-block">per_device_train_batch_size=<span class="changed">8</span>,     <span class="comment"># was 16</span>
+gradient_accumulation_steps=<span class="changed">2</span>,    <span class="comment"># was 1</span>
+<span class="comment"># effective batch = 8 * 2 = 16 (unchanged)</span>
+warmup_ratio=<span class="changed">0.06</span>,                 <span class="comment"># was 0.1</span></div>
+      <div class="expect good">Expected: Smoother training curves, more granular LR scheduling. May slightly improve or match the best so far.</div>
+      <div class="decision"><strong>Decision rule:</strong> If training curves are smoother and accuracy &ge; best so far &rarr; keep. This is a polish step, not a breakthrough.</div>
+    </div></div>
+  </div>
+
+  <!-- ITER 10 -->
+  <div class="iter-card" id="iter10">
+    <div class="iter-header" onclick="toggleIter('iter10')">
+      <div class="iter-num" style="background:var(--green-bg);color:var(--green)">10</div>
+      <div class="iter-info">
+        <h3>The Final Best-of-Everything Run</h3>
+        <span class="strategy cat-final">BEST COMBINATION</span>
+      </div>
+      <span class="iter-arrow">&#9660;</span>
+    </div>
+    <div class="iter-body"><div class="iter-content">
+      <p style="font-size:.95rem;margin-bottom:16px;color:var(--text-bright)">Combine all the winners from the previous 9 iterations into a single final run. This is your production candidate.</p>
+      <table class="change-table">
+        <thead><tr><th>Parameter</th><th>Baseline</th><th>Final Run</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td><code>learning_rate</code></td><td class="val-old">2e-4</td><td class="val-new"><em>Best from Iters 1-3</em></td><td style="font-size:.82rem">Phase 1 winner</td></tr>
+          <tr><td><code>r</code></td><td class="val-old">16</td><td class="val-new"><em>Best from Iters 4-5</em></td><td style="font-size:.82rem">Phase 2 winner</td></tr>
+          <tr><td><code>lora_alpha</code></td><td class="val-old">32</td><td class="val-new"><em>2 &times; best r</em></td><td style="font-size:.82rem">Keep ratio</td></tr>
+          <tr><td><code>target_modules</code></td><td class="val-old">q, v</td><td class="val-new"><em>Best from Iter 6</em></td><td style="font-size:.82rem">Phase 2 winner</td></tr>
+          <tr><td><code>lora_dropout</code></td><td class="val-old">0.05</td><td class="val-new"><em>Best from Iter 7</em></td><td style="font-size:.82rem">Phase 3 winner</td></tr>
+          <tr><td><code>weight_decay</code></td><td class="val-old">0</td><td class="val-new"><em>Best from Iter 7</em></td><td style="font-size:.82rem">Phase 3 winner</td></tr>
+          <tr><td><code>num_train_epochs</code></td><td class="val-old">5</td><td class="val-new">10 + early stopping</td><td style="font-size:.82rem">Phase 3 (Iter 8)</td></tr>
+          <tr><td><code>batch / grad_accum</code></td><td class="val-old">16 / 1</td><td class="val-new"><em>Best from Iter 9</em></td><td style="font-size:.82rem">Phase 4 winner</td></tr>
+        </tbody>
+      </table>
+      <div class="rationale"><strong>Why combine at the end?</strong> Each phase isolated one variable. Now we combine all winners. There's a small risk that winners from different phases conflict (e.g., lower LR + higher rank might need different training dynamics), but in practice, combining independently-validated winners almost always produces the best result.</div>
+      <div class="code-block"><span class="comment"># Example final config (values depend on Iters 1-9 results):</span>
+
+peft_config = LoraConfig(
+    task_type=TaskType.SEQ_CLS,
+    r=<span class="changed">8</span>,                                 <span class="comment"># or whatever won</span>
+    lora_alpha=<span class="changed">16</span>,
+    lora_dropout=<span class="changed">0.1</span>,
+    bias="none",
+    target_modules=<span class="changed">["query","key","value","dense"]</span>,
+    modules_to_save=["classifier"]
+)
+
+training_args = TrainingArguments(
+    learning_rate=<span class="changed">1e-4</span>,                <span class="comment"># or whatever won</span>
+    per_device_train_batch_size=<span class="changed">8</span>,
+    gradient_accumulation_steps=<span class="changed">2</span>,
+    num_train_epochs=<span class="changed">10</span>,
+    weight_decay=<span class="changed">0.01</span>,
+    warmup_ratio=<span class="changed">0.06</span>,
+    lr_scheduler_type="cosine",
+    eval_strategy="epoch",
+    save_strategy="epoch",
+    load_best_model_at_end=True,
+    metric_for_best_model="accuracy",
+    ...
+)
+
+callbacks=[lineage_callback, <span class="changed">EarlyStoppingCallback(early_stopping_patience=2)</span>]</div>
+      <div class="expect good">Expected: The best model. Target: eval accuracy &ge; 0.82+, F1 &ge; 0.75+, with no overfitting. If this doesn't beat all previous iterations, re-examine the Phase 1 LR choice.</div>
+      <div class="decision"><strong>Final decision:</strong> Run evaluation on the <strong>held-out test set</strong> (test_split.jsonl). This is the only time you touch the test set. If test accuracy &ge; eval accuracy &plusmn; 3% &rarr; the model generalizes well. Deploy this model.</div>
+    </div></div>
+  </div>
+
+</div>
+</section>
+
+<!-- =================== TRACKING SHEET =================== -->
+<section class="section" id="s-tracking">
+<div class="container">
+  <h2 class="section-title">Iteration Tracking Sheet</h2>
+  <p class="section-desc">Use this table to record results as you run each iteration. The interactive version lets you type in your results.</p>
+
+  <div style="overflow-x:auto">
+  <table class="param-table" id="tracking-table" style="font-size:.82rem">
+    <thead>
+      <tr>
+        <th>Iter</th>
+        <th>What Changed</th>
+        <th style="min-width:70px">LR</th>
+        <th>r</th>
+        <th>Targets</th>
+        <th>Dropout</th>
+        <th style="min-width:90px">Best Epoch</th>
+        <th style="min-width:90px">Eval Acc</th>
+        <th style="min-width:80px">Eval Loss</th>
+        <th style="min-width:80px">Overfit?</th>
+        <th style="min-width:60px">Keep?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="background:rgba(88,166,255,.04)">
+        <td style="font-weight:700;color:var(--accent)">0</td>
+        <td>Baseline</td>
+        <td>2e-4</td><td>16</td><td>q, v</td><td>0.05</td>
+        <td>4</td><td>0.74-0.80</td><td>~0.65</td><td style="color:var(--red)">Yes (E5)</td><td>&mdash;</td>
+      </tr>
+      <tr><td style="font-weight:700;color:var(--purple)">1</td><td>LR &darr;</td><td>5e-5</td><td>16</td><td>q, v</td><td>0.05</td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:40px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+      </tr>
+      <tr><td style="font-weight:700;color:var(--purple)">2</td><td>LR &uarr;</td><td>5e-4</td><td>16</td><td>q, v</td><td>0.05</td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:40px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+      </tr>
+      <tr><td style="font-weight:700;color:var(--purple)">3</td><td>LR mid</td><td>1e-4</td><td>16</td><td>q, v</td><td>0.05</td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:40px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+      </tr>
+      <tr><td style="font-weight:700;color:var(--cyan)">4</td><td>r &darr;</td><td><em>best</em></td><td>8</td><td>q, v</td><td>0.05</td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:40px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+      </tr>
+      <tr><td style="font-weight:700;color:var(--cyan)">5</td><td>r &uarr;</td><td><em>best</em></td><td>32</td><td>q, v</td><td>0.05</td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:40px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+      </tr>
+      <tr><td style="font-weight:700;color:var(--cyan)">6</td><td>modules</td><td><em>best</em></td><td><em>best</em></td><td>q,k,v,d</td><td>0.05</td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:40px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+      </tr>
+      <tr><td style="font-weight:700;color:var(--orange)">7</td><td>regularize</td><td><em>best</em></td><td><em>best</em></td><td><em>best</em></td><td>0.1</td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:40px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+      </tr>
+      <tr><td style="font-weight:700;color:var(--orange)">8</td><td>early stop</td><td><em>best</em></td><td><em>best</em></td><td><em>best</em></td><td><em>best</em></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:40px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+      </tr>
+      <tr><td style="font-weight:700;color:var(--green)">9</td><td>batch/warmup</td><td><em>best</em></td><td><em>best</em></td><td><em>best</em></td><td><em>best</em></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:40px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+      </tr>
+      <tr style="background:rgba(63,185,80,.06)"><td style="font-weight:700;color:var(--green)">10</td><td>FINAL</td><td><em>best</em></td><td><em>best</em></td><td><em>best</em></td><td><em>best</em></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+        <td><input type="text" style="width:40px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+</section>
+
+<!-- =================== QUIZ =================== -->
+<section class="game-section" id="s-quiz">
+<div class="container">
+  <h2>Test Your Understanding</h2>
+  <p class="desc">8 questions about hyperparameter tuning strategy and decisions</p>
+  <div class="quiz-card" id="quiz-card">
+    <div class="quiz-q" id="quiz-q"></div>
+    <div class="quiz-options" id="quiz-opts"></div>
+    <div class="quiz-feedback" id="quiz-fb"></div>
+    <div class="quiz-nav">
+      <span class="quiz-progress" id="quiz-prog"></span>
+      <button class="quiz-btn" id="quiz-next" onclick="nextQuestion()">Next</button>
+    </div>
+  </div>
+  <div id="quiz-result" style="display:none;text-align:center;margin-top:24px">
+    <div style="font-family:'Fraunces',serif;font-size:2rem;color:var(--text-bright)" id="quiz-score-text"></div>
+    <p id="quiz-grade" style="font-size:1.1rem;margin-top:8px"></p>
+    <button class="quiz-btn" style="margin-top:16px" onclick="startQuiz()">Try Again</button>
+  </div>
+</div>
+</section>
+
+<footer>
+  <div class="container">Built for learning &middot; phayathaibert LoRA SFT &middot; Hyperparameter Tuning Plan</div>
+</footer>
+
+<script>
+// Toggle iterations
+function toggleIter(id){document.getElementById(id).classList.toggle('open')}
+
+// Open all by default for first visit
+document.querySelectorAll('.iter-card').forEach(c => c.classList.add('open'));
+
+// QUIZ
+const questions = [
+  {
+    q: 'Why do we change the learning rate FIRST before touching other hyperparameters?',
+    opts: [
+      'Because it\'s the easiest to change in code',
+      'Learning rate has the single largest impact on training dynamics \u2014 all other tuning depends on finding the right LR first',
+      'It doesn\'t matter what order you tune in',
+      'Because the learning rate is always wrong by default'
+    ],
+    correct: 1,
+    explain: 'LR affects everything: convergence speed, stability, and overfitting. If the LR is wrong, other tuning (rank, dropout) can\'t compensate. Finding the right LR first gives you a stable foundation.'
+  },
+  {
+    q: 'Your baseline uses LoRA rank r=16 with alpha=32. Why do we keep the alpha/r ratio at 2 when we change r?',
+    opts: [
+      'It\'s just a convention with no real impact',
+      'The effective scaling of LoRA updates is alpha/r \u2014 changing r without adjusting alpha would change how aggressively the adapters modify the model',
+      'Alpha must always be exactly 32',
+      'Higher ratios cause GPU out-of-memory errors'
+    ],
+    correct: 1,
+    explain: 'The LoRA update is scaled by alpha/r. If you halve r to 8 but keep alpha=32, the ratio becomes 4 (2x stronger updates), which changes the effective learning dynamics. Keeping alpha=2*r maintains the same effective scaling.'
+  },
+  {
+    q: 'In Iteration 6, we expand target_modules from ["query","value"] to ["query","key","value","dense"]. What\'s the tradeoff?',
+    opts: [
+      'More modules = faster training, no downsides',
+      'More adapted modules = more expressive fine-tuning for subtle intent differences, but also more trainable parameters = higher overfitting risk',
+      'It only affects inference speed, not accuracy',
+      'Adding "dense" changes the model architecture entirely'
+    ],
+    correct: 1,
+    explain: 'Each target module gets its own LoRA adapter. More modules = more capacity to learn task-specific features (good for distinguishing POSTPAID vs PREPAID). But more trainable params also means more risk of overfitting on 228 samples.'
+  },
+  {
+    q: 'Why do we increase lora_dropout from 0.05 to 0.1 in Iteration 7?',
+    opts: [
+      'To make training faster',
+      'Higher dropout randomly disables more neurons during training, forcing the model to learn redundant representations \u2014 a defense against memorizing the small training set',
+      'Dropout has no effect on LoRA adapters',
+      'To reduce GPU memory usage'
+    ],
+    correct: 1,
+    explain: 'With only 228 training samples, the model easily memorizes specific patterns. Higher dropout forces it to learn more robust, generalizable features. 0.1 is a moderate increase \u2014 high enough to help, not so high that learning stalls.'
+  },
+  {
+    q: 'In Iteration 9, we change batch_size from 16 to 8 but set gradient_accumulation_steps=2. What\'s the net effect?',
+    opts: [
+      'The effective batch size doubles to 32',
+      'The effective batch size stays at 16, but we get more steps per epoch for finer LR scheduling and more frequent logging',
+      'Training becomes twice as slow with no benefit',
+      'The model sees each sample twice per step'
+    ],
+    correct: 1,
+    explain: 'Effective batch = batch_size \u00d7 grad_accum = 8\u00d72 = 16 (same gradient quality). But now each epoch has ~30 steps instead of ~15. This means the cosine LR scheduler has finer resolution, and you get more granular training curves.'
+  },
+  {
+    q: 'Your baseline overfit at epoch 5. In Iteration 8, we set num_train_epochs=10 with early stopping patience=2. Why increase epochs?',
+    opts: [
+      'More epochs always means a better model',
+      'With regularization from Iter 7 (dropout + weight decay), the model may converge slower and need more epochs. Early stopping ensures it still stops at the right time.',
+      'We want to force more overfitting to study it',
+      '10 is the default for all BERT models'
+    ],
+    correct: 1,
+    explain: 'Regularization (dropout, weight decay) slows down learning. The model that overfit at epoch 5 without regularization might now need epochs 6-7 to reach the same accuracy WITH regularization. Early stopping with patience=2 catches the sweet spot automatically.'
+  },
+  {
+    q: 'Why do we only combine all winning hyperparameters in Iteration 10, not earlier?',
+    opts: [
+      'To save compute \u2014 fewer total runs',
+      'If you change multiple things at once and the model improves, you don\'t know which change helped. Isolating variables first, then combining winners, gives you confidence each change independently contributes.',
+      'It doesn\'t matter \u2014 you can combine everything in Iteration 1',
+      'MLflow can\'t track more than one change per run'
+    ],
+    correct: 1,
+    explain: 'This is the golden rule of systematic tuning. If you change LR + rank + dropout simultaneously and accuracy jumps, was it the LR? The rank? The dropout? All three? You can\'t tell. By isolating each variable, you build a causal understanding of what works.'
+  },
+  {
+    q: 'After Iteration 10, you evaluate on the held-out test set for the first time. Why not use it earlier?',
+    opts: [
+      'The test set is too small to be useful',
+      'Using the test set to make tuning decisions would "leak" information \u2014 your hyperparameters would be optimized for test data, not truly unseen data. The test set must stay quarantined until the final evaluation.',
+      'You should actually use the test set in every iteration',
+      'The test set is only for measuring inference speed'
+    ],
+    correct: 1,
+    explain: 'If you peek at test results to decide which hyperparameters to keep, you\'re indirectly tuning to the test set. Your reported accuracy would be overly optimistic. The test set must be truly unseen \u2014 used exactly once at the end to get an honest measure of generalization.'
+  }
+];
+
+let qIdx=0,score=0,answered=false;
+function renderQ(){
+  const q=questions[qIdx];document.getElementById('quiz-q').textContent=q.q;
+  const opts=document.getElementById('quiz-opts');opts.innerHTML='';
+  q.opts.forEach((o,i)=>{const btn=document.createElement('div');btn.className='quiz-opt';btn.textContent=o;btn.onclick=()=>answerQ(i);opts.appendChild(btn)});
+  document.getElementById('quiz-fb').className='quiz-feedback';document.getElementById('quiz-fb').textContent='';
+  document.getElementById('quiz-prog').textContent=`Question ${qIdx+1} of ${questions.length}`;
+  document.getElementById('quiz-next').disabled=true;answered=false;
+}
+function answerQ(i){
+  if(answered)return;answered=true;
+  const q=questions[qIdx];const opts=document.querySelectorAll('.quiz-opt');
+  opts.forEach((o,j)=>{if(j===q.correct)o.classList.add('correct');else if(j===i&&i!==q.correct)o.classList.add('incorrect')});
+  const fb=document.getElementById('quiz-fb');
+  if(i===q.correct){score++;fb.className='quiz-feedback show right';fb.textContent='Correct! '+q.explain}
+  else{fb.className='quiz-feedback show wrong';fb.textContent='Not quite. '+q.explain}
+  document.getElementById('quiz-next').disabled=false;
+}
+function nextQuestion(){
+  qIdx++;
+  if(qIdx>=questions.length){document.getElementById('quiz-card').style.display='none';const r=document.getElementById('quiz-result');r.style.display='block';
+    document.getElementById('quiz-score-text').textContent=`You scored ${score}/${questions.length}!`;
+    const pct=score/questions.length;const g=document.getElementById('quiz-grade');
+    if(pct===1)g.innerHTML='<span style="color:var(--green)">Perfect! You\'re ready to run these iterations.</span>';
+    else if(pct>=.75)g.innerHTML='<span style="color:var(--green)">Great! You understand the systematic tuning approach.</span>';
+    else if(pct>=.5)g.innerHTML='<span style="color:var(--yellow)">Good start. Review the rationale behind each phase.</span>';
+    else g.innerHTML='<span style="color:var(--orange)">Worth re-reading the iteration details above.</span>';
+  } else renderQ();
+}
+function startQuiz(){qIdx=0;score=0;answered=false;document.getElementById('quiz-card').style.display='block';document.getElementById('quiz-result').style.display='none';renderQ()}
+startQuiz();
+
+// TOC
+const sections=['s-hero','s-baseline','s-strategy','s-iterations','s-tracking','s-quiz'];
+const toc=document.getElementById('toc');
+sections.forEach(id=>{const a=document.createElement('a');a.href='#'+id;a.dataset.section=id;toc.appendChild(a)});
+window.addEventListener('scroll',()=>{
+  const y=window.scrollY+window.innerHeight/2;
+  sections.forEach(id=>{const el=document.getElementById(id);if(!el)return;const a=toc.querySelector(`[data-section="${id}"]`);if(y>=el.offsetTop&&y<el.offsetTop+el.offsetHeight)a.classList.add('active');else a.classList.remove('active')});
+});
+
+// Scroll fade-in
+const observer=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting)x.target.style.animationPlayState='running'})},{threshold:.1});
+document.querySelectorAll('.fade-in').forEach(el=>{el.style.animationPlayState='paused';observer.observe(el)});
+</script>
+</body>
+</html>

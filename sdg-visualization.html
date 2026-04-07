@@ -1,0 +1,2052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIS Telco Chat SDG Pipeline</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #00B900;
+  --green-dim: #00990080;
+  --green-glow: #00ff0030;
+  --green-bright: #33ff33;
+  --bg-deepest: #050a05;
+  --bg-deep: #0a120a;
+  --bg-card: #0f1a0f;
+  --bg-card-hover: #142014;
+  --bg-surface: #1a2a1a;
+  --text-primary: #e8f5e8;
+  --text-secondary: #8aab8a;
+  --text-dim: #5a7a5a;
+  --border: #1a3a1a;
+  --red: #ff4444;
+  --red-dim: #ff444440;
+  --amber: #ffaa00;
+  --cyan: #00cccc;
+  --purple: #aa66ff;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  background: var(--bg-deepest);
+}
+
+body {
+  font-family: 'Outfit', 'Noto Sans Thai', sans-serif;
+  background: var(--bg-deepest);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ─── NOISE OVERLAY ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ─── NAV ─── */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: #050a05ee;
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: color 0.3s;
+  white-space: nowrap;
+}
+
+nav a:hover, nav a.active { color: var(--green); }
+
+nav .nav-brand {
+  color: var(--green);
+  font-weight: 800;
+  font-size: 0.9rem;
+  margin-right: auto;
+  letter-spacing: 0.05em;
+}
+
+/* ─── SECTIONS ─── */
+section {
+  padding: 6rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--green);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  opacity: 0.8;
+}
+
+h2 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
+}
+
+h3 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+/* ─── HERO ─── */
+#hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  padding-top: 56px;
+}
+
+.hero-grid-bg {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+  opacity: 0.4;
+}
+
+.hero-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, var(--green-glow) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+.hero-content { position: relative; z-index: 1; }
+
+.hero-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--green);
+  border: 1px solid var(--green-dim);
+  padding: 0.4rem 1rem;
+  border-radius: 100px;
+  margin-bottom: 2rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  animation: fade-in 0.8s ease-out;
+}
+
+h1 {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 900;
+  line-height: 1.05;
+  margin-bottom: 1.5rem;
+  animation: fade-up 0.8s ease-out 0.1s both;
+}
+
+h1 span { color: var(--green); }
+
+.hero-sub {
+  font-size: 1.15rem;
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto 3rem;
+  font-weight: 300;
+  animation: fade-up 0.8s ease-out 0.2s both;
+}
+
+.stats-row {
+  display: flex;
+  gap: 3rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  animation: fade-up 0.8s ease-out 0.3s both;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--green);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 0.3rem;
+}
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── PIPELINE ─── */
+.pipeline-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+.pipeline-stage {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 1.5rem;
+  position: relative;
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: all 0.6s ease-out;
+}
+
+.pipeline-stage.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.stage-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.stage-number {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 2px solid var(--green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--green);
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.stage-connector {
+  width: 2px;
+  flex: 1;
+  background: linear-gradient(to bottom, var(--green), var(--green-dim), transparent);
+  position: relative;
+  overflow: hidden;
+}
+
+.stage-connector::after {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: -1px;
+  width: 4px;
+  height: 20px;
+  background: var(--green-bright);
+  border-radius: 2px;
+  animation: flow-down 2s linear infinite;
+  box-shadow: 0 0 8px var(--green);
+}
+
+@keyframes flow-down {
+  0% { top: -20px; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.stage-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.stage-card:hover {
+  border-color: var(--green-dim);
+  box-shadow: 0 0 30px var(--green-glow);
+}
+
+.stage-card h3 {
+  color: var(--green);
+  font-size: 1.1rem;
+  margin-bottom: 0.3rem;
+}
+
+.stage-card .stage-subtitle {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.stage-card ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stage-card li {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  padding-left: 1.2rem;
+  position: relative;
+  line-height: 1.5;
+}
+
+.stage-card li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55rem;
+  width: 6px;
+  height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+}
+
+/* ─── DATA FORMAT ─── */
+.json-display {
+  background: #080e08;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  overflow-x: auto;
+  position: relative;
+}
+
+.json-display .json-bracket { color: var(--text-dim); }
+.json-display .json-key { color: var(--cyan); }
+.json-display .json-string { color: var(--green); }
+.json-display .json-role { color: var(--amber); }
+.json-display .json-comment {
+  color: var(--text-dim);
+  font-style: italic;
+  font-size: 0.75rem;
+  margin-left: 1rem;
+  opacity: 0.7;
+}
+
+.field-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.field-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.2rem 1.5rem;
+  border-left: 3px solid var(--green);
+}
+
+.field-card .field-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--cyan);
+  margin-bottom: 0.3rem;
+}
+
+.field-card p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* ─── DESIGN DECISIONS ─── */
+.decisions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.decision {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.decision:hover { border-color: var(--green-dim); }
+
+.decision-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+}
+
+.decision-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--green-glow);
+  border: 1px solid var(--green-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.decision-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  flex: 1;
+}
+
+.decision-chevron {
+  color: var(--text-dim);
+  transition: transform 0.3s;
+  font-size: 1.2rem;
+}
+
+.decision.open .decision-chevron { transform: rotate(180deg); }
+
+.decision-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease-out;
+}
+
+.decision.open .decision-body { max-height: 400px; }
+
+.decision-content {
+  padding: 0 1.5rem 1.2rem 4rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.decision-content code {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg-surface);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: var(--green);
+}
+
+/* ─── COMPARISON ─── */
+.comparison-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 800px) {
+  .comparison-wrapper { grid-template-columns: 1fr; }
+}
+
+.comparison-col {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  position: relative;
+}
+
+.comparison-col.manual { border-top: 3px solid var(--red); }
+.comparison-col.pipeline { border-top: 3px solid var(--green); }
+
+.comparison-col h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.2rem;
+}
+
+.comparison-col.manual h3 { color: var(--red); }
+.comparison-col.pipeline h3 { color: var(--green); }
+
+.comp-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 100px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.manual .comp-badge { background: var(--red-dim); color: var(--red); }
+.pipeline .comp-badge { background: var(--green-glow); color: var(--green); }
+
+.comp-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.comp-list li {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  padding-left: 1.5rem;
+  position: relative;
+  line-height: 1.5;
+}
+
+.manual .comp-list li::before {
+  content: '✕';
+  position: absolute;
+  left: 0;
+  color: var(--red);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pipeline .comp-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 700;
+}
+
+/* ─── METRICS BAR ─── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 2.5rem;
+}
+
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.2rem;
+  text-align: center;
+}
+
+.metric-label {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.8rem;
+}
+
+.metric-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.metric-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.metric-bar-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  width: 55px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.metric-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-surface);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.metric-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 1.5s ease-out;
+  width: 0;
+}
+
+.metric-bar-fill.red { background: var(--red); }
+.metric-bar-fill.green { background: var(--green); box-shadow: 0 0 6px var(--green-dim); }
+
+.metric-bar-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  width: 55px;
+  flex-shrink: 0;
+}
+
+.metric-bar-value.red { color: var(--red); }
+.metric-bar-value.green { color: var(--green); }
+
+.metric-speedup {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--green);
+  margin-top: 0.3rem;
+}
+
+/* ─── INTENTS GRID ─── */
+.intents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.intent-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.2rem;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.intent-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--green), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.intent-card:hover {
+  border-color: var(--green-dim);
+  transform: translateY(-2px);
+}
+
+.intent-card:hover::before { opacity: 1; }
+
+.intent-icon {
+  font-size: 1.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.intent-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--green);
+  word-break: break-all;
+  margin-bottom: 0.3rem;
+  line-height: 1.3;
+}
+
+.intent-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.intent-thai {
+  font-family: 'Noto Sans Thai', sans-serif;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-top: 0.3rem;
+}
+
+/* ─── TECH STACK ─── */
+.stack-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 700px;
+  margin: 2rem auto 0;
+}
+
+.stack-layer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  position: relative;
+  transition: all 0.3s;
+}
+
+.stack-layer:first-child { border-radius: 12px 12px 0 0; }
+.stack-layer:last-child { border-radius: 0 0 12px 12px; }
+.stack-layer:not(:last-child) { border-bottom: none; }
+
+.stack-layer:hover {
+  background: var(--bg-card-hover);
+  z-index: 1;
+}
+
+.stack-depth {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.stack-bar {
+  width: 4px;
+  height: 100%;
+  min-height: 24px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.stack-info { flex: 1; }
+
+.stack-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.stack-desc {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.stack-layer:nth-child(1) .stack-bar { background: var(--green); }
+.stack-layer:nth-child(2) .stack-bar { background: var(--cyan); }
+.stack-layer:nth-child(3) .stack-bar { background: var(--purple); }
+.stack-layer:nth-child(4) .stack-bar { background: var(--amber); }
+.stack-layer:nth-child(5) .stack-bar { background: var(--green); }
+.stack-layer:nth-child(6) .stack-bar { background: var(--cyan); }
+
+/* ─── COMMAND ─── */
+.command-block {
+  background: #080e08;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.2rem 1.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  color: var(--green);
+  margin-top: 2rem;
+  position: relative;
+  overflow-x: auto;
+}
+
+.command-block .prompt { color: var(--text-dim); }
+.command-block .flag { color: var(--cyan); }
+.command-block .value { color: var(--amber); }
+
+/* ─── FOOTER ─── */
+footer {
+  text-align: center;
+  padding: 3rem 2rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+/* ─── SCROLL ANIMATIONS ─── */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.7s ease-out;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── BEST PRACTICES ─── */
+.bp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.2rem;
+}
+
+.bp-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border-top: 3px solid var(--green);
+  transition: all 0.3s;
+  position: relative;
+}
+
+.bp-card:hover {
+  border-color: var(--green-dim);
+  box-shadow: 0 0 30px var(--green-glow);
+  transform: translateY(-3px);
+}
+
+.bp-card .bp-number {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--green-glow);
+  line-height: 1;
+}
+
+.bp-card h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.bp-card h4 .bp-icon {
+  font-size: 1.2rem;
+}
+
+.bp-card p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 0.6rem;
+}
+
+.bp-card .bp-tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 100px;
+  background: var(--green-glow);
+  color: var(--green);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-right: 0.4rem;
+  margin-top: 0.3rem;
+}
+
+.bp-card .bp-highlight {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--green);
+  background: var(--bg-surface);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.bp-card ul {
+  list-style: none;
+  margin-top: 0.5rem;
+}
+
+.bp-card li {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  padding-left: 1rem;
+  position: relative;
+  line-height: 1.6;
+}
+
+.bp-card li::before {
+  content: '>';
+  position: absolute;
+  left: 0;
+  color: var(--green-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+}
+
+/* ─── QUIZ ─── */
+.quiz-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.quiz-question {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  transition: border-color 0.3s;
+}
+
+.quiz-question.answered-correct {
+  border-color: var(--green);
+  box-shadow: 0 0 20px var(--green-glow);
+}
+
+.quiz-question.answered-wrong {
+  border-color: var(--red);
+  box-shadow: 0 0 20px var(--red-dim);
+}
+
+.quiz-q-number {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--green);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+
+.quiz-q-text {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1.2rem;
+  line-height: 1.5;
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.quiz-option {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.quiz-option:hover:not(.disabled) {
+  border-color: var(--green-dim);
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.quiz-option .opt-letter {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--text-dim);
+  transition: all 0.2s;
+}
+
+.quiz-option.selected-correct {
+  border-color: var(--green);
+  background: #00B90010;
+}
+
+.quiz-option.selected-correct .opt-letter {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--bg-deepest);
+}
+
+.quiz-option.selected-wrong {
+  border-color: var(--red);
+  background: #ff444410;
+}
+
+.quiz-option.selected-wrong .opt-letter {
+  background: var(--red);
+  border-color: var(--red);
+  color: white;
+}
+
+.quiz-option.reveal-correct {
+  border-color: var(--green);
+}
+
+.quiz-option.reveal-correct .opt-letter {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.quiz-option.disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.quiz-explanation {
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
+  background: var(--bg-surface);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  display: none;
+  border-left: 3px solid var(--green);
+}
+
+.quiz-explanation.show { display: block; }
+
+.quiz-explanation code {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg-card);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: var(--green);
+}
+
+.quiz-score {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  display: none;
+}
+
+.quiz-score.show { display: block; }
+
+.quiz-score-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--green);
+}
+
+.quiz-score-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 0.3rem;
+}
+
+.quiz-reset {
+  margin-top: 1rem;
+  padding: 0.6rem 1.5rem;
+  background: transparent;
+  border: 1px solid var(--green);
+  color: var(--green);
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quiz-reset:hover {
+  background: var(--green);
+  color: var(--bg-deepest);
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 700px) {
+  section { padding: 4rem 1rem; }
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.6rem; }
+  .stats-row { gap: 1.5rem; }
+  .pipeline-stage { grid-template-columns: 50px 1fr; }
+  nav { gap: 0.8rem; padding: 0 1rem; overflow-x: auto; }
+  nav a { font-size: 0.7rem; }
+  .intents-grid { grid-template-columns: 1fr 1fr; }
+  .bp-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <span class="nav-brand">SDG PIPELINE</span>
+  <a href="#hero">Overview</a>
+  <a href="#pipeline">Pipeline</a>
+  <a href="#format">Format</a>
+  <a href="#decisions">Decisions</a>
+  <a href="#comparison">Comparison</a>
+  <a href="#intents">Intents</a>
+  <a href="#stack">Stack</a>
+  <a href="#bestpractices">Best Practices</a>
+  <a href="#quiz">Quiz</a>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-grid-bg"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-content">
+    <div class="hero-tag">Synthetic Data Generation</div>
+    <h1>AIS Telco Chat<br><span>SDG Pipeline</span></h1>
+    <p class="hero-sub">Automated generation of realistic Thai-language multi-turn chat training data for intent classification, powered by sdg_hub and large language models.</p>
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-value">10</div>
+        <div class="stat-label">Intents</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">20</div>
+        <div class="stat-label">Per Intent</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">200</div>
+        <div class="stat-label">Total Examples</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">~5m</div>
+        <div class="stat-label">Generation Time</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE ARCHITECTURE -->
+<section id="pipeline">
+  <div class="section-label">Architecture</div>
+  <h2 class="reveal">Pipeline Flow</h2>
+  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 3rem; max-width: 600px;">Five stages transform human-curated seed data into hundreds of validated training examples, maintaining format consistency and linguistic realism.</p>
+
+  <div class="pipeline-flow">
+
+    <div class="pipeline-stage" data-delay="0">
+      <div class="stage-line">
+        <div class="stage-number">1</div>
+        <div class="stage-connector"></div>
+      </div>
+      <div class="stage-card">
+        <h3>Seed Data Loading</h3>
+        <div class="stage-subtitle">load_seed_data() &rarr; select_seed_examples()</div>
+        <ul>
+          <li>Reads 10 JSON files with existing human-curated examples (16&ndash;26 per intent)</li>
+          <li>Each file maps to one intent &mdash; e.g. <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--cyan);">MOBILE_BILLING_CHECK_DUE_DATE.json</code></li>
+          <li>Smart seed selection: round-robin across session_history length buckets for maximum diversity</li>
+          <li>Seed histories truncated to 5 messages to match the real sliding window constraint</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="pipeline-stage" data-delay="1">
+      <div class="stage-line">
+        <div class="stage-number">2</div>
+        <div class="stage-connector"></div>
+      </div>
+      <div class="stage-card">
+        <h3>Prompt Engineering</h3>
+        <div class="stage-subtitle">prompts/generate_telco_chat.yaml &rarr; build_prompt()</div>
+        <ul>
+          <li>Jinja2 YAML template system with system + user message structure</li>
+          <li>System prompt encodes Thai telco domain expertise, formatting rules, and constraint specifications</li>
+          <li>User prompt injects: intent name, description, and seed examples as few-shot demonstrations</li>
+          <li>Constraints embedded directly: max 5 history messages, typo distribution ratios, intent switching requirements, history length distribution targets</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="pipeline-stage" data-delay="2">
+      <div class="stage-line">
+        <div class="stage-number">3</div>
+        <div class="stage-connector"></div>
+      </div>
+      <div class="stage-card">
+        <h3>LLM Generation</h3>
+        <div class="stage-subtitle">litellm.completion() &rarr; Qwen3-235B-A22B-Instruct</div>
+        <ul>
+          <li>Uses <strong>litellm</strong> abstraction layer &mdash; model-agnostic, provider-agnostic</li>
+          <li>Default model: <strong>Qwen3-235B-A22B-Instruct</strong> on Nebius TokenFactory</li>
+          <li>OpenAI-compatible API, temperature&nbsp;0.8, max_tokens&nbsp;16384</li>
+          <li>Sequential processing: one intent at a time, ~25s per intent on cloud inference</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="pipeline-stage" data-delay="3">
+      <div class="stage-line">
+        <div class="stage-number">4</div>
+        <div class="stage-connector"></div>
+      </div>
+      <div class="stage-card">
+        <h3>Parsing &amp; Validation</h3>
+        <div class="stage-subtitle">parse_json_output() &rarr; validate_examples()</div>
+        <ul>
+          <li>JSON extraction from raw LLM output &mdash; handles markdown fences, partial output, recovery</li>
+          <li>Schema validation: ensures <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--cyan);">user_message</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--cyan);">intent</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--cyan);">session_history</code> fields present and valid</li>
+          <li>History truncation: programmatic enforcement of max 5 message sliding window</li>
+          <li>Intent correction: forces the correct intent label regardless of what the LLM outputs</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="pipeline-stage" data-delay="4">
+      <div class="stage-line">
+        <div class="stage-number">5</div>
+        <div class="stage-connector" style="background: transparent;"></div>
+      </div>
+      <div class="stage-card">
+        <h3>Output</h3>
+        <div class="stage-subtitle">generated/{INTENT}.json</div>
+        <ul>
+          <li>Saves to <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--cyan);">generated/</code> directory as individual JSON files per intent</li>
+          <li>Exact same format as seed data &mdash; seamless integration with downstream training pipeline</li>
+          <li>Summary report with per-intent counts and total statistics</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- DATA FORMAT -->
+<section id="format">
+  <div class="section-label">Data Schema</div>
+  <h2 class="reveal">Training Example Format</h2>
+  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 2rem; max-width: 600px;">Each example captures a user's current message, the target intent, and the conversation context &mdash; exactly as the real classifier receives it at inference time.</p>
+
+  <div class="json-display reveal">
+<span class="json-bracket">{</span>
+  <span class="json-key">"user_message"</span>: <span class="json-string">"เช็คยอดค้างชำระหน่อยค้าบ 😅"</span>, <span class="json-comment">&larr; current message to classify</span>
+  <span class="json-key">"intent"</span>: <span class="json-string">"MOBILE_ACCOUNT_CHECK_PAYMENT_STATUS_POSTPAID"</span>, <span class="json-comment">&larr; target label</span>
+  <span class="json-key">"session_history"</span>: <span class="json-bracket">[</span> <span class="json-comment">&larr; sliding window (max 5 messages)</span>
+    <span class="json-bracket">{</span> <span class="json-role">"role"</span>: <span class="json-string">"user"</span>, <span class="json-key">"content"</span>: <span class="json-string">"สัญญาณเน็ตช้ามากเลยครับ"</span> <span class="json-bracket">}</span>,  <span class="json-comment">&larr; previous topic (network)</span>
+    <span class="json-bracket">{</span> <span class="json-role">"role"</span>: <span class="json-string">"assistant"</span>, <span class="json-key">"content"</span>: <span class="json-string">"ขออภัยค่ะ ทีมงานกำลังตรวจสอบ"</span> <span class="json-bracket">}</span>  <span class="json-comment">&larr; intent switch happens next</span>
+  <span class="json-bracket">]</span>
+<span class="json-bracket">}</span>
+  </div>
+
+  <div class="field-cards reveal">
+    <div class="field-card">
+      <div class="field-name">user_message</div>
+      <p>The current chat message to classify. This is the primary model input. Includes natural Thai with typos, slang, emoji, and occasional English.</p>
+    </div>
+    <div class="field-card">
+      <div class="field-name">intent</div>
+      <p>One of 10 possible target labels. Determined solely by the current <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--green);">user_message</code>, not by the session history.</p>
+    </div>
+    <div class="field-card">
+      <div class="field-name">session_history</div>
+      <p>Sliding window of the last 5 messages providing conversation context. May contain topic switches from completely different intents &mdash; the classifier must learn to ignore irrelevant history.</p>
+    </div>
+  </div>
+</section>
+
+<!-- DESIGN DECISIONS -->
+<section id="decisions">
+  <div class="section-label">Rationale</div>
+  <h2 class="reveal">Key Design Decisions</h2>
+  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 2rem; max-width: 600px;">Every constraint in the pipeline exists because of a real-world failure mode. Click to expand the reasoning.</p>
+
+  <div class="decisions-grid reveal">
+
+    <div class="decision open" onclick="this.classList.toggle('open')">
+      <div class="decision-header">
+        <div class="decision-icon">5</div>
+        <div class="decision-title">Sliding Window = 5 Messages</div>
+        <div class="decision-chevron">&#9662;</div>
+      </div>
+      <div class="decision-body">
+        <div class="decision-content">
+          The production system passes the <strong>last 5 messages</strong> of the conversation as context to the classifier. Training data must match inference conditions exactly &mdash; if you train on 8-message histories but deploy with 5-message windows, the model learns patterns it will never see in production. The pipeline enforces this both in the prompt (instructing the LLM) and programmatically (truncating any violations to the last 5).
+        </div>
+      </div>
+    </div>
+
+    <div class="decision" onclick="this.classList.toggle('open')">
+      <div class="decision-header">
+        <div class="decision-icon">&#8644;</div>
+        <div class="decision-title">Intent Switching in History</div>
+        <div class="decision-chevron">&#9662;</div>
+      </div>
+      <div class="decision-body">
+        <div class="decision-content">
+          Real users change topics mid-conversation: "เน็ตช้ามาก... อ้อ แล้วบิลเดือนนี้ต้องจ่ายวันไหนครับ". Without intent-switch examples, the model overfits to session history &mdash; if the history mentions roaming, it predicts a roaming intent regardless of the current message. At least <strong>5&ndash;6 of every 20 examples</strong> contain history about a completely different topic, teaching the model that <code>user_message</code> alone determines intent.
+        </div>
+      </div>
+    </div>
+
+    <div class="decision" onclick="this.classList.toggle('open')">
+      <div class="decision-header">
+        <div class="decision-icon">&#9999;</div>
+        <div class="decision-title">Typos &amp; Informal Language</div>
+        <div class="decision-chevron">&#9662;</div>
+      </div>
+      <div class="decision-body">
+        <div class="decision-content">
+          Real Thai chat is messy: <code>เนต</code> vs <code>เน็ต</code>, <code>ป่าว</code> vs <code>ไหม</code>, doubled vowels <code>ค่าาา</code>, slang <code>555</code>, missing spaces, emoji. If training data is clean Thai only, the classifier fails on real user input. The pipeline requires <strong>8&ndash;10 of 20 examples</strong> to contain realistic typos, misspellings, and slang &mdash; including specific patterns like <code>ตรจสอบ</code>, <code>รบกวณ</code>, <code>กานใช้งาน</code>.
+        </div>
+      </div>
+    </div>
+
+    <div class="decision" onclick="this.classList.toggle('open')">
+      <div class="decision-header">
+        <div class="decision-icon">&#127760;</div>
+        <div class="decision-title">Bilingual Examples (Thai + English)</div>
+        <div class="decision-chevron">&#9662;</div>
+      </div>
+      <div class="decision-body">
+        <div class="decision-content">
+          AIS serves expats, tourists, and bilingual Thai users who type in English. Messages like "can u check my bill pls" or "how much roaming data left ah" are real usage patterns. The pipeline includes <strong>2&ndash;3 English examples per intent</strong> with intentional grammar mistakes reflecting non-native speakers, ensuring the classifier handles both languages.
+        </div>
+      </div>
+    </div>
+
+    <div class="decision" onclick="this.classList.toggle('open')">
+      <div class="decision-header">
+        <div class="decision-icon">&#127919;</div>
+        <div class="decision-title">Few-Shot Seed Strategy</div>
+        <div class="decision-chevron">&#9662;</div>
+      </div>
+      <div class="decision-body">
+        <div class="decision-content">
+          Seeds aren't randomly selected &mdash; the <code>select_seed_examples()</code> function uses round-robin across history-length buckets (0, 2, 4, 5 messages). This ensures the LLM sees the <strong>full distribution</strong> of conversation depths, not just one pattern. A random 5-sample pick might yield all long conversations, causing the LLM to only generate long histories.
+        </div>
+      </div>
+    </div>
+
+    <div class="decision" onclick="this.classList.toggle('open')">
+      <div class="decision-header">
+        <div class="decision-icon">&#128172;</div>
+        <div class="decision-title">Sentence &amp; Word Diversity</div>
+        <div class="decision-chevron">&#9662;</div>
+      </div>
+      <div class="decision-body">
+        <div class="decision-content">
+          Without explicit instructions, LLMs fall into repetitive phrasing patterns &mdash; generating 15 out of 20 <code>user_message</code> values starting with "อยากเช็ค..." or "ขอดู...". Real users express the same intent in wildly different ways: questions (<em>"ยอดเท่าไหร่?"</em>), imperatives (<em>"ช่วยดูยอดให้หน่อย"</em>), fragments (<em>"ยอดค้างชำระ"</em>), or casual conversation (<em>"เอ่อ พอดีจะดูยอดน่ะ"</em>). The prompt now explicitly requires <strong>varied verbs, sentence forms, directness levels, and message lengths</strong>, with a hard cap of 2&ndash;3 examples sharing the same opening word. Each example should feel like it came from a different person.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- COMPARISON -->
+<section id="comparison">
+  <div class="section-label">Why This Pipeline</div>
+  <h2 class="reveal">SDG Pipeline vs. Handcrafted ChatGPT</h2>
+  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 0.5rem; max-width: 700px;">The traditional approach &mdash; manually prompting ChatGPT, copy-pasting outputs, fixing JSON errors &mdash; doesn't scale and produces inconsistent results. Here's how the automated pipeline compares.</p>
+
+  <div class="comparison-wrapper reveal">
+    <div class="comparison-col manual">
+      <h3><span class="comp-badge">Legacy</span> Handcrafted ChatGPT</h3>
+      <ul class="comp-list">
+        <li>Manual copy-paste into ChatGPT, re-prompt each intent individually</li>
+        <li>No version control &mdash; each session is ad-hoc, prompts vary by mood</li>
+        <li>Inconsistent quality: different wordings yield different styles and formats</li>
+        <li>No validation &mdash; raw output may have wrong JSON, extra fields, broken structure</li>
+        <li>Zero reproducibility &mdash; can't re-run to get comparable output</li>
+        <li>Time-consuming: 2&ndash;4 hours of manual work for 200 examples</li>
+        <li>No seed strategy &mdash; manually picking examples each time</li>
+        <li>No constraint enforcement &mdash; history length, typo ratio, intent switching all manual</li>
+        <li>No scalability &mdash; need 1000 examples? Repeat the entire process 5x</li>
+        <li>Data leakage risk &mdash; ChatGPT may memorize or repeat seeds verbatim</li>
+        <li>Manual reformatting needed to match training pipeline format</li>
+      </ul>
+    </div>
+
+    <div class="comparison-col pipeline">
+      <h3><span class="comp-badge">Automated</span> SDG Hub Pipeline</h3>
+      <ul class="comp-list">
+        <li>Single command generates all 200 examples in ~5 minutes end-to-end</li>
+        <li>Version-controlled YAML prompts stored in git &mdash; fully auditable</li>
+        <li>Consistent quality: same system prompt, temperature, constraints every run</li>
+        <li>Built-in validation: JSON parsing, schema enforcement, history truncation</li>
+        <li>Fully reproducible: same seed + prompt + model = comparable output</li>
+        <li>Scalable: change <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--green);">--num-examples 100</code> for 1000 examples instantly</li>
+        <li>Smart seed selection: algorithm picks diverse examples across history lengths</li>
+        <li>Programmatic constraint enforcement: max-5 truncation, distribution targets in prompt</li>
+        <li>Model-agnostic: swap Qwen, Llama, GPT-4o with one <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--green);">--model</code> flag</li>
+        <li>Provider-agnostic: Nebius, OpenAI, Ollama, vLLM via litellm abstraction</li>
+        <li>Output matches training format exactly &mdash; zero reformatting needed</li>
+        <li>Retry logic: failed intents re-run individually with <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--green);">--intents</code></li>
+        <li>Cost-trackable: litellm logs token usage for budget estimation</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- METRICS -->
+  <div class="metrics-grid reveal">
+
+    <div class="metric-card">
+      <div class="metric-label">Time to Generate 200 Examples</div>
+      <div class="metric-bars">
+        <div class="metric-bar-row">
+          <div class="metric-bar-label">Manual</div>
+          <div class="metric-bar-track"><div class="metric-bar-fill red" data-width="95"></div></div>
+          <div class="metric-bar-value red">2&ndash;4 hrs</div>
+        </div>
+        <div class="metric-bar-row">
+          <div class="metric-bar-label">Pipeline</div>
+          <div class="metric-bar-track"><div class="metric-bar-fill green" data-width="4"></div></div>
+          <div class="metric-bar-value green">5 min</div>
+        </div>
+      </div>
+      <div class="metric-speedup">48x faster</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-label">Format Compliance</div>
+      <div class="metric-bars">
+        <div class="metric-bar-row">
+          <div class="metric-bar-label">Manual</div>
+          <div class="metric-bar-track"><div class="metric-bar-fill red" data-width="70"></div></div>
+          <div class="metric-bar-value red">~70%</div>
+        </div>
+        <div class="metric-bar-row">
+          <div class="metric-bar-label">Pipeline</div>
+          <div class="metric-bar-track"><div class="metric-bar-fill green" data-width="100"></div></div>
+          <div class="metric-bar-value green">100%</div>
+        </div>
+      </div>
+      <div class="metric-speedup">Validated</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-label">Reproducibility</div>
+      <div class="metric-bars">
+        <div class="metric-bar-row">
+          <div class="metric-bar-label">Manual</div>
+          <div class="metric-bar-track"><div class="metric-bar-fill red" data-width="0"></div></div>
+          <div class="metric-bar-value red">0%</div>
+        </div>
+        <div class="metric-bar-row">
+          <div class="metric-bar-label">Pipeline</div>
+          <div class="metric-bar-track"><div class="metric-bar-fill green" data-width="100"></div></div>
+          <div class="metric-bar-value green">100%</div>
+        </div>
+      </div>
+      <div class="metric-speedup">Deterministic</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-label">Scalability</div>
+      <div class="metric-bars">
+        <div class="metric-bar-row">
+          <div class="metric-bar-label">Manual</div>
+          <div class="metric-bar-track"><div class="metric-bar-fill red" data-width="90"></div></div>
+          <div class="metric-bar-value red">O(n) hrs</div>
+        </div>
+        <div class="metric-bar-row">
+          <div class="metric-bar-label">Pipeline</div>
+          <div class="metric-bar-track"><div class="metric-bar-fill green" data-width="8"></div></div>
+          <div class="metric-bar-value green">O(1) cmd</div>
+        </div>
+      </div>
+      <div class="metric-speedup">1 command</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- INTENTS -->
+<section id="intents">
+  <div class="section-label">Coverage</div>
+  <h2 class="reveal">The 10 Intents</h2>
+  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 2rem;">Each intent covers a distinct customer service scenario in the AIS mobile ecosystem.</p>
+
+  <div class="intents-grid reveal">
+    <div class="intent-card">
+      <div class="intent-icon">&#128179;</div>
+      <div class="intent-name">MOBILE_ACCOUNT_CHECK_PAYMENT_STATUS_POSTPAID</div>
+      <div class="intent-desc">Check postpaid payment status</div>
+      <div class="intent-thai">เช็คยอดค้างชำระรายเดือน</div>
+    </div>
+    <div class="intent-card">
+      <div class="intent-icon">&#128176;</div>
+      <div class="intent-name">MOBILE_ACCOUNT_CHECK_PAYMENT_STATUS_PREPAID</div>
+      <div class="intent-desc">Check prepaid balance / payment</div>
+      <div class="intent-thai">เช็คยอดเงินซิมเติมเงิน</div>
+    </div>
+    <div class="intent-card">
+      <div class="intent-icon">&#128197;</div>
+      <div class="intent-name">MOBILE_BILLING_CHECK_DUE_DATE</div>
+      <div class="intent-desc">Check bill due date</div>
+      <div class="intent-thai">เช็ควันครบกำหนดชำระบิล</div>
+    </div>
+    <div class="intent-card">
+      <div class="intent-icon">&#128202;</div>
+      <div class="intent-name">MOBILE_PACKAGE_CHECK_DATA_HISTORY</div>
+      <div class="intent-desc">Check data package history</div>
+      <div class="intent-thai">ดูประวัติแพ็กเกจเน็ต</div>
+    </div>
+    <div class="intent-card">
+      <div class="intent-icon">&#127757;</div>
+      <div class="intent-name">MOBILE_ROAMING_CHECK_DATA_CURRENT</div>
+      <div class="intent-desc">Check current roaming data</div>
+      <div class="intent-thai">เช็คเน็ตโรมมิ่งคงเหลือ</div>
+    </div>
+    <div class="intent-card">
+      <div class="intent-icon">&#128200;</div>
+      <div class="intent-name">MOBILE_ROAMING_CHECK_DATA_HISTORY</div>
+      <div class="intent-desc">Check roaming data history</div>
+      <div class="intent-thai">ดูประวัติใช้เน็ตโรมมิ่ง</div>
+    </div>
+    <div class="intent-card">
+      <div class="intent-icon">&#9992;</div>
+      <div class="intent-name">MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID</div>
+      <div class="intent-desc">Check roaming payment</div>
+      <div class="intent-thai">เช็คค่าบริการโรมมิ่ง</div>
+    </div>
+    <div class="intent-card">
+      <div class="intent-icon">&#128230;</div>
+      <div class="intent-name">MOBILE_ROAMING_SUBSCRIBE_DATA_POSTPAID</div>
+      <div class="intent-desc">Subscribe roaming package</div>
+      <div class="intent-thai">สมัครแพ็กเกจโรมมิ่ง</div>
+    </div>
+    <div class="intent-card">
+      <div class="intent-icon">&#10060;</div>
+      <div class="intent-name">MOBILE_SIM_CHECK_UNSUBSCRIBE_DATA_POSTPAID</div>
+      <div class="intent-desc">Unsubscribe postpaid data package</div>
+      <div class="intent-thai">ยกเลิกแพ็กเน็ตรายเดือน</div>
+    </div>
+    <div class="intent-card">
+      <div class="intent-icon">&#128244;</div>
+      <div class="intent-name">MOBILE_SIM_CHECK_UNSUBSCRIBE_DATA_PREPAID</div>
+      <div class="intent-desc">Unsubscribe prepaid data package</div>
+      <div class="intent-thai">ยกเลิกแพ็กเน็ตเติมเงิน</div>
+    </div>
+  </div>
+</section>
+
+<!-- TECH STACK -->
+<section id="stack">
+  <div class="section-label">Infrastructure</div>
+  <h2 class="reveal">Technology Stack</h2>
+  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 1rem; max-width: 600px;">Each layer is swappable. Change the model, provider, or templating engine without touching the core pipeline logic.</p>
+
+  <div class="stack-layers reveal">
+    <div class="stack-layer">
+      <div class="stack-depth">1</div>
+      <div class="stack-bar"></div>
+      <div class="stack-info">
+        <div class="stack-name">Python Pipeline</div>
+        <div class="stack-desc">Orchestration, CLI, file I/O, validation &mdash; run.py</div>
+      </div>
+    </div>
+    <div class="stack-layer">
+      <div class="stack-depth">2</div>
+      <div class="stack-bar"></div>
+      <div class="stack-info">
+        <div class="stack-name">sdg_hub Framework</div>
+        <div class="stack-desc">Red Hat AI Innovation Team &mdash; Blocks, Flows, Registry</div>
+      </div>
+    </div>
+    <div class="stack-layer">
+      <div class="stack-depth">3</div>
+      <div class="stack-bar"></div>
+      <div class="stack-info">
+        <div class="stack-name">litellm</div>
+        <div class="stack-desc">LLM provider abstraction &mdash; OpenAI, Anthropic, Ollama, vLLM</div>
+      </div>
+    </div>
+    <div class="stack-layer">
+      <div class="stack-depth">4</div>
+      <div class="stack-bar"></div>
+      <div class="stack-info">
+        <div class="stack-name">Jinja2 + YAML</div>
+        <div class="stack-desc">Version-controlled prompt templates with variable injection</div>
+      </div>
+    </div>
+    <div class="stack-layer">
+      <div class="stack-depth">5</div>
+      <div class="stack-bar"></div>
+      <div class="stack-info">
+        <div class="stack-name">Qwen3-235B-A22B-Instruct</div>
+        <div class="stack-desc">235B parameter MoE model &mdash; strong multilingual + structured output</div>
+      </div>
+    </div>
+    <div class="stack-layer">
+      <div class="stack-depth">6</div>
+      <div class="stack-bar"></div>
+      <div class="stack-info">
+        <div class="stack-name">Nebius TokenFactory</div>
+        <div class="stack-desc">Cloud inference &mdash; $0.20/M input, $0.60/M output, OpenAI-compatible API</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="command-block reveal">
+    <span class="prompt">$</span> python run.py <span class="flag">--model</span> <span class="value">"openai/Qwen/Qwen3-235B-A22B-Instruct-2507"</span> \<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--api-base</span> <span class="value">https://api.tokenfactory.nebius.com/v1</span> \<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--api-key</span> <span class="value">$NEBIUS_API_KEY</span> \<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--num-examples</span> <span class="value">20</span> <span class="flag">--max-seeds</span> <span class="value">5</span>
+  </div>
+</section>
+
+<!-- BEST PRACTICES -->
+<section id="bestpractices">
+  <div class="section-label">Guidelines</div>
+  <h2 class="reveal">SDG Best Practices</h2>
+  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 2.5rem; max-width: 650px;">Lessons learned from building production-grade synthetic data for Thai telco intent classification. Each practice addresses a real failure mode.</p>
+
+  <div class="bp-grid reveal">
+
+    <div class="bp-card">
+      <div class="bp-number">01</div>
+      <h4><span class="bp-icon">&#127919;</span> Match Training to Inference</h4>
+      <p>Training data must mirror production conditions exactly. If the classifier receives a 5-message sliding window at inference, generate training data with the same constraint. Mismatched context lengths cause silent accuracy drops.</p>
+      <span class="bp-tag">Critical</span>
+      <span class="bp-tag">Architecture</span>
+      <ul>
+        <li>Enforce max history length in prompt AND code</li>
+        <li>Use same tokenization and truncation strategy</li>
+        <li>Validate every example post-generation</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <div class="bp-number">02</div>
+      <h4><span class="bp-icon">&#128256;</span> Diversify Seed Selection</h4>
+      <p>Don't pick seeds randomly. Use stratified sampling across conversation depths (0, 1, 2, 3, 4, 5 messages) to ensure the LLM sees the full distribution. Random selection biases toward the most common pattern.</p>
+      <span class="bp-tag">Seeding</span>
+      <ul>
+        <li>Round-robin across history-length buckets</li>
+        <li>Limit to 5 seeds to prevent prompt bloat</li>
+        <li>Truncate long seeds to match the window constraint</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <div class="bp-number">03</div>
+      <h4><span class="bp-icon">&#8644;</span> Force Intent Switching</h4>
+      <p>Require 25&ndash;30% of examples to have session history about a completely different topic. Without this, the model overfits to history &mdash; predicting roaming just because the history mentions roaming, ignoring the actual current message.</p>
+      <span class="bp-tag">Critical</span>
+      <span class="bp-tag">Context</span>
+      <ul>
+        <li>5&ndash;6 of every 20 examples must switch topics</li>
+        <li>user_message alone determines the intent</li>
+        <li>History should contain plausible prior conversations</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <div class="bp-number">04</div>
+      <h4><span class="bp-icon">&#9999;</span> Embrace Messy Input</h4>
+      <p>Real Thai chat includes typos (<span class="bp-highlight">เนต</span> vs <span class="bp-highlight">เน็ต</span>), slang (<span class="bp-highlight">555</span>), emoji, doubled vowels (<span class="bp-highlight">ค่าาา</span>), and missing spaces. Clean-only training data fails on real users. Target 40&ndash;50% informal examples.</p>
+      <span class="bp-tag">Language</span>
+      <span class="bp-tag">Realism</span>
+      <ul>
+        <li>8&ndash;10 of 20 examples with typos/slang</li>
+        <li>Include agent typos too (realistic support staff)</li>
+        <li>Mix formal and informal register</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <div class="bp-number">05</div>
+      <h4><span class="bp-icon">&#127760;</span> Include Multilingual Examples</h4>
+      <p>AIS serves bilingual users and expats. Include 10&ndash;15% English examples with intentional grammar mistakes typical of non-native speakers. Messages like "can u check my bill pls" are real usage patterns.</p>
+      <span class="bp-tag">Coverage</span>
+      <ul>
+        <li>2&ndash;3 English examples per 20-example batch</li>
+        <li>Use non-native English patterns, not perfect grammar</li>
+        <li>Include Thai-English code-mixing in some examples</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <div class="bp-number">06</div>
+      <h4><span class="bp-icon">&#128274;</span> Mask Sensitive Data</h4>
+      <p>Never expose real phone numbers or OTPs in synthetic data. Use consistent masking formats: <span class="bp-highlight">091234XXXX</span> for phone numbers and <span class="bp-highlight">XXXXXX</span> for OTP codes across all generated examples.</p>
+      <span class="bp-tag">Security</span>
+      <ul>
+        <li>Phone format: 0XXXXXXXX with partial masking</li>
+        <li>OTP codes always fully masked</li>
+        <li>Embed masking rules in the system prompt</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <div class="bp-number">07</div>
+      <h4><span class="bp-icon">&#128295;</span> Validate Programmatically</h4>
+      <p>Never trust LLM output blindly. Validate schema, enforce field types, force correct intent labels, and truncate overlong histories in code. The prompt requests constraints; the code enforces them.</p>
+      <span class="bp-tag">Quality</span>
+      <span class="bp-tag">Reliability</span>
+      <ul>
+        <li>Check required fields: user_message, intent, session_history</li>
+        <li>Override incorrect intent labels automatically</li>
+        <li>Truncate history exceeding max window size</li>
+        <li>Validate role values are only "user" or "assistant"</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <div class="bp-number">08</div>
+      <h4><span class="bp-icon">&#128209;</span> Version Control Prompts</h4>
+      <p>Store prompt templates as YAML files in git, not in code or chat history. This makes prompts auditable, diffable, and reproducible. A prompt change is a code change &mdash; review it like one.</p>
+      <span class="bp-tag">Process</span>
+      <ul>
+        <li>Use Jinja2 templates with variable injection</li>
+        <li>Separate system prompt from user prompt</li>
+        <li>Track prompt evolution alongside generated data quality</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <div class="bp-number">09</div>
+      <h4><span class="bp-icon">&#128736;</span> Stay Model-Agnostic</h4>
+      <p>Use an abstraction layer like litellm so you can swap models (Qwen, Llama, GPT-4o) and providers (Nebius, OpenAI, Ollama) without changing pipeline code. Today's best model isn't tomorrow's.</p>
+      <span class="bp-tag">Architecture</span>
+      <ul>
+        <li>One <span class="bp-highlight">--model</span> flag to switch models</li>
+        <li>OpenAI-compatible APIs for provider portability</li>
+        <li>Temperature 0.8 for creative variation with structure</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <div class="bp-number">10</div>
+      <h4><span class="bp-icon">&#128202;</span> Define Clear Intent Boundaries</h4>
+      <p>Each intent description must specify what it IS and what it ISN'T. Distinguish postpaid vs. prepaid, current vs. historical, roaming vs. domestic. Ambiguous intents produce ambiguous data.</p>
+      <span class="bp-tag">Data Quality</span>
+      <ul>
+        <li>2&ndash;3 sentence descriptions per intent</li>
+        <li>List related but different intents to clarify boundaries</li>
+        <li>Include example use cases in intent definitions</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <div class="bp-number">11</div>
+      <h4><span class="bp-icon">&#128200;</span> Control Distribution Targets</h4>
+      <p>Specify exact distribution requirements in the prompt: how many examples per history length, typo ratio, intent switches, and language mix. Without explicit targets, the LLM defaults to its most comfortable pattern.</p>
+      <span class="bp-tag">Quality</span>
+      <ul>
+        <li>History length: 2 empty, 3 short, 8 medium, 4 long, 3 max</li>
+        <li>Typo ratio: 40&ndash;50% of all examples</li>
+        <li>Intent switch: 25&ndash;30% of examples</li>
+        <li>English: 10&ndash;15% of examples</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <div class="bp-number">12</div>
+      <h4><span class="bp-icon">&#128172;</span> Maximize Sentence &amp; Word Diversity</h4>
+      <p>LLMs tend to repeat the same phrasing pattern. Explicitly require varied verbs (<span class="bp-highlight">เช็ค</span>, <span class="bp-highlight">ดู</span>, <span class="bp-highlight">อยากรู้</span>, <span class="bp-highlight">ขอ</span>), sentence forms (questions, statements, fragments, imperatives), directness levels, and message lengths. No two examples should feel like the same person.</p>
+      <span class="bp-tag">Critical</span>
+      <span class="bp-tag">Diversity</span>
+      <ul>
+        <li>Vary opening words &mdash; max 2&ndash;3 examples with same opener</li>
+        <li>Mix direct ("เช็คบิล") vs indirect ("รบกวนสอบถามยอดหน่อยค่ะ")</li>
+        <li>Mix lengths: single phrase vs full sentence with context</li>
+        <li>Each user_message should feel like a different person</li>
+      </ul>
+    </div>
+
+    <div class="bp-card">
+      <div class="bp-number">13</div>
+      <h4><span class="bp-icon">&#9889;</span> Fail Gracefully, Retry Smart</h4>
+      <p>LLMs sometimes produce malformed output. Parse JSON with fallbacks (strip markdown fences, try line-by-line). Skip bad examples instead of crashing. Allow re-running individual failed intents with <span class="bp-highlight">--intents</span>.</p>
+      <span class="bp-tag">Reliability</span>
+      <ul>
+        <li>Multi-stage JSON recovery: array → line-by-line → skip</li>
+        <li>Per-intent retry without regenerating everything</li>
+        <li>Log warnings for skipped examples, don't silently drop</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="section-label">Knowledge test</div>
+  <h2 class="reveal">SDG Pipeline Quiz</h2>
+  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 2.5rem; max-width: 600px;">How well do you understand the pipeline's design decisions? Let's test on the key concepts.</p>
+
+  <div class="quiz-score reveal" id="quizScore">
+    <div class="quiz-score-value" id="quizScoreValue">0/11</div>
+    <div class="quiz-score-label">Questions Answered Correctly</div>
+    <button class="quiz-reset" onclick="resetQuiz()">Reset Quiz</button>
+  </div>
+
+  <div class="quiz-container reveal">
+
+    <div class="quiz-question" data-answer="1" id="q1">
+      <div class="quiz-q-number">Question 01 / 11</div>
+      <div class="quiz-q-text">What is the maximum number of messages allowed in session_history?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="answerQuiz('q1', 0)"><span class="opt-letter">A</span> 3 messages</div>
+        <div class="quiz-option" onclick="answerQuiz('q1', 1)"><span class="opt-letter">B</span> 5 messages</div>
+        <div class="quiz-option" onclick="answerQuiz('q1', 2)"><span class="opt-letter">C</span> 8 messages</div>
+        <div class="quiz-option" onclick="answerQuiz('q1', 3)"><span class="opt-letter">D</span> 10 messages</div>
+      </div>
+      <div class="quiz-explanation" id="q1-exp">The production system passes the <strong>last 5 messages</strong> as the sliding window to the classifier. Training data must match this exact constraint. The pipeline enforces this both in the prompt and programmatically via truncation.</div>
+    </div>
+
+    <div class="quiz-question" data-answer="2" id="q2">
+      <div class="quiz-q-number">Question 02 / 11</div>
+      <div class="quiz-q-text">Why does the pipeline require intent switching in session_history?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="answerQuiz('q2', 0)"><span class="opt-letter">A</span> To increase the total dataset size</div>
+        <div class="quiz-option" onclick="answerQuiz('q2', 1)"><span class="opt-letter">B</span> To make the JSON output more complex</div>
+        <div class="quiz-option" onclick="answerQuiz('q2', 2)"><span class="opt-letter">C</span> To prevent the model from overfitting to session history instead of the current message</div>
+        <div class="quiz-option" onclick="answerQuiz('q2', 3)"><span class="opt-letter">D</span> To test whether the LLM can generate multi-topic conversations</div>
+      </div>
+      <div class="quiz-explanation" id="q2-exp">Without intent-switch examples, the classifier overfits to session history. If the history mentions roaming, it predicts a roaming intent regardless of the actual <code>user_message</code>. Intent switching teaches the model that only the current message determines the intent.</div>
+    </div>
+
+    <div class="quiz-question" data-answer="1" id="q3">
+      <div class="quiz-q-number">Question 03 / 11</div>
+      <div class="quiz-q-text">What percentage of generated examples should contain typos, slang, or informal language?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="answerQuiz('q3', 0)"><span class="opt-letter">A</span> 10&ndash;15%</div>
+        <div class="quiz-option" onclick="answerQuiz('q3', 1)"><span class="opt-letter">B</span> 40&ndash;50%</div>
+        <div class="quiz-option" onclick="answerQuiz('q3', 2)"><span class="opt-letter">C</span> 70&ndash;80%</div>
+        <div class="quiz-option" onclick="answerQuiz('q3', 3)"><span class="opt-letter">D</span> 100% &mdash; all examples should be informal</div>
+      </div>
+      <div class="quiz-explanation" id="q3-exp">The pipeline targets <strong>8&ndash;10 out of 20 examples</strong> (40&ndash;50%) with realistic typos, misspellings, and slang. This mirrors real Thai chat behavior where users mix formal and informal register, use shortened words, and include emoji.</div>
+    </div>
+
+    <div class="quiz-question" data-answer="0" id="q4">
+      <div class="quiz-q-number">Question 04 / 11</div>
+      <div class="quiz-q-text">How does the seed selection algorithm choose examples?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="answerQuiz('q4', 0)"><span class="opt-letter">A</span> Round-robin across session history length buckets</div>
+        <div class="quiz-option" onclick="answerQuiz('q4', 1)"><span class="opt-letter">B</span> Random sampling from all available examples</div>
+        <div class="quiz-option" onclick="answerQuiz('q4', 2)"><span class="opt-letter">C</span> Longest session histories first</div>
+        <div class="quiz-option" onclick="answerQuiz('q4', 3)"><span class="opt-letter">D</span> Most recent examples first by timestamp</div>
+      </div>
+      <div class="quiz-explanation" id="q4-exp">The <code>select_seed_examples()</code> function uses round-robin across history-length buckets (0, 2, 4, 5 messages). This ensures the LLM sees diverse conversation depths, not just one dominant pattern. Random selection might yield all long conversations.</div>
+    </div>
+
+    <div class="quiz-question" data-answer="3" id="q5">
+      <div class="quiz-q-number">Question 05 / 11</div>
+      <div class="quiz-q-text">What temperature is used for LLM generation in this pipeline?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="answerQuiz('q5', 0)"><span class="opt-letter">A</span> 0.0 &mdash; fully deterministic</div>
+        <div class="quiz-option" onclick="answerQuiz('q5', 1)"><span class="opt-letter">B</span> 0.3 &mdash; low creativity</div>
+        <div class="quiz-option" onclick="answerQuiz('q5', 2)"><span class="opt-letter">C</span> 0.5 &mdash; balanced</div>
+        <div class="quiz-option" onclick="answerQuiz('q5', 3)"><span class="opt-letter">D</span> 0.8 &mdash; creative with structure</div>
+      </div>
+      <div class="quiz-explanation" id="q5-exp">Temperature 0.8 provides the optimal balance: enough randomness for diverse, creative examples while maintaining the structured JSON format. Lower temperatures produce repetitive outputs; higher temperatures risk breaking JSON structure.</div>
+    </div>
+
+    <div class="quiz-question" data-answer="2" id="q6">
+      <div class="quiz-q-number">Question 06 / 11</div>
+      <div class="quiz-q-text">What abstraction layer does the pipeline use for model-agnostic LLM calls?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="answerQuiz('q6', 0)"><span class="opt-letter">A</span> LangChain</div>
+        <div class="quiz-option" onclick="answerQuiz('q6', 1)"><span class="opt-letter">B</span> OpenAI SDK directly</div>
+        <div class="quiz-option" onclick="answerQuiz('q6', 2)"><span class="opt-letter">C</span> litellm</div>
+        <div class="quiz-option" onclick="answerQuiz('q6', 3)"><span class="opt-letter">D</span> Hugging Face Transformers</div>
+      </div>
+      <div class="quiz-explanation" id="q6-exp"><code>litellm</code> provides a unified interface across 100+ LLM providers (OpenAI, Anthropic, Ollama, vLLM, Nebius) with a single API. Swapping from Qwen on Nebius to GPT-4o on OpenAI requires only changing the <code>--model</code> flag.</div>
+    </div>
+
+    <div class="quiz-question" data-answer="1" id="q7">
+      <div class="quiz-q-number">Question 07 / 11</div>
+      <div class="quiz-q-text">How should phone numbers appear in generated synthetic data?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="answerQuiz('q7', 0)"><span class="opt-letter">A</span> Full realistic phone numbers like 0912345678</div>
+        <div class="quiz-option" onclick="answerQuiz('q7', 1)"><span class="opt-letter">B</span> Partially masked like 091234XXXX</div>
+        <div class="quiz-option" onclick="answerQuiz('q7', 2)"><span class="opt-letter">C</span> Completely removed from all examples</div>
+        <div class="quiz-option" onclick="answerQuiz('q7', 3)"><span class="opt-letter">D</span> Replaced with placeholder text [PHONE]</div>
+      </div>
+      <div class="quiz-explanation" id="q7-exp">Phone numbers must use partial masking format <code>091234XXXX</code>. This preserves the realistic appearance of customer interactions while preventing any real personal data from leaking into training data. OTP codes are fully masked as <code>XXXXXX</code>.</div>
+    </div>
+
+    <div class="quiz-question" data-answer="0" id="q8">
+      <div class="quiz-q-number">Question 08 / 11</div>
+      <div class="quiz-q-text">What determines the intent label of a training example?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="answerQuiz('q8', 0)"><span class="opt-letter">A</span> Only the current user_message</div>
+        <div class="quiz-option" onclick="answerQuiz('q8', 1)"><span class="opt-letter">B</span> The session_history combined with user_message</div>
+        <div class="quiz-option" onclick="answerQuiz('q8', 2)"><span class="opt-letter">C</span> The most recent assistant response</div>
+        <div class="quiz-option" onclick="answerQuiz('q8', 3)"><span class="opt-letter">D</span> The overall conversation topic</div>
+      </div>
+      <div class="quiz-explanation" id="q8-exp">The intent is determined <strong>solely by the current <code>user_message</code></strong>, not by the session history. This is why intent switching in history is critical &mdash; the classifier must learn to ignore irrelevant prior context and focus on what the user is asking right now.</div>
+    </div>
+
+    <div class="quiz-question" data-answer="3" id="q9">
+      <div class="quiz-q-number">Question 09 / 11</div>
+      <div class="quiz-q-text">Why does the pipeline override the LLM's generated intent label?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="answerQuiz('q9', 0)"><span class="opt-letter">A</span> To save on API costs by skipping re-generation</div>
+        <div class="quiz-option" onclick="answerQuiz('q9', 1)"><span class="opt-letter">B</span> Because the LLM doesn't know the intent categories</div>
+        <div class="quiz-option" onclick="answerQuiz('q9', 2)"><span class="opt-letter">C</span> To randomize labels for data augmentation</div>
+        <div class="quiz-option" onclick="answerQuiz('q9', 3)"><span class="opt-letter">D</span> Because the LLM may hallucinate a wrong intent label despite generating a valid example</div>
+      </div>
+      <div class="quiz-explanation" id="q9-exp">Even when prompted to generate examples for a specific intent, the LLM may output a different intent string due to hallucination, typos, or label confusion. The pipeline programmatically forces the correct label, ensuring 100% label accuracy regardless of LLM behavior.</div>
+    </div>
+
+    <div class="quiz-question" data-answer="2" id="q10">
+      <div class="quiz-q-number">Question 10 / 11</div>
+      <div class="quiz-q-text">What is the primary advantage of storing prompts as YAML templates in version control?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="answerQuiz('q10', 0)"><span class="opt-letter">A</span> YAML is faster to parse than JSON</div>
+        <div class="quiz-option" onclick="answerQuiz('q10', 1)"><span class="opt-letter">B</span> It allows multi-line strings without escaping</div>
+        <div class="quiz-option" onclick="answerQuiz('q10', 2)"><span class="opt-letter">C</span> Prompt changes become auditable, diffable, and reproducible</div>
+        <div class="quiz-option" onclick="answerQuiz('q10', 3)"><span class="opt-letter">D</span> YAML supports comments which JSON doesn't</div>
+      </div>
+      <div class="quiz-explanation" id="q10-exp">Version-controlled YAML templates make every prompt change a reviewable code change. You can <code>git diff</code> prompt modifications, trace which prompt version produced which dataset, and reproduce any previous generation run exactly. This is impossible with ad-hoc ChatGPT sessions.</div>
+    </div>
+
+    <div class="quiz-question" data-answer="1" id="q11">
+      <div class="quiz-q-number">Question 11 / 11</div>
+      <div class="quiz-q-text">Why is it critical to vary sentence structure and word choice across generated user_message examples for the same intent?</div>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="answerQuiz('q11', 0)"><span class="opt-letter">A</span> To make the dataset look larger than it actually is</div>
+        <div class="quiz-option" onclick="answerQuiz('q11', 1)"><span class="opt-letter">B</span> Because real users express the same intent in wildly different ways, and the classifier must generalize across all of them</div>
+        <div class="quiz-option" onclick="answerQuiz('q11', 2)"><span class="opt-letter">C</span> To prevent the LLM from running out of token budget</div>
+        <div class="quiz-option" onclick="answerQuiz('q11', 3)"><span class="opt-letter">D</span> Because JSON requires unique string values in arrays</div>
+      </div>
+      <div class="quiz-explanation" id="q11-exp">Without explicit diversity requirements, LLMs tend to repeat the same phrasing pattern (e.g., all starting with "อยากเช็ค..."). Real users say the same thing in many ways: questions, statements, fragments, polite requests, or terse commands. The prompt must require varied verbs, sentence forms, directness levels, and message lengths so the classifier generalizes to all of them.</div>
+    </div>
+
+  </div>
+</section>
+
+<footer>
+  AIS Telco Chat SDG Pipeline &mdash; Built with sdg_hub, litellm, Qwen3 on Nebius TokenFactory
+</footer>
+
+<script>
+// Scroll-triggered animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+
+      // Animate metric bars
+      entry.target.querySelectorAll('.metric-bar-fill').forEach(bar => {
+        const w = bar.dataset.width;
+        setTimeout(() => { bar.style.width = w + '%'; }, 300);
+      });
+    }
+  });
+}, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+document.querySelectorAll('.reveal, .pipeline-stage').forEach(el => observer.observe(el));
+
+// Pipeline stages staggered reveal
+const stageObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const delay = parseInt(entry.target.dataset.delay || 0) * 200;
+      setTimeout(() => entry.target.classList.add('visible'), delay);
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.pipeline-stage').forEach(el => stageObserver.observe(el));
+
+// Active nav highlight
+const sections = document.querySelectorAll('section');
+const navLinks = document.querySelectorAll('nav a');
+
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(section => {
+    const top = section.offsetTop - 100;
+    if (scrollY >= top) current = section.id;
+  });
+  navLinks.forEach(link => {
+    link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+  });
+});
+
+// Quiz logic
+let quizScore = 0;
+let quizAnswered = 0;
+const totalQuestions = 11;
+
+function answerQuiz(qId, selected) {
+  const qEl = document.getElementById(qId);
+  if (qEl.classList.contains('answered-correct') || qEl.classList.contains('answered-wrong')) return;
+
+  const correct = parseInt(qEl.dataset.answer);
+  const options = qEl.querySelectorAll('.quiz-option');
+
+  options.forEach(opt => opt.classList.add('disabled'));
+
+  if (selected === correct) {
+    options[selected].classList.add('selected-correct');
+    qEl.classList.add('answered-correct');
+    quizScore++;
+  } else {
+    options[selected].classList.add('selected-wrong');
+    options[correct].classList.add('reveal-correct');
+    qEl.classList.add('answered-wrong');
+  }
+
+  quizAnswered++;
+
+  const exp = document.getElementById(qId + '-exp');
+  if (exp) exp.classList.add('show');
+
+  const scoreEl = document.getElementById('quizScore');
+  const scoreVal = document.getElementById('quizScoreValue');
+  scoreVal.textContent = quizScore + '/' + totalQuestions;
+  scoreEl.classList.add('show');
+}
+
+function resetQuiz() {
+  quizScore = 0;
+  quizAnswered = 0;
+  document.querySelectorAll('.quiz-question').forEach(q => {
+    q.classList.remove('answered-correct', 'answered-wrong');
+    q.querySelectorAll('.quiz-option').forEach(opt => {
+      opt.classList.remove('disabled', 'selected-correct', 'selected-wrong', 'reveal-correct');
+    });
+    const exp = q.querySelector('.quiz-explanation');
+    if (exp) exp.classList.remove('show');
+  });
+  document.getElementById('quizScore').classList.remove('show');
+  document.getElementById('quizScoreValue').textContent = '0/11';
+}
+</script>
+
+</body>
+</html>

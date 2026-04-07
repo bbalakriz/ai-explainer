@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Understanding SFT Training Metrics — phayathaibert-1k-run-v1</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,800;1,9..144,400&family=Source+Code+Pro:wght@400;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e1117;--bg2:#161b22;--bg3:#1c2333;
+  --text:#c9d1d9;--text-dim:#8b949e;--text-bright:#e6edf3;
+  --accent:#58a6ff;--accent2:#79c0ff;
+  --green:#3fb950;--green-bg:rgba(63,185,80,.12);
+  --red:#f85149;--red-bg:rgba(248,81,73,.12);
+  --yellow:#d29922;--yellow-bg:rgba(210,153,34,.12);
+  --purple:#bc8cff;--purple-bg:rgba(188,140,255,.12);
+  --orange:#f0883e;--orange-bg:rgba(240,136,62,.12);
+  --cyan:#3ddbd9;--cyan-bg:rgba(61,219,217,.12);
+  --pink:#f778ba;--pink-bg:rgba(247,120,186,.12);
+  --border:#30363d;--card:#161b22;--radius:12px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:17px;line-height:1.7;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")}
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
+
+/* HERO */
+.hero{padding:80px 0 60px;text-align:center;background:linear-gradient(180deg,rgba(188,140,255,.06) 0%,transparent 100%);border-bottom:1px solid var(--border);position:relative}
+.hero::after{content:'';position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);width:120px;height:3px;background:linear-gradient(90deg,var(--purple),var(--orange));border-radius:2px}
+.hero h1{font-family:'Fraunces',serif;font-weight:800;font-size:clamp(2rem,5vw,3.2rem);color:var(--text-bright);letter-spacing:-.02em;margin-bottom:12px}
+.hero h1 span{background:linear-gradient(135deg,var(--purple),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero .subtitle{font-size:1.1rem;color:var(--text-dim);max-width:700px;margin:0 auto}
+.hero .tag{display:inline-block;margin-top:20px;padding:6px 16px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);font-family:'Source Code Pro',monospace;font-size:.85rem;color:var(--accent2)}
+
+/* SECTIONS */
+.section{padding:60px 0;border-bottom:1px solid var(--border)}
+.section-title{font-family:'Fraunces',serif;font-weight:800;font-size:2rem;color:var(--text-bright);text-align:center;margin-bottom:12px}
+.section-desc{text-align:center;color:var(--text-dim);margin-bottom:40px;max-width:700px;margin-left:auto;margin-right:auto}
+
+/* SCENARIO CARD */
+.scenario-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:36px 40px;position:relative;overflow:hidden}
+.scenario-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--purple),var(--orange),var(--cyan))}
+.scenario-card h2{font-family:'Fraunces',serif;font-weight:600;font-size:1.5rem;color:var(--text-bright);margin-bottom:16px}
+
+/* PARAM CARDS */
+.param-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-top:20px}
+.param-pill{padding:12px;border-radius:8px;background:var(--bg);border:1px solid var(--border);text-align:center}
+.param-pill .val{font-family:'Fraunces',serif;font-weight:700;font-size:1.3rem}
+.param-pill .lbl{font-family:'Source Code Pro',monospace;font-size:.72rem;color:var(--text-dim);margin-top:2px}
+
+/* SCREENSHOTS */
+.screenshot-wrap{border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);background:#000;margin-bottom:24px}
+.screenshot-wrap img{width:100%;display:block}
+.screenshot-label{padding:10px 16px;background:var(--bg3);border-top:1px solid var(--border);font-family:'Source Code Pro',monospace;font-size:.82rem;color:var(--text-dim)}
+
+/* METRIC BLOCKS */
+.metric-block{margin-bottom:48px;padding:32px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);position:relative;overflow:hidden}
+.metric-block::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%}
+.metric-block.loss::before{background:var(--red)}
+.metric-block.eval-acc::before{background:var(--green)}
+.metric-block.eval-loss::before{background:var(--orange)}
+.metric-block.lr::before{background:var(--purple)}
+.metric-block.grad::before{background:var(--cyan)}
+.metric-block.epoch::before{background:var(--accent)}
+.metric-block.infra::before{background:var(--text-dim)}
+.metric-block.overfit::before{background:var(--red)}
+
+.metric-header{display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.metric-name{font-family:'Source Code Pro',monospace;font-weight:600;font-size:1.3rem;color:var(--text-bright)}
+.metric-tag{font-size:.75rem;padding:3px 10px;border-radius:6px;font-family:'Source Code Pro',monospace;font-weight:600}
+
+.metric-oneliner{font-size:1.05rem;color:var(--text);margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.metric-oneliner strong{color:var(--text-bright)}
+
+/* EXAMPLE BOXES */
+.example-box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:16px}
+.example-box h4{font-family:'Source Code Pro',monospace;font-size:.85rem;color:var(--accent2);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
+
+.formula-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px 24px;margin-top:16px;font-family:'Source Code Pro',monospace;font-size:.95rem;color:var(--accent2);text-align:center}
+.formula-box .result{color:var(--text-bright);font-weight:600;margin-top:6px}
+
+/* DATA TABLE */
+.data-table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.88rem}
+.data-table th{padding:10px 12px;text-align:left;background:var(--bg3);font-family:'Source Code Pro',monospace;color:var(--accent2);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)}
+.data-table td{padding:10px 12px;border-bottom:1px solid rgba(48,54,61,.5);font-size:.88rem}
+.data-table tr:last-child td{border-bottom:none}
+
+/* INSIGHT BANNER */
+.insight-banner{margin:40px 0;padding:24px 32px;border-radius:var(--radius);text-align:center}
+.insight-banner.info{background:linear-gradient(135deg,rgba(88,166,255,.08),rgba(188,140,255,.08));border:1px solid rgba(88,166,255,.2)}
+.insight-banner.warn{background:linear-gradient(135deg,rgba(248,81,73,.08),rgba(240,136,62,.08));border:1px solid rgba(248,81,73,.2)}
+.insight-banner.good{background:linear-gradient(135deg,rgba(63,185,80,.08),rgba(61,219,217,.08));border:1px solid rgba(63,185,80,.2)}
+.insight-banner h3{font-family:'Fraunces',serif;font-weight:600;color:var(--text-bright);margin-bottom:8px;font-size:1.2rem}
+.insight-banner p{color:var(--text);font-size:.95rem;max-width:750px;margin:0 auto}
+
+/* ANALOGY CARDS */
+.analogy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-top:24px}
+.analogy-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center}
+.analogy-card .big-icon{font-size:3rem;margin-bottom:12px}
+.analogy-card h4{font-family:'Fraunces',serif;color:var(--text-bright);margin-bottom:8px}
+.analogy-card p{font-size:.9rem;color:var(--text-dim)}
+
+/* INTERACTIVE CHART */
+.chart-container{position:relative;width:100%;height:300px;margin:20px 0;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:20px 20px 40px 50px;overflow:hidden}
+.chart-container canvas{width:100%!important;height:100%!important}
+
+/* TIMELINE */
+.timeline{position:relative;padding-left:32px;margin:24px 0}
+.timeline::before{content:'';position:absolute;left:12px;top:0;bottom:0;width:2px;background:var(--border)}
+.timeline-item{position:relative;margin-bottom:24px;padding:16px 20px;background:var(--bg);border:1px solid var(--border);border-radius:10px}
+.timeline-item::before{content:'';position:absolute;left:-26px;top:20px;width:12px;height:12px;border-radius:50%;border:2px solid var(--border);background:var(--bg)}
+.timeline-item.good::before{border-color:var(--green);background:var(--green)}
+.timeline-item.warn::before{border-color:var(--yellow);background:var(--yellow)}
+.timeline-item.bad::before{border-color:var(--red);background:var(--red)}
+.timeline-item.neutral::before{border-color:var(--accent);background:var(--accent)}
+.timeline-epoch{font-family:'Source Code Pro',monospace;font-size:.78rem;color:var(--accent2);margin-bottom:4px}
+.timeline-title{font-weight:600;color:var(--text-bright);margin-bottom:4px}
+.timeline-desc{font-size:.9rem;color:var(--text-dim)}
+
+/* BEST PRACTICES */
+.bp-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px}
+@media(max-width:768px){.bp-grid{grid-template-columns:1fr}}
+.bp-card{padding:24px;border-radius:var(--radius);background:var(--card);border:1px solid var(--border)}
+.bp-card h4{font-family:'Source Code Pro',monospace;font-size:.85rem;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.bp-card p{font-size:.9rem;color:var(--text-dim);line-height:1.6}
+.bp-card .do{color:var(--green)}
+.bp-card .dont{color:var(--red)}
+.bp-card .tip{color:var(--yellow)}
+.bp-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;font-size:.75rem;font-weight:700;flex-shrink:0}
+
+/* CHECKLIST */
+.checklist{list-style:none;margin:16px 0;padding:0}
+.checklist li{padding:8px 0;padding-left:28px;position:relative;font-size:.9rem;border-bottom:1px solid rgba(48,54,61,.3)}
+.checklist li:last-child{border-bottom:none}
+.checklist li::before{content:'';position:absolute;left:0;top:12px;width:16px;height:16px;border-radius:4px;border:2px solid var(--border)}
+.checklist li.check::before{border-color:var(--green);background:var(--green-bg)}
+.checklist li.cross::before{border-color:var(--red);background:var(--red-bg)}
+.checklist li.check::after{content:'✓';position:absolute;left:2px;top:9px;font-size:.75rem;font-weight:700;line-height:1;color:var(--green)}
+.checklist li.cross::after{content:'✗';position:absolute;left:2px;top:9px;font-size:.75rem;font-weight:700;line-height:1;color:var(--red)}
+
+/* QUIZ */
+.game-section{padding:60px 0;border-top:1px solid var(--border)}
+.game-section h2{font-family:'Fraunces',serif;font-weight:800;font-size:2rem;color:var(--text-bright);text-align:center;margin-bottom:12px}
+.game-section .desc{text-align:center;color:var(--text-dim);margin-bottom:32px}
+.quiz-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;max-width:750px;margin:0 auto}
+.quiz-q{font-size:1.1rem;color:var(--text-bright);margin-bottom:20px;font-family:'Fraunces',serif;line-height:1.6}
+.quiz-options{display:flex;flex-direction:column;gap:10px}
+.quiz-opt{padding:14px 20px;border-radius:10px;background:var(--bg);border:2px solid var(--border);cursor:pointer;transition:all .2s;font-size:.95rem;color:var(--text)}
+.quiz-opt:hover{border-color:var(--accent);background:var(--bg3)}
+.quiz-opt.correct{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.quiz-opt.incorrect{border-color:var(--red);background:var(--red-bg);color:var(--red)}
+.quiz-nav{display:flex;justify-content:space-between;align-items:center;margin-top:24px}
+.quiz-btn{padding:10px 24px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-weight:600;font-size:.95rem;cursor:pointer;transition:opacity .2s}
+.quiz-btn:hover{opacity:.85}
+.quiz-btn:disabled{opacity:.4;cursor:not-allowed}
+.quiz-progress{font-family:'Source Code Pro',monospace;font-size:.85rem;color:var(--text-dim)}
+.quiz-feedback{margin-top:16px;padding:14px 18px;border-radius:8px;font-size:.95rem;display:none;line-height:1.6}
+.quiz-feedback.show{display:block}
+.quiz-feedback.right{background:var(--green-bg);color:var(--green);border:1px solid rgba(63,185,80,.3)}
+.quiz-feedback.wrong{background:var(--red-bg);color:var(--red);border:1px solid rgba(248,81,73,.3)}
+
+/* TOC */
+.toc{position:fixed;right:24px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:6px;z-index:100}
+@media(max-width:900px){.toc{display:none}}
+.toc a{width:10px;height:10px;border-radius:50%;background:var(--border);display:block;transition:all .3s}
+.toc a:hover,.toc a.active{background:var(--accent);transform:scale(1.4)}
+
+footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color:var(--text-dim);font-size:.85rem}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{opacity:0;animation:fadeUp .6s ease forwards}
+.delay-1{animation-delay:.1s}.delay-2{animation-delay:.2s}.delay-3{animation-delay:.3s}
+
+/* SVG Chart styles */
+.svg-chart{width:100%;overflow:visible}
+.chart-line{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.chart-dot{stroke-width:2}
+.chart-grid{stroke:var(--border);stroke-width:1;stroke-dasharray:4,4}
+.chart-axis-label{fill:var(--text-dim);font-family:'Source Code Pro',monospace;font-size:11px}
+.chart-title{fill:var(--text-bright);font-family:'Source Code Pro',monospace;font-size:13px;font-weight:600}
+.chart-annotation{fill:var(--text-dim);font-family:'DM Sans',sans-serif;font-size:11px}
+.chart-zone{opacity:.08}
+
+/* Overfitting visual */
+.overfit-visual{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:20px 0}
+@media(max-width:600px){.overfit-visual{grid-template-columns:1fr}}
+.overfit-card{padding:20px;border-radius:10px;text-align:center}
+.overfit-card h5{font-family:'Source Code Pro',monospace;font-size:.8rem;margin-bottom:8px}
+.overfit-card .big-val{font-family:'Fraunces',serif;font-size:2rem;font-weight:700}
+.overfit-card .trend{font-size:.85rem;margin-top:4px}
+
+/* Summary table */
+.summary-table{width:100%;border-collapse:collapse;margin:32px 0;background:var(--card);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+.summary-table th{padding:14px 20px;text-align:left;background:var(--bg3);font-family:'Source Code Pro',monospace;color:var(--accent2);font-size:.82rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)}
+.summary-table td{padding:14px 20px;border-bottom:1px solid var(--border);font-size:.9rem}
+.summary-table tr:last-child td{border-bottom:none}
+</style>
+</head>
+<body>
+
+<nav class="toc" id="toc"></nav>
+
+<!-- =================== HERO =================== -->
+<section class="hero" id="s-hero">
+<div class="container">
+  <h1 class="fade-in">Understanding <span>SFT Training Metrics</span></h1>
+  <p class="subtitle fade-in delay-1">A visual, example-driven guide to the 14 metrics from  Supervised Fine-Tuning run on phayathaibert</p>
+  <div class="tag fade-in delay-2">phayathaibert-1k-run-v1 &middot; ~285 samples &middot; 5 epochs &middot; 10 intents</div>
+</div>
+</section>
+
+<!-- =================== SCENARIO =================== -->
+<section class="section" id="s-scenario">
+<div class="container">
+  <div class="scenario-card fade-in">
+    <h2>What Happened: The Fine-Tuning Run</h2>
+    <p>You took <strong>phayathaibert</strong>, a pre-trained Thai-language BERT model, and fine-tuned it using <strong>Supervised Fine-Tuning (SFT)</strong> to classify mobile customer messages into 10 intent categories. Here's what the training setup looked like:</p>
+
+    <div class="param-grid" style="margin-top:20px">
+      <div class="param-pill">
+        <div class="val" style="color:var(--purple)">phayathaibert</div>
+        <div class="lbl">Base Model</div>
+      </div>
+      <div class="param-pill">
+        <div class="val" style="color:var(--accent)">~285</div>
+        <div class="lbl">Training Samples</div>
+      </div>
+      <div class="param-pill">
+        <div class="val" style="color:var(--green)">5</div>
+        <div class="lbl">Epochs</div>
+      </div>
+      <div class="param-pill">
+        <div class="val" style="color:var(--orange)">~215</div>
+        <div class="lbl">Total Steps</div>
+      </div>
+      <div class="param-pill">
+        <div class="val" style="color:var(--cyan)">2e-4</div>
+        <div class="lbl">Learning Rate</div>
+      </div>
+      <div class="param-pill">
+        <div class="val" style="color:var(--yellow)">10</div>
+        <div class="lbl">Intent Classes</div>
+      </div>
+    </div>
+
+    <p style="margin-top:20px;color:var(--text-dim);font-size:.93rem">During training, the system tracked <strong style="color:var(--text-bright)">14 metrics</strong> in real time. We'll go deep on the 6 key training metrics, then briefly cover the 8 infrastructure metrics. Let's start with the big picture.</p>
+  </div>
+</div>
+</section>
+
+<!-- =================== ACTUAL SCREENSHOTS =================== -->
+<section class="section" id="s-screenshots">
+<div class="container">
+  <h2 class="section-title fade-in"> Actual Training Dashboard</h2>
+  <p class="section-desc fade-in delay-1">These are the real charts from  phayathaibert-1k-run-v1 SFT run</p>
+  <div class="screenshot-wrap fade-in delay-2">
+    <img src="Screenshot 2026-04-05 at 14.35.36.png" alt="Training Dashboard 1">
+    <div class="screenshot-label">Row 1: epoch, eval_accuracy, eval_loss &mdash; Row 2: eval_runtime, eval_samples_per_second, eval_steps_per_second</div>
+  </div>
+  <div class="screenshot-wrap fade-in delay-2">
+    <img src="Screenshot 2026-04-05 at 14.35.45.png" alt="Training Dashboard 2">
+    <div class="screenshot-label">Row 1: eval_runtime, eval_samples_per_second, eval_steps_per_second &mdash; Row 2: grad_norm, learning_rate, total_flos</div>
+  </div>
+  <div class="screenshot-wrap fade-in delay-3">
+    <img src="Screenshot 2026-04-05 at 14.35.52.png" alt="Training Dashboard 3">
+    <div class="screenshot-label">Row 1: train_loss, train_runtime, train_samples_per_second &mdash; Row 2: train_steps_per_second, loss (training loss curve)</div>
+  </div>
+</div>
+</section>
+
+<!-- =================== ANALOGY: WHAT IS TRAINING? =================== -->
+<section class="section" id="s-bigpicture">
+<div class="container">
+  <h2 class="section-title">First, What is Fine-Tuning?</h2>
+  <p class="section-desc">Before we look at the metrics, let's understand what's actually happening during SFT with an everyday analogy.</p>
+
+  <div class="example-box">
+    <h4>The Student Analogy</h4>
+    <p style="font-size:.95rem;line-height:1.8">Imagine a student (<strong style="color:var(--purple)">phayathaibert</strong>) who already speaks Thai fluently (pre-training) but has never worked in telecom customer service.</p>
+    <p style="font-size:.95rem;line-height:1.8;margin-top:8px"><strong>SFT = giving them a study guide</strong> of 285 example customer messages with the correct intent labels, and having them practice over and over (<strong style="color:var(--green)">5 epochs</strong> = 5 full passes through the study guide).</p>
+    <p style="font-size:.95rem;line-height:1.8;margin-top:8px">Each metric we'll cover maps to something about this student's learning journey:</p>
+  </div>
+
+  <div class="analogy-grid" style="margin-top:20px">
+    <div class="analogy-card">
+      <div class="big-icon">&#128214;</div>
+      <h4>Epoch = Study Pass</h4>
+      <p>Each epoch is one complete read-through of all 285 practice questions</p>
+    </div>
+    <div class="analogy-card">
+      <div class="big-icon">&#128200;</div>
+      <h4>Loss = Mistake Severity</h4>
+      <p>How badly wrong is the student? High loss = wild guesses. Low loss = close to correct answers</p>
+    </div>
+    <div class="analogy-card">
+      <div class="big-icon">&#127919;</div>
+      <h4>Eval Accuracy = Test Score</h4>
+      <p>After each study pass, give the student a pop quiz on NEW questions they haven't seen</p>
+    </div>
+    <div class="analogy-card">
+      <div class="big-icon">&#128218;</div>
+      <h4>Learning Rate = Study Speed</h4>
+      <p>How big of a correction to make after each mistake. Start big, slow down as you get better</p>
+    </div>
+    <div class="analogy-card">
+      <div class="big-icon">&#128207;</div>
+      <h4>Grad Norm = Correction Size</h4>
+      <p>How much the student is adjusting their understanding after each batch of questions</p>
+    </div>
+    <div class="analogy-card">
+      <div class="big-icon">&#9888;&#65039;</div>
+      <h4>Overfitting = Memorizing</h4>
+      <p>When the student memorizes exact answers instead of learning the concept &mdash; fails on new questions</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- =================== SAMPLES, BATCHES, STEPS, EPOCHS =================== -->
+<section class="section" id="s-building-blocks">
+<div class="container">
+  <h2 class="section-title">The Building Blocks: Sample, Batch, Step, Epoch</h2>
+  <p class="section-desc">Before we look at the charts, you need to understand these 4 terms. They are the units of measurement for everything that happens during training.</p>
+
+  <!-- ===== SAMPLE ===== -->
+  <div class="example-box">
+    <h4 style="color:var(--green)">1. Sample = One Training Example</h4>
+    <p style="font-size:.9rem;line-height:1.8">
+      A <strong>sample</strong> is a single input-output pair the model learns from. In your case, each sample is:
+    </p>
+    <div style="display:flex;gap:12px;align-items:center;margin:12px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:250px;padding:14px;border-radius:8px;background:var(--bg3);border:1px solid var(--border)">
+        <div style="font-family:'Source Code Pro',monospace;font-size:.75rem;color:var(--text-dim);margin-bottom:4px">INPUT (customer message):</div>
+        <div style="font-size:.9rem;color:var(--text-bright)">"How much do I owe on my postpaid bill?"</div>
+      </div>
+      <div style="font-size:1.5rem;color:var(--text-dim);flex-shrink:0">&#8594;</div>
+      <div style="min-width:180px;padding:14px;border-radius:8px;background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.15)">
+        <div style="font-family:'Source Code Pro',monospace;font-size:.75rem;color:var(--text-dim);margin-bottom:4px">LABEL (correct intent):</div>
+        <div style="font-family:'Source Code Pro',monospace;font-size:.8rem;color:var(--accent);font-weight:600">PAYMENT_POSTPAID</div>
+      </div>
+    </div>
+    <p style="font-size:.9rem;color:var(--text-dim)">Your training set has <strong style="color:var(--text-bright)">~285 samples</strong> total &mdash; 285 customer messages, each labeled with one of the 10 intents.</p>
+  </div>
+
+  <!-- ===== BATCH ===== -->
+  <div class="example-box">
+    <h4 style="color:var(--purple)">2. Batch = A Group of Samples Processed Together</h4>
+    <p style="font-size:.9rem;line-height:1.8">
+      The model does <strong>not</strong> learn one sample at a time. Instead, it groups samples into <strong>batches</strong> and processes them together. This is much faster (GPUs are designed for parallel computation) and also makes learning more stable.
+    </p>
+    <div style="margin:16px 0">
+      <div style="font-family:'Source Code Pro',monospace;font-size:.78rem;color:var(--purple);margin-bottom:8px">A batch of ~7 samples being processed together:</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div style="width:80px;padding:8px;border-radius:6px;background:var(--purple-bg);border:1px solid rgba(188,140,255,.2);text-align:center;font-size:.72rem;font-family:'Source Code Pro',monospace;color:var(--purple)">Sample 1</div>
+        <div style="width:80px;padding:8px;border-radius:6px;background:var(--purple-bg);border:1px solid rgba(188,140,255,.2);text-align:center;font-size:.72rem;font-family:'Source Code Pro',monospace;color:var(--purple)">Sample 2</div>
+        <div style="width:80px;padding:8px;border-radius:6px;background:var(--purple-bg);border:1px solid rgba(188,140,255,.2);text-align:center;font-size:.72rem;font-family:'Source Code Pro',monospace;color:var(--purple)">Sample 3</div>
+        <div style="width:80px;padding:8px;border-radius:6px;background:var(--purple-bg);border:1px solid rgba(188,140,255,.2);text-align:center;font-size:.72rem;font-family:'Source Code Pro',monospace;color:var(--purple)">Sample 4</div>
+        <div style="width:80px;padding:8px;border-radius:6px;background:var(--purple-bg);border:1px solid rgba(188,140,255,.2);text-align:center;font-size:.72rem;font-family:'Source Code Pro',monospace;color:var(--purple)">Sample 5</div>
+        <div style="width:80px;padding:8px;border-radius:6px;background:var(--purple-bg);border:1px solid rgba(188,140,255,.2);text-align:center;font-size:.72rem;font-family:'Source Code Pro',monospace;color:var(--purple)">Sample 6</div>
+        <div style="width:80px;padding:8px;border-radius:6px;background:var(--purple-bg);border:1px solid rgba(188,140,255,.2);text-align:center;font-size:.72rem;font-family:'Source Code Pro',monospace;color:var(--purple)">Sample 7</div>
+      </div>
+    </div>
+    <p style="font-size:.9rem;line-height:1.8">
+      The <strong>batch size</strong> is a hyperparameter you choose. Common values are 4, 8, 16, or 32. In your run, the effective batch size is approximately <strong style="color:var(--text-bright)">~7</strong> (we can deduce this from the math: 285 samples / 43 steps per epoch &asymp; 6.6, rounded up).
+    </p>
+    <div style="margin-top:12px;padding:12px 16px;border-radius:8px;background:var(--bg3);border:1px solid var(--border)">
+      <div style="font-size:.85rem;color:var(--text-dim)"><strong style="color:var(--text-bright)">Why batch size matters:</strong></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:8px">
+        <div style="padding:8px;border-radius:6px;background:var(--red-bg);border:1px solid rgba(248,81,73,.15)">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.72rem;color:var(--red);font-weight:600">TOO SMALL (1-2)</div>
+          <div style="font-size:.78rem;color:var(--text-dim);margin-top:2px">Noisy updates, slow training, grad norm spikes</div>
+        </div>
+        <div style="padding:8px;border-radius:6px;background:var(--green-bg);border:1px solid rgba(63,185,80,.15)">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.72rem;color:var(--green);font-weight:600">GOOD RANGE (4-16)</div>
+          <div style="font-size:.78rem;color:var(--text-dim);margin-top:2px">Balanced stability and speed. Your ~7 fits here.</div>
+        </div>
+        <div style="padding:8px;border-radius:6px;background:var(--yellow-bg);border:1px solid rgba(210,153,34,.15)">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.72rem;color:var(--yellow);font-weight:600">TOO LARGE (64+)</div>
+          <div style="font-size:.78rem;color:var(--text-dim);margin-top:2px">Needs more GPU memory, may generalize worse</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== STEP ===== -->
+  <div class="example-box">
+    <h4 style="color:var(--orange)">3. Step = One Batch Processed + One Model Update</h4>
+    <p style="font-size:.9rem;line-height:1.8">
+      A <strong>step</strong> (also called an <strong>iteration</strong>) is the atomic unit of training. In each step, three things happen:
+    </p>
+    <div style="display:flex;gap:8px;margin:16px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:160px;padding:14px;border-radius:8px;background:rgba(240,136,62,.06);border:1px solid rgba(240,136,62,.15);text-align:center">
+        <div style="font-size:1.5rem;margin-bottom:4px">&#9312;</div>
+        <div style="font-family:'Source Code Pro',monospace;font-size:.75rem;color:var(--orange);font-weight:600">FORWARD PASS</div>
+        <div style="font-size:.82rem;color:var(--text-dim);margin-top:4px">Feed one batch (~7 samples) through the model. Get predictions.</div>
+      </div>
+      <div style="flex:1;min-width:160px;padding:14px;border-radius:8px;background:rgba(240,136,62,.06);border:1px solid rgba(240,136,62,.15);text-align:center">
+        <div style="font-size:1.5rem;margin-bottom:4px">&#9313;</div>
+        <div style="font-family:'Source Code Pro',monospace;font-size:.75rem;color:var(--orange);font-weight:600">COMPUTE LOSS</div>
+        <div style="font-size:.82rem;color:var(--text-dim);margin-top:4px">Compare predictions to correct labels. Calculate how wrong the model was.</div>
+      </div>
+      <div style="flex:1;min-width:160px;padding:14px;border-radius:8px;background:rgba(240,136,62,.06);border:1px solid rgba(240,136,62,.15);text-align:center">
+        <div style="font-size:1.5rem;margin-bottom:4px">&#9314;</div>
+        <div style="font-family:'Source Code Pro',monospace;font-size:.75rem;color:var(--orange);font-weight:600">BACKWARD PASS</div>
+        <div style="font-size:.82rem;color:var(--text-dim);margin-top:4px">Calculate gradients and update model weights. This is where learning happens.</div>
+      </div>
+    </div>
+    <p style="font-size:.9rem;color:var(--text-dim)">
+      <strong style="color:var(--text-bright)">1 step = 1 batch = ~7 samples processed = 1 weight update.</strong><br>
+      The X-axis on all your training charts says "Step" &mdash; now you know what that means.
+    </p>
+  </div>
+
+  <!-- ===== EPOCH ===== -->
+  <div class="example-box">
+    <h4 style="color:var(--accent)">4. Epoch = One Complete Pass Through ALL Samples</h4>
+    <p style="font-size:.9rem;line-height:1.8">
+      An <strong>epoch</strong> is completed when the model has seen every training sample exactly once. Since you process ~7 samples per step, it takes ~43 steps to get through all 285 samples = 1 epoch.
+    </p>
+  </div>
+
+  <!-- ===== THE BIG VISUAL ===== -->
+  <div class="example-box" style="background:var(--bg3)">
+    <h4 style="color:var(--text-bright)">Putting it all together: The complete picture</h4>
+    <div style="margin:16px 0">
+      <!-- Visual: Epoch 1 broken into steps -->
+      <div style="font-family:'Source Code Pro',monospace;font-size:.78rem;color:var(--accent);margin-bottom:8px">EPOCH 1 (Steps 1 through 43):</div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:4px">
+        <div style="padding:6px 10px;border-radius:4px;background:rgba(240,136,62,.15);border:1px solid rgba(240,136,62,.2);font-size:.7rem;font-family:'Source Code Pro',monospace;color:var(--orange)">Step 1<br><span style="color:var(--text-dim)">7 samples</span></div>
+        <div style="padding:6px 10px;border-radius:4px;background:rgba(240,136,62,.15);border:1px solid rgba(240,136,62,.2);font-size:.7rem;font-family:'Source Code Pro',monospace;color:var(--orange)">Step 2<br><span style="color:var(--text-dim)">7 samples</span></div>
+        <div style="padding:6px 10px;border-radius:4px;background:rgba(240,136,62,.15);border:1px solid rgba(240,136,62,.2);font-size:.7rem;font-family:'Source Code Pro',monospace;color:var(--orange)">Step 3<br><span style="color:var(--text-dim)">7 samples</span></div>
+        <div style="padding:6px 10px;border-radius:4px;background:rgba(240,136,62,.1);border:1px solid rgba(240,136,62,.15);font-size:.7rem;font-family:'Source Code Pro',monospace;color:var(--text-dim)">...</div>
+        <div style="padding:6px 10px;border-radius:4px;background:rgba(240,136,62,.15);border:1px solid rgba(240,136,62,.2);font-size:.7rem;font-family:'Source Code Pro',monospace;color:var(--orange)">Step 42<br><span style="color:var(--text-dim)">7 samples</span></div>
+        <div style="padding:6px 10px;border-radius:4px;background:rgba(240,136,62,.15);border:1px solid rgba(240,136,62,.2);font-size:.7rem;font-family:'Source Code Pro',monospace;color:var(--orange)">Step 43<br><span style="color:var(--text-dim)">5 samples</span></div>
+      </div>
+      <div style="font-size:.78rem;color:var(--text-dim);margin-bottom:16px">&#8593; 42 steps &times; 7 samples + 1 step &times; 5 samples = 285 + 4 = all samples seen once. <strong style="color:var(--accent)">That's 1 epoch.</strong></div>
+
+      <!-- The full training -->
+      <div style="font-family:'Source Code Pro',monospace;font-size:.78rem;color:var(--text-bright);margin-bottom:8px">FULL TRAINING (5 epochs &times; ~43 steps = ~215 total steps):</div>
+      <div style="display:flex;gap:4px;align-items:stretch;flex-wrap:wrap">
+        <div style="flex:1;min-width:100px;padding:10px;border-radius:6px;background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.15);text-align:center">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.72rem;color:var(--accent);font-weight:600">Epoch 1</div>
+          <div style="font-size:.7rem;color:var(--text-dim)">Steps 1-43</div>
+          <div style="font-size:.7rem;color:var(--text-dim)">285 samples</div>
+          <div style="font-size:.7rem;color:var(--text-dim)">43 weight updates</div>
+        </div>
+        <div style="flex:1;min-width:100px;padding:10px;border-radius:6px;background:rgba(88,166,255,.12);border:1px solid rgba(88,166,255,.15);text-align:center">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.72rem;color:var(--accent);font-weight:600">Epoch 2</div>
+          <div style="font-size:.7rem;color:var(--text-dim)">Steps 44-86</div>
+          <div style="font-size:.7rem;color:var(--text-dim)">285 samples</div>
+          <div style="font-size:.7rem;color:var(--text-dim)">43 weight updates</div>
+        </div>
+        <div style="flex:1;min-width:100px;padding:10px;border-radius:6px;background:rgba(88,166,255,.16);border:1px solid rgba(88,166,255,.15);text-align:center">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.72rem;color:var(--accent);font-weight:600">Epoch 3</div>
+          <div style="font-size:.7rem;color:var(--text-dim)">Steps 87-129</div>
+          <div style="font-size:.7rem;color:var(--text-dim)">285 samples</div>
+          <div style="font-size:.7rem;color:var(--text-dim)">43 weight updates</div>
+        </div>
+        <div style="flex:1;min-width:100px;padding:10px;border-radius:6px;background:rgba(63,185,80,.12);border:1px solid rgba(63,185,80,.2);text-align:center">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.72rem;color:var(--green);font-weight:600">Epoch 4</div>
+          <div style="font-size:.7rem;color:var(--green)">Steps 130-172</div>
+          <div style="font-size:.7rem;color:var(--text-dim)">285 samples</div>
+          <div style="font-size:.7rem;color:var(--green)">Best checkpoint</div>
+        </div>
+        <div style="flex:1;min-width:100px;padding:10px;border-radius:6px;background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.15);text-align:center">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.72rem;color:var(--red);font-weight:600">Epoch 5</div>
+          <div style="font-size:.7rem;color:var(--red)">Steps 173-215</div>
+          <div style="font-size:.7rem;color:var(--text-dim)">285 samples</div>
+          <div style="font-size:.7rem;color:var(--red)">Overfitting</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SUMMARY FORMULA TABLE ===== -->
+  <div class="example-box">
+    <h4>The math that connects them</h4>
+    <div style="overflow-x:auto">
+    <table class="data-table">
+      <thead><tr><th>Relationship</th><th>Formula</th><th>Your Run</th></tr></thead>
+      <tbody>
+        <tr>
+          <td style="font-size:.88rem">Steps per Epoch</td>
+          <td style="font-family:'Source Code Pro',monospace;color:var(--accent2);font-size:.85rem">= ceil(Total Samples / Batch Size)</td>
+          <td style="font-family:'Source Code Pro',monospace;font-size:.85rem">= ceil(285 / 7) = <strong style="color:var(--text-bright)">~43</strong></td>
+        </tr>
+        <tr>
+          <td style="font-size:.88rem">Total Steps</td>
+          <td style="font-family:'Source Code Pro',monospace;color:var(--accent2);font-size:.85rem">= Steps per Epoch &times; Num Epochs</td>
+          <td style="font-family:'Source Code Pro',monospace;font-size:.85rem">= 43 &times; 5 = <strong style="color:var(--text-bright)">~215</strong></td>
+        </tr>
+        <tr>
+          <td style="font-size:.88rem">Samples per Step</td>
+          <td style="font-family:'Source Code Pro',monospace;color:var(--accent2);font-size:.85rem">= Batch Size</td>
+          <td style="font-family:'Source Code Pro',monospace;font-size:.85rem">= <strong style="color:var(--text-bright)">~7</strong></td>
+        </tr>
+        <tr>
+          <td style="font-size:.88rem">Total Samples Seen</td>
+          <td style="font-family:'Source Code Pro',monospace;color:var(--accent2);font-size:.85rem">= Total Samples &times; Num Epochs</td>
+          <td style="font-family:'Source Code Pro',monospace;font-size:.85rem">= 285 &times; 5 = <strong style="color:var(--text-bright)">1,425</strong></td>
+        </tr>
+        <tr>
+          <td style="font-size:.88rem">Weight Updates</td>
+          <td style="font-family:'Source Code Pro',monospace;color:var(--accent2);font-size:.85rem">= Total Steps (1 update per step)</td>
+          <td style="font-family:'Source Code Pro',monospace;font-size:.85rem">= <strong style="color:var(--text-bright)">~215 updates</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <p style="font-size:.85rem;color:var(--text-dim);margin-top:12px"><strong style="color:var(--text-bright)">Key nuance:</strong> each of the 285 samples is seen <strong>5 times total</strong> (once per epoch), but the data is typically <strong>shuffled differently each epoch</strong> so the batches are different. This helps the model learn general patterns rather than memorizing the order.</p>
+  </div>
+
+  <div class="insight-banner info">
+    <h3>Now you can read the charts</h3>
+    <p>Every chart in the training dashboard has <strong>"Step"</strong> on the X-axis. Now you know: Step 43 = end of epoch 1 (the model has seen all 285 samples once). Step 86 = end of epoch 2 (all samples seen twice). And so on. Each step = one batch of ~7 samples processed and one weight update.</p>
+  </div>
+</div>
+</section>
+
+<!-- =================== KEY METRICS DEEP DIVE =================== -->
+<section class="section" id="s-keymetrics">
+<div class="container">
+  <h2 class="section-title">The 6 Key Training Metrics</h2>
+  <p class="section-desc">These are the metrics that tell you whether training is going well, badly, or has gone too far.</p>
+
+  <!-- ===== EPOCH ===== -->
+  <div class="metric-block epoch fade-in">
+    <div class="metric-header">
+      <span class="metric-name">epoch</span>
+      <span class="metric-tag" style="background:rgba(88,166,255,.12);color:var(--accent)">PROGRESS</span>
+    </div>
+    <p class="metric-oneliner"><strong>How many complete passes through the training data has the model made?</strong></p>
+
+    <div class="example-box">
+      <h4>This run: 5 epochs</h4>
+      <p style="font-size:.9rem">The model trained for 5 epochs over approximately 215 steps. With ~285 training samples at ~7 per batch, that means roughly <strong>43 steps per epoch</strong>.</p>
+      <div style="margin:16px 0;display:flex;gap:4px;align-items:flex-end;height:60px">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.7rem;color:var(--text-dim)">Epoch 1</div>
+          <div style="width:100%;height:12px;border-radius:4px;background:rgba(88,166,255,.3)"></div>
+          <div style="font-size:.7rem;color:var(--text-dim)">Steps 1-43</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.7rem;color:var(--text-dim)">Epoch 2</div>
+          <div style="width:100%;height:12px;border-radius:4px;background:rgba(88,166,255,.45)"></div>
+          <div style="font-size:.7rem;color:var(--text-dim)">Steps 44-86</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.7rem;color:var(--text-dim)">Epoch 3</div>
+          <div style="width:100%;height:12px;border-radius:4px;background:rgba(88,166,255,.6)"></div>
+          <div style="font-size:.7rem;color:var(--text-dim)">Steps 87-129</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.7rem;color:var(--green)">Epoch 4</div>
+          <div style="width:100%;height:12px;border-radius:4px;background:rgba(63,185,80,.5)"></div>
+          <div style="font-size:.7rem;color:var(--green)">Steps 130-172</div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.7rem;color:var(--red)">Epoch 5</div>
+          <div style="width:100%;height:12px;border-radius:4px;background:rgba(248,81,73,.4)"></div>
+          <div style="font-size:.7rem;color:var(--red)">Steps 173-215</div>
+        </div>
+      </div>
+      <p style="font-size:.85rem;color:var(--text-dim)"><strong style="color:var(--green)">Epoch 4</strong> was the sweet spot (best eval accuracy). <strong style="color:var(--red)">Epoch 5</strong> shows signs of overfitting.</p>
+    </div>
+
+    <div class="formula-box">
+      Steps per Epoch = Training Samples / Batch Size<br>
+      <div class="result">~285 samples / ~7 effective batch size &asymp; <strong>43 steps/epoch</strong> &times; 5 epochs = <strong>~215 total steps</strong></div>
+    </div>
+  </div>
+
+  <!-- ===== TRAINING LOSS ===== -->
+  <div class="metric-block loss fade-in">
+    <div class="metric-header">
+      <span class="metric-name">loss (training loss)</span>
+      <span class="metric-tag" style="background:var(--red-bg);color:var(--red)">CORE METRIC</span>
+    </div>
+    <p class="metric-oneliner"><strong>How badly is the model getting the training examples wrong?</strong> Lower = better. This should decrease smoothly during training.</p>
+
+    <div class="example-box">
+      <h4>What loss actually measures</h4>
+      <p style="font-size:.9rem;line-height:1.8">When the model sees the message <em>"How much do I owe on my postpaid bill?"</em> and the correct answer is <strong>PAYMENT_POSTPAID</strong>, the model outputs a probability for each of the 10 intents.</p>
+      <p style="font-size:.9rem;margin-top:8px">If it says 90% confident PAYMENT_POSTPAID &rarr; <strong style="color:var(--green)">low loss</strong> (good!)</p>
+      <p style="font-size:.9rem">If it says 10% confident PAYMENT_POSTPAID &rarr; <strong style="color:var(--red)">high loss</strong> (bad!)</p>
+      <p style="font-size:.9rem;margin-top:8px;color:var(--text-dim)">The mathematical function used is <strong>cross-entropy loss</strong> &mdash; it measures how far the model's probability distribution is from the correct answer.</p>
+    </div>
+
+    <div class="example-box">
+      <h4> training loss journey</h4>
+      <!-- SVG chart for training loss -->
+      <svg class="svg-chart" viewBox="0 0 600 200" style="margin:8px 0">
+        <!-- Grid -->
+        <line x1="60" y1="20" x2="60" y2="170" class="chart-grid" style="stroke-dasharray:none;stroke:var(--border)"/>
+        <line x1="60" y1="170" x2="580" y2="170" class="chart-grid" style="stroke-dasharray:none;stroke:var(--border)"/>
+        <line x1="60" y1="127.5" x2="580" y2="127.5" class="chart-grid"/>
+        <line x1="60" y1="85" x2="580" y2="85" class="chart-grid"/>
+        <line x1="60" y1="42.5" x2="580" y2="42.5" class="chart-grid"/>
+        <!-- Y-axis labels -->
+        <text x="50" y="175" class="chart-axis-label" text-anchor="end">0</text>
+        <text x="50" y="132" class="chart-axis-label" text-anchor="end">1.0</text>
+        <text x="50" y="90" class="chart-axis-label" text-anchor="end">2.0</text>
+        <text x="50" y="47" class="chart-axis-label" text-anchor="end">3.0</text>
+        <text x="50" y="24" class="chart-axis-label" text-anchor="end">3.5</text>
+        <!-- X-axis labels -->
+        <text x="60" y="188" class="chart-axis-label" text-anchor="middle">0</text>
+        <text x="190" y="188" class="chart-axis-label" text-anchor="middle">50</text>
+        <text x="320" y="188" class="chart-axis-label" text-anchor="middle">100</text>
+        <text x="450" y="188" class="chart-axis-label" text-anchor="middle">150</text>
+        <text x="580" y="188" class="chart-axis-label" text-anchor="middle">~215</text>
+        <text x="320" y="200" class="chart-axis-label" text-anchor="middle">Step</text>
+        <!-- Title -->
+        <text x="320" y="14" class="chart-title" text-anchor="middle">Training Loss Over Time</text>
+        <!-- Loss curve -->
+        <path d="M 90,22 Q 150,50 190,72 Q 240,100 300,120 Q 360,138 420,148 Q 480,155 550,160" class="chart-line" stroke="var(--red)" opacity=".8"/>
+        <!-- Data points -->
+        <circle cx="90" cy="22" r="4" fill="var(--red)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="150" cy="52" r="4" fill="var(--red)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="220" cy="90" r="4" fill="var(--red)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="300" cy="120" r="4" fill="var(--red)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="390" cy="142" r="4" fill="var(--red)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="470" cy="152" r="4" fill="var(--red)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="550" cy="158" r="4" fill="var(--red)" class="chart-dot" stroke="var(--bg)"/>
+        <!-- Annotations -->
+        <text x="100" y="18" class="chart-annotation" fill="var(--red)">~3.5</text>
+        <text x="540" y="152" class="chart-annotation" fill="var(--green)">~0.65</text>
+        <!-- Zone labels -->
+        <rect x="60" y="20" width="130" height="150" fill="var(--red)" class="chart-zone"/>
+        <rect x="350" y="20" width="230" height="150" fill="var(--green)" class="chart-zone"/>
+        <text x="125" y="60" class="chart-annotation" fill="var(--red)" opacity=".6">Rapid learning</text>
+        <text x="465" y="60" class="chart-annotation" fill="var(--green)" opacity=".6">Refinement</text>
+      </svg>
+      <p style="font-size:.88rem;color:var(--text-dim);margin-top:8px">
+        <strong style="color:var(--text-bright)">This is a healthy training loss curve.</strong> It drops steeply at first (the model quickly learns the obvious patterns), then gradually levels off (it's refining the harder cases). Starting at ~3.5 and ending at ~0.65 shows strong learning.
+      </p>
+    </div>
+
+    <div class="example-box">
+      <h4>What if the loss curve looked different?</h4>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:8px">
+        <div style="padding:12px;border-radius:8px;background:var(--green-bg);border:1px solid rgba(63,185,80,.2)">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.78rem;color:var(--green);font-weight:600">SMOOTH DECREASE &#10003;</div>
+          <div style="font-size:.82rem;color:var(--text-dim);margin-top:4px">What s looks like. Healthy training. The model is learning steadily.</div>
+        </div>
+        <div style="padding:12px;border-radius:8px;background:var(--yellow-bg);border:1px solid rgba(210,153,34,.2)">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.78rem;color:var(--yellow);font-weight:600">FLAT / NOT DECREASING</div>
+          <div style="font-size:.82rem;color:var(--text-dim);margin-top:4px">Model isn't learning. Learning rate might be too low, or data has issues.</div>
+        </div>
+        <div style="padding:12px;border-radius:8px;background:var(--red-bg);border:1px solid rgba(248,81,73,.2)">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.78rem;color:var(--red);font-weight:600">SPIKY / ERRATIC</div>
+          <div style="font-size:.82rem;color:var(--text-dim);margin-top:4px">Unstable training. Learning rate too high, or batch size too small.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== EVAL LOSS ===== -->
+  <div class="metric-block eval-loss fade-in">
+    <div class="metric-header">
+      <span class="metric-name">eval_loss</span>
+      <span class="metric-tag" style="background:var(--orange-bg);color:var(--orange)">CORE METRIC</span>
+    </div>
+    <p class="metric-oneliner"><strong>Same as training loss, but measured on data the model has NEVER seen.</strong> This is the honest report card.</p>
+
+    <div class="example-box">
+      <h4>Training loss vs eval loss &mdash; the critical difference</h4>
+      <p style="font-size:.9rem;line-height:1.8">
+        <strong style="color:var(--red)">Training loss</strong> = how well the student does on <em>practice questions they've already studied</em>.<br>
+        <strong style="color:var(--orange)">Eval loss</strong> = how well the student does on a <em>pop quiz with completely new questions</em>.<br><br>
+        Training loss will almost always go down (the student memorizes). But if eval loss starts going <em>up</em> while training loss is still going <em>down</em> &mdash; that's overfitting.
+      </p>
+    </div>
+
+    <div class="example-box">
+      <h4> eval loss journey</h4>
+      <svg class="svg-chart" viewBox="0 0 600 220" style="margin:8px 0">
+        <!-- Grid -->
+        <line x1="60" y1="20" x2="60" y2="170" class="chart-grid" style="stroke-dasharray:none;stroke:var(--border)"/>
+        <line x1="60" y1="170" x2="580" y2="170" class="chart-grid" style="stroke-dasharray:none;stroke:var(--border)"/>
+        <line x1="60" y1="132.5" x2="580" y2="132.5" class="chart-grid"/>
+        <line x1="60" y1="95" x2="580" y2="95" class="chart-grid"/>
+        <line x1="60" y1="57.5" x2="580" y2="57.5" class="chart-grid"/>
+        <!-- Y-axis -->
+        <text x="50" y="175" class="chart-axis-label" text-anchor="end">0</text>
+        <text x="50" y="137" class="chart-axis-label" text-anchor="end">0.5</text>
+        <text x="50" y="100" class="chart-axis-label" text-anchor="end">1.0</text>
+        <text x="50" y="62" class="chart-axis-label" text-anchor="end">1.5</text>
+        <text x="50" y="24" class="chart-axis-label" text-anchor="end">2.5</text>
+        <!-- X-axis -->
+        <text x="125" y="188" class="chart-axis-label" text-anchor="middle">Epoch 1</text>
+        <text x="235" y="188" class="chart-axis-label" text-anchor="middle">Epoch 2</text>
+        <text x="345" y="188" class="chart-axis-label" text-anchor="middle">Epoch 3</text>
+        <text x="455" y="188" class="chart-axis-label" text-anchor="middle">Epoch 4</text>
+        <text x="555" y="188" class="chart-axis-label" text-anchor="middle">Epoch 5</text>
+        <!-- Title -->
+        <text x="320" y="14" class="chart-title" text-anchor="middle">Eval Loss &mdash; Watch for the Uptick!</text>
+        <!-- Good zone -->
+        <rect x="60" y="20" width="395" height="150" fill="var(--green)" class="chart-zone"/>
+        <!-- Bad zone -->
+        <rect x="455" y="20" width="125" height="150" fill="var(--red)" class="chart-zone"/>
+        <!-- Eval loss curve -->
+        <path d="M 125,25 L 235,80 L 345,142 L 455,152 L 555,147" class="chart-line" stroke="var(--orange)"/>
+        <circle cx="125" cy="25" r="5" fill="var(--orange)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="235" cy="80" r="5" fill="var(--orange)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="345" cy="142" r="5" fill="var(--orange)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="455" cy="152" r="6" fill="var(--green)" class="chart-dot" stroke="var(--bg)" stroke-width="3"/>
+        <circle cx="555" cy="147" r="5" fill="var(--red)" class="chart-dot" stroke="var(--bg)"/>
+        <!-- Annotations -->
+        <text x="130" y="20" class="chart-annotation" fill="var(--orange)">~2.5</text>
+        <text x="240" y="75" class="chart-annotation" fill="var(--orange)">~1.2</text>
+        <text x="350" y="137" class="chart-annotation" fill="var(--orange)">~0.75</text>
+        <text x="435" y="165" class="chart-annotation" fill="var(--green)" font-weight="600">~0.65 Best!</text>
+        <text x="540" y="165" class="chart-annotation" fill="var(--red)">~0.70 &#8593;</text>
+        <!-- Arrow showing uptick -->
+        <line x1="505" y1="145" x2="505" y2="135" stroke="var(--red)" stroke-width="2" marker-end="url(#arrowhead)"/>
+        <text x="475" y="210" class="chart-annotation" fill="var(--red)" font-weight="600">Overfitting starts here!</text>
+        <defs><marker id="arrowhead" markerWidth="6" markerHeight="4" refX="0" refY="2" orient="auto"><polygon points="0 0, 6 2, 0 4" fill="var(--red)"/></marker></defs>
+      </svg>
+      <p style="font-size:.88rem;color:var(--text-dim)">The eval loss drops beautifully from 2.5 to 0.65 across epochs 1-4 &mdash; but <strong style="color:var(--red)">rises slightly at epoch 5</strong> (from 0.65 to ~0.70). This is the first sign of overfitting.</p>
+    </div>
+  </div>
+
+  <!-- ===== EVAL ACCURACY ===== -->
+  <div class="metric-block eval-acc fade-in">
+    <div class="metric-header">
+      <span class="metric-name">eval_accuracy</span>
+      <span class="metric-tag" style="background:var(--green-bg);color:var(--green)">CORE METRIC</span>
+    </div>
+    <p class="metric-oneliner"><strong>What percentage of the held-out evaluation messages did the model classify correctly?</strong> This is the most intuitive metric.</p>
+
+    <div class="example-box">
+      <h4> eval accuracy journey</h4>
+      <svg class="svg-chart" viewBox="0 0 600 220" style="margin:8px 0">
+        <!-- Grid -->
+        <line x1="60" y1="20" x2="60" y2="170" class="chart-grid" style="stroke-dasharray:none;stroke:var(--border)"/>
+        <line x1="60" y1="170" x2="580" y2="170" class="chart-grid" style="stroke-dasharray:none;stroke:var(--border)"/>
+        <line x1="60" y1="120" x2="580" y2="120" class="chart-grid"/>
+        <line x1="60" y1="70" x2="580" y2="70" class="chart-grid"/>
+        <!-- Y-axis -->
+        <text x="50" y="175" class="chart-axis-label" text-anchor="end">0.0</text>
+        <text x="50" y="125" class="chart-axis-label" text-anchor="end">0.4</text>
+        <text x="50" y="75" class="chart-axis-label" text-anchor="end">0.6</text>
+        <text x="50" y="24" class="chart-axis-label" text-anchor="end">1.0</text>
+        <!-- X-axis -->
+        <text x="125" y="188" class="chart-axis-label" text-anchor="middle">Epoch 1</text>
+        <text x="235" y="188" class="chart-axis-label" text-anchor="middle">Epoch 2</text>
+        <text x="345" y="188" class="chart-axis-label" text-anchor="middle">Epoch 3</text>
+        <text x="455" y="188" class="chart-axis-label" text-anchor="middle">Epoch 4</text>
+        <text x="555" y="188" class="chart-axis-label" text-anchor="middle">Epoch 5</text>
+        <!-- Title -->
+        <text x="320" y="14" class="chart-title" text-anchor="middle">Eval Accuracy &mdash; Peaks Then Drops</text>
+        <!-- Accuracy curve -->
+        <path d="M 125,120 L 235,70 L 345,48 L 455,33 L 555,38" class="chart-line" stroke="var(--green)"/>
+        <circle cx="125" cy="120" r="5" fill="var(--green)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="235" cy="70" r="5" fill="var(--green)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="345" cy="48" r="5" fill="var(--green)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="455" cy="33" r="6" fill="var(--green)" class="chart-dot" stroke="var(--bg)" stroke-width="3"/>
+        <circle cx="555" cy="38" r="5" fill="var(--red)" class="chart-dot" stroke="var(--bg)"/>
+        <!-- Labels -->
+        <text x="115" y="135" class="chart-annotation" fill="var(--text-dim)">~0.40</text>
+        <text x="225" y="63" class="chart-annotation" fill="var(--text-dim)">~0.65</text>
+        <text x="335" y="42" class="chart-annotation" fill="var(--text-dim)">~0.75</text>
+        <text x="435" y="26" class="chart-annotation" fill="var(--green)" font-weight="600">~0.80 Peak!</text>
+        <text x="540" y="52" class="chart-annotation" fill="var(--red)">~0.78 &#8595;</text>
+        <!-- Star on best -->
+        <text x="455" y="20" style="font-size:16px" text-anchor="middle">&#11088;</text>
+        <text x="475" y="210" class="chart-annotation" fill="var(--red)" font-weight="600">Accuracy drops &mdash; overfitting!</text>
+      </svg>
+    </div>
+
+    <div class="example-box">
+      <h4>Reading the story in the numbers</h4>
+      <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead><tr><th>Epoch</th><th>Eval Accuracy</th><th>Change</th><th>What it means</th></tr></thead>
+        <tbody>
+          <tr>
+            <td style="font-family:'Source Code Pro',monospace;color:var(--accent)">1</td>
+            <td style="font-family:'Fraunces',serif;font-weight:700;color:var(--text-dim)">~0.40</td>
+            <td>&mdash;</td>
+            <td style="font-size:.85rem">Model is still mostly random. Just starting to learn patterns.</td>
+          </tr>
+          <tr>
+            <td style="font-family:'Source Code Pro',monospace;color:var(--accent)">2</td>
+            <td style="font-family:'Fraunces',serif;font-weight:700;color:var(--yellow)">~0.65</td>
+            <td style="color:var(--green)">+0.25 &#8593;</td>
+            <td style="font-size:.85rem">Biggest jump! Model learned the main distinguishing patterns.</td>
+          </tr>
+          <tr>
+            <td style="font-family:'Source Code Pro',monospace;color:var(--accent)">3</td>
+            <td style="font-family:'Fraunces',serif;font-weight:700;color:var(--yellow)">~0.75</td>
+            <td style="color:var(--green)">+0.10 &#8593;</td>
+            <td style="font-size:.85rem">Steady improvement. Refining harder cases.</td>
+          </tr>
+          <tr style="background:rgba(63,185,80,.06)">
+            <td style="font-family:'Source Code Pro',monospace;color:var(--green);font-weight:700">4</td>
+            <td style="font-family:'Fraunces',serif;font-weight:700;color:var(--green)">~0.80</td>
+            <td style="color:var(--green)">+0.05 &#8593;</td>
+            <td style="font-size:.85rem"><strong style="color:var(--green)">Best epoch!</strong> Peak performance on unseen data.</td>
+          </tr>
+          <tr style="background:rgba(248,81,73,.06)">
+            <td style="font-family:'Source Code Pro',monospace;color:var(--red);font-weight:700">5</td>
+            <td style="font-family:'Fraunces',serif;font-weight:700;color:var(--red)">~0.78</td>
+            <td style="color:var(--red)">-0.02 &#8595;</td>
+            <td style="font-size:.85rem"><strong style="color:var(--red)">Accuracy dropped!</strong> Model started memorizing training data.</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== OVERFITTING SPOTLIGHT ===== -->
+  <div class="metric-block overfit fade-in" id="m-overfit">
+    <div class="metric-header">
+      <span class="metric-name" style="color:var(--red)">OVERFITTING DETECTED</span>
+      <span class="metric-tag" style="background:var(--red-bg);color:var(--red)">CRITICAL INSIGHT</span>
+    </div>
+    <p class="metric-oneliner"><strong>At epoch 5,  model started memorizing the training data instead of learning generalizable patterns.</strong></p>
+
+    <div class="example-box">
+      <h4>The evidence: two signals pointing the same way</h4>
+      <div class="overfit-visual">
+        <div class="overfit-card" style="background:var(--green-bg);border:1px solid rgba(63,185,80,.2)">
+          <h5 style="color:var(--green)">EPOCH 4 (Best)</h5>
+          <div class="big-val" style="color:var(--green)">0.80</div>
+          <div style="font-size:.85rem;color:var(--text-dim)">eval_accuracy</div>
+          <div class="big-val" style="color:var(--green);margin-top:8px">0.65</div>
+          <div style="font-size:.85rem;color:var(--text-dim)">eval_loss</div>
+        </div>
+        <div class="overfit-card" style="background:var(--red-bg);border:1px solid rgba(248,81,73,.2)">
+          <h5 style="color:var(--red)">EPOCH 5 (Overfit)</h5>
+          <div class="big-val" style="color:var(--red)">0.78</div>
+          <div class="trend" style="color:var(--red)">&#8595; accuracy dropped</div>
+          <div class="big-val" style="color:var(--red);margin-top:8px">0.70</div>
+          <div class="trend" style="color:var(--red)">&#8593; loss increased</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="example-box">
+      <h4>The student analogy for overfitting</h4>
+      <p style="font-size:.9rem;line-height:1.8">
+        Imagine our student read the study guide so many times that they <strong>memorized the exact wording</strong> of each question-answer pair. When asked <em>"How much do I owe on my postpaid bill?"</em> &mdash; they know it perfectly because they've seen that exact sentence 5 times.
+      </p>
+      <p style="font-size:.9rem;line-height:1.8;margin-top:8px">
+        But when a NEW customer asks <em>"Can you check my monthly plan charges?"</em> (same intent, different wording) &mdash; the student stumbles because they memorized <strong>specific words</strong> instead of understanding the <strong>underlying concept</strong>.
+      </p>
+      <p style="font-size:.9rem;margin-top:12px;color:var(--text-dim)">This is especially likely with only <strong style="color:var(--text-bright)">285 training samples</strong> &mdash; the model sees each example ~5 times across 5 epochs, giving it plenty of opportunity to memorize.</p>
+    </div>
+
+    <div class="example-box">
+      <h4>How to spot overfitting &mdash; the classic pattern</h4>
+      <svg class="svg-chart" viewBox="0 0 600 200" style="margin:8px 0">
+        <!-- Grid -->
+        <line x1="60" y1="20" x2="60" y2="170" class="chart-grid" style="stroke-dasharray:none;stroke:var(--border)"/>
+        <line x1="60" y1="170" x2="580" y2="170" class="chart-grid" style="stroke-dasharray:none;stroke:var(--border)"/>
+        <!-- Axis labels -->
+        <text x="50" y="175" class="chart-axis-label" text-anchor="end">0</text>
+        <text x="50" y="24" class="chart-axis-label" text-anchor="end">High</text>
+        <text x="320" y="196" class="chart-axis-label" text-anchor="middle">Training Progresses &rarr;</text>
+        <text x="320" y="14" class="chart-title" text-anchor="middle">Overfitting Pattern: Train Loss vs Eval Loss</text>
+        <!-- Vertical split line -->
+        <line x1="380" y1="20" x2="380" y2="170" stroke="var(--yellow)" stroke-width="1" stroke-dasharray="6,4"/>
+        <text x="380" y="186" class="chart-annotation" fill="var(--yellow)" text-anchor="middle" font-weight="600">Sweet Spot</text>
+        <!-- Training loss - keeps going down -->
+        <path d="M 80,30 Q 200,80 300,130 Q 400,150 560,162" class="chart-line" stroke="var(--red)" opacity=".7"/>
+        <text x="565" y="158" class="chart-annotation" fill="var(--red)">Train Loss</text>
+        <!-- Eval loss - goes down then up -->
+        <path d="M 80,35 Q 200,85 300,120 Q 350,130 380,128 Q 440,125 500,100 Q 540,80 570,60" class="chart-line" stroke="var(--orange)"/>
+        <text x="565" y="53" class="chart-annotation" fill="var(--orange)">Eval Loss</text>
+        <!-- Labels for zones -->
+        <text x="220" y="60" class="chart-annotation" fill="var(--green)" font-weight="600">Both decreasing = Learning</text>
+        <text x="480" y="40" class="chart-annotation" fill="var(--red)" font-weight="600">Gap widens = Overfitting</text>
+      </svg>
+      <p style="font-size:.88rem;color:var(--text-dim)"><strong style="color:var(--text-bright)">The pattern:</strong> training loss keeps dropping (model memorizes better), but eval loss starts rising (performs worse on new data). The gap between them widens. The best checkpoint is right where eval loss was lowest.</p>
+    </div>
+  </div>
+
+  <!-- ===== LEARNING RATE ===== -->
+  <div class="metric-block lr fade-in">
+    <div class="metric-header">
+      <span class="metric-name">learning_rate</span>
+      <span class="metric-tag" style="background:var(--purple-bg);color:var(--purple)">HYPERPARAMETER</span>
+    </div>
+    <p class="metric-oneliner"><strong>How big of a step does the model take to correct itself after each mistake?</strong> Controls the speed of learning.</p>
+
+    <div class="example-box">
+      <h4>The driving analogy</h4>
+      <p style="font-size:.9rem;line-height:1.8">
+        Learning rate is like driving to a destination:<br>
+        <strong style="color:var(--purple)">High LR (start)</strong> = driving fast on the highway &mdash; you cover lots of ground quickly, but you might overshoot  exit.<br>
+        <strong style="color:var(--text-dim)">Low LR (end)</strong> = slow, careful driving in a parking lot &mdash; you're close to  spot, making tiny adjustments.
+      </p>
+    </div>
+
+    <div class="example-box">
+      <h4> learning rate schedule: Linear Decay</h4>
+      <svg class="svg-chart" viewBox="0 0 600 180" style="margin:8px 0">
+        <line x1="60" y1="20" x2="60" y2="150" class="chart-grid" style="stroke-dasharray:none;stroke:var(--border)"/>
+        <line x1="60" y1="150" x2="580" y2="150" class="chart-grid" style="stroke-dasharray:none;stroke:var(--border)"/>
+        <text x="50" y="155" class="chart-axis-label" text-anchor="end">0</text>
+        <text x="50" y="32" class="chart-axis-label" text-anchor="end">2e-4</text>
+        <text x="125" y="170" class="chart-axis-label" text-anchor="middle">Step 0</text>
+        <text x="555" y="170" class="chart-axis-label" text-anchor="middle">Step 215</text>
+        <text x="320" y="14" class="chart-title" text-anchor="middle">Learning Rate: Linear Decay from 2e-4 to 0</text>
+        <!-- Line -->
+        <line x1="80" y1="28" x2="560" y2="148" class="chart-line" stroke="var(--purple)"/>
+        <circle cx="80" cy="28" r="5" fill="var(--purple)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="560" cy="148" r="5" fill="var(--purple)" class="chart-dot" stroke="var(--bg)"/>
+        <!-- Labels -->
+        <text x="95" y="22" class="chart-annotation" fill="var(--purple)">0.0002 (big steps)</text>
+        <text x="475" y="142" class="chart-annotation" fill="var(--text-dim)">~0 (tiny steps)</text>
+      </svg>
+      <p style="font-size:.88rem;color:var(--text-dim)">
+         run used <strong style="color:var(--purple)">linear decay</strong>: the learning rate starts at <strong>2e-4</strong> (0.0002) and decreases linearly to <strong>0</strong> by the end of training. This is a standard and safe schedule &mdash; it prevents the model from making large, destabilizing changes in later epochs.
+      </p>
+    </div>
+
+    <div class="example-box">
+      <h4>What does 2e-4 actually mean?</h4>
+      <p style="font-size:.9rem">
+        <span style="font-family:'Source Code Pro',monospace;color:var(--purple)">2e-4 = 0.0002</span> &mdash; the model adjusts its weights by about 0.02% in the direction of each correction. This sounds tiny, but across millions of parameters and thousands of steps, these small adjustments add up to major behavior changes.
+      </p>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">
+        <div style="padding:10px;border-radius:8px;background:var(--red-bg);border:1px solid rgba(248,81,73,.15);text-align:center">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.75rem;color:var(--red)">TOO HIGH (1e-2)</div>
+          <div style="font-size:.8rem;color:var(--text-dim);margin-top:2px">Overshoots, unstable, loss explodes</div>
+        </div>
+        <div style="padding:10px;border-radius:8px;background:var(--green-bg);border:1px solid rgba(63,185,80,.15);text-align:center">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.75rem;color:var(--green)">JUST RIGHT (2e-4) &#10003;</div>
+          <div style="font-size:.8rem;color:var(--text-dim);margin-top:2px"> choice. Standard for BERT fine-tuning</div>
+        </div>
+        <div style="padding:10px;border-radius:8px;background:var(--yellow-bg);border:1px solid rgba(210,153,34,.15);text-align:center">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.75rem;color:var(--yellow)">TOO LOW (1e-6)</div>
+          <div style="font-size:.8rem;color:var(--text-dim);margin-top:2px">Barely learns, wastes compute</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== GRAD NORM ===== -->
+  <div class="metric-block grad fade-in">
+    <div class="metric-header">
+      <span class="metric-name">grad_norm</span>
+      <span class="metric-tag" style="background:var(--cyan-bg);color:var(--cyan)">STABILITY INDICATOR</span>
+    </div>
+    <p class="metric-oneliner"><strong>How large are the corrections the model is making at each step?</strong> Measures the magnitude of gradients.</p>
+
+    <div class="example-box">
+      <h4>What gradients are (simplified)</h4>
+      <p style="font-size:.9rem;line-height:1.8">
+        After the model makes a prediction and checks it against the correct answer, it calculates <strong>"how should I adjust each of my millions of parameters to do better next time?"</strong> These adjustments are called <strong>gradients</strong>.
+      </p>
+      <p style="font-size:.9rem;margin-top:8px">
+        <strong style="color:var(--cyan)">Grad norm</strong> = the overall size of all these adjustments combined into a single number. Think of it as "how urgently does the model need to change?"
+      </p>
+    </div>
+
+    <div class="example-box">
+      <h4> grad norm: healthy pattern</h4>
+      <svg class="svg-chart" viewBox="0 0 600 180" style="margin:8px 0">
+        <line x1="60" y1="20" x2="60" y2="150" class="chart-grid" style="stroke-dasharray:none;stroke:var(--border)"/>
+        <line x1="60" y1="150" x2="580" y2="150" class="chart-grid" style="stroke-dasharray:none;stroke:var(--border)"/>
+        <text x="50" y="155" class="chart-axis-label" text-anchor="end">2.5</text>
+        <text x="50" y="32" class="chart-axis-label" text-anchor="end">5.0</text>
+        <text x="320" y="14" class="chart-title" text-anchor="middle">Grad Norm: Gradually Decreasing (Healthy)</text>
+        <text x="320" y="175" class="chart-axis-label" text-anchor="middle">Step</text>
+        <!-- Grad norm (noisy but trending down) -->
+        <path d="M 80,30 L 130,40 L 170,55 L 210,35 L 260,70 L 310,80 L 360,75 L 410,90 L 460,100 L 510,105 L 560,115" class="chart-line" stroke="var(--cyan)" opacity=".8"/>
+        <circle cx="80" cy="30" r="4" fill="var(--cyan)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="170" cy="55" r="4" fill="var(--cyan)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="210" cy="35" r="3" fill="var(--cyan)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="310" cy="80" r="4" fill="var(--cyan)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="460" cy="100" r="4" fill="var(--cyan)" class="chart-dot" stroke="var(--bg)"/>
+        <circle cx="560" cy="115" r="4" fill="var(--cyan)" class="chart-dot" stroke="var(--bg)"/>
+        <!-- Labels -->
+        <text x="95" y="25" class="chart-annotation" fill="var(--cyan)">~4.5</text>
+        <text x="545" y="132" class="chart-annotation" fill="var(--cyan)">~3.0</text>
+        <text x="215" y="30" class="chart-annotation" fill="var(--text-dim)" style="font-size:10px">spike (normal)</text>
+      </svg>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">
+        <div style="padding:10px;border-radius:8px;background:var(--green-bg);border:1px solid rgba(63,185,80,.15);text-align:center">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.75rem;color:var(--green)">DECREASING &#10003;</div>
+          <div style="font-size:.8rem;color:var(--text-dim);margin-top:2px">s. Model needs less correction as it learns.</div>
+        </div>
+        <div style="padding:10px;border-radius:8px;background:var(--yellow-bg);border:1px solid rgba(210,153,34,.15);text-align:center">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.75rem;color:var(--yellow)">STABLE / FLAT</div>
+          <div style="font-size:.8rem;color:var(--text-dim);margin-top:2px">OK, but model may not be converging.</div>
+        </div>
+        <div style="padding:10px;border-radius:8px;background:var(--red-bg);border:1px solid rgba(248,81,73,.15);text-align:center">
+          <div style="font-family:'Source Code Pro',monospace;font-size:.75rem;color:var(--red)">EXPLODING &#8593;&#8593;</div>
+          <div style="font-size:.8rem;color:var(--text-dim);margin-top:2px">Dangerous! Training is diverging. Reduce LR.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</section>
+
+<!-- =================== INFRA METRICS (BRIEF) =================== -->
+<section class="section" id="s-infra">
+<div class="container">
+  <h2 class="section-title">Infrastructure Metrics (Brief)</h2>
+  <p class="section-desc">These 8 metrics track speed and compute resources, not model quality. Useful for debugging and cost optimization.</p>
+
+  <div style="overflow-x:auto">
+  <table class="summary-table">
+    <thead><tr><th>Metric</th><th> Value</th><th>What It Measures</th></tr></thead>
+    <tbody>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">eval_runtime</td>
+        <td style="font-family:'Source Code Pro',monospace">~0.150-0.153 sec</td>
+        <td>Time to run one evaluation pass. Very fast &mdash;  eval set is small.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">eval_samples_per_second</td>
+        <td style="font-family:'Source Code Pro',monospace">~557-564</td>
+        <td>How many eval examples processed per second. Higher = faster GPU throughput.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">eval_steps_per_second</td>
+        <td style="font-family:'Source Code Pro',monospace">~39.2-39.8</td>
+        <td>Eval batches processed per second. Stable = healthy GPU usage.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">train_runtime</td>
+        <td style="font-family:'Source Code Pro',monospace">~15.5-16.5 sec</td>
+        <td>Total wall-clock time for the training run. Very short &mdash; small dataset + small model.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">train_samples_per_second</td>
+        <td style="font-family:'Source Code Pro',monospace">~214-216</td>
+        <td>Training throughput. Lower than eval because training also computes gradients.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">train_steps_per_second</td>
+        <td style="font-family:'Source Code Pro',monospace">~13-14</td>
+        <td>Training batches per second.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">train_loss (final)</td>
+        <td style="font-family:'Source Code Pro',monospace">~1.5-2.0</td>
+        <td>Average training loss at the end. Compare with the loss curve for the full story.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">total_flos</td>
+        <td style="font-family:'Source Code Pro',monospace">~4.03 &times; 10<sup>13</sup></td>
+        <td>Total floating-point operations. A measure of total compute used. Useful for cost tracking.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="insight-banner info" style="margin-top:32px">
+    <h3>Why infra metrics matter</h3>
+    <p>If <strong>samples_per_second drops suddenly</strong>,  GPU might be throttling (overheating) or competing with other processes. If <strong>runtime increases between runs</strong> with the same data, something changed in  environment. These metrics are  debugging tools for hardware/speed issues &mdash; not model quality.</p>
+  </div>
+</div>
+</section>
+
+<!-- =================== DECODER INFRA METRICS =================== -->
+<section class="section" id="s-infra-decoder">
+<div class="container">
+  <h2 class="section-title">Decoder Infrastructure Metrics</h2>
+  <p class="section-desc">The same 8 infra metrics &mdash; but from the <strong>qwen-1k-run-v1</strong> decoder SFT run. Decoder models (autoregressive, token-by-token generation) are much larger than encoders, so the numbers look very different.</p>
+
+  <div class="card" style="margin-bottom:32px">
+    <h3 style="margin:0 0 8px">Run at a Glance</h3>
+    <p style="margin:0;color:var(--muted)">Model: <strong>Qwen (decoder)</strong> &nbsp;|&nbsp; Dataset: ~1,000 samples &nbsp;|&nbsp; ~130 training steps across ~3 epochs</p>
+  </div>
+
+  <div style="overflow-x:auto">
+  <table class="summary-table">
+    <thead><tr><th>Metric</th><th>Decoder Value</th><th>What It Measures</th></tr></thead>
+    <tbody>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">eval_runtime</td>
+        <td style="font-family:'Source Code Pro',monospace">~10.7&ndash;11.0 sec</td>
+        <td>Time to run one evaluation pass. Much slower than encoder &mdash; decoder generates tokens sequentially.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">eval_samples_per_second</td>
+        <td style="font-family:'Source Code Pro',monospace">~7.7&ndash;7.9</td>
+        <td>Eval examples processed per second. Dramatically lower &mdash; each sample requires autoregressive generation.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">eval_steps_per_second</td>
+        <td style="font-family:'Source Code Pro',monospace">~2.0&ndash;2.06</td>
+        <td>Eval batches per second. Steady but ~20&times; slower than the encoder run.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">train_runtime</td>
+        <td style="font-family:'Source Code Pro',monospace">~849.5 sec (~14 min)</td>
+        <td>Total wall-clock time for training. About 50&times; longer than the encoder run.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">train_samples_per_second</td>
+        <td style="font-family:'Source Code Pro',monospace">~2.4</td>
+        <td>Training throughput. Much lower because the decoder model has far more parameters to update.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">train_steps_per_second</td>
+        <td style="font-family:'Source Code Pro',monospace">~0.15</td>
+        <td>Training batches per second. Reflects the heavier per-step compute of decoders.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">train_loss (final)</td>
+        <td style="font-family:'Source Code Pro',monospace">~0.4</td>
+        <td>Average training loss at the end. Lower than encoder &mdash; decoder uses next-token prediction loss on a larger context.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">total_flos</td>
+        <td style="font-family:'Source Code Pro',monospace">~3.1 &times; 10<sup>15</sup></td>
+        <td>Total floating-point operations. ~75&times; more compute than the encoder run.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- ---- ENCODER vs DECODER COMPARISON ---- -->
+  <h3 style="margin-top:48px;margin-bottom:16px;color:var(--accent)">Encoder vs Decoder &mdash; Side-by-Side Comparison</h3>
+  <p style="margin-bottom:20px;color:var(--muted)">Same 8 metrics, two very different models. The differences reveal <em>why</em> decoder fine-tuning is fundamentally more expensive.</p>
+
+  <div style="overflow-x:auto">
+  <table class="summary-table">
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>Encoder<br><span style="font-weight:400;font-size:0.8em;color:var(--muted)">phayathaibert</span></th>
+        <th>Decoder<br><span style="font-weight:400;font-size:0.8em;color:var(--muted)">qwen-1k-run-v1</span></th>
+        <th>Diff</th>
+        <th>Why?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;font-size:0.85em">eval_runtime</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~0.15 sec</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~10.8 sec</td>
+        <td style="text-align:center;color:#e06c75;font-weight:600">~72&times; slower</td>
+        <td>Decoder generates tokens one-by-one; encoder processes the whole input in one forward pass.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;font-size:0.85em">eval_samples/sec</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~560</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~7.8</td>
+        <td style="text-align:center;color:#e06c75;font-weight:600">~72&times; fewer</td>
+        <td>Direct consequence of slower eval runtime per sample.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;font-size:0.85em">eval_steps/sec</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~39.5</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~2.0</td>
+        <td style="text-align:center;color:#e06c75;font-weight:600">~20&times; fewer</td>
+        <td>Larger model = more FLOPs per batch.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;font-size:0.85em">train_runtime</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~16 sec</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~850 sec</td>
+        <td style="text-align:center;color:#e06c75;font-weight:600">~53&times; longer</td>
+        <td>More parameters + longer sequences + autoregressive gradient computation.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;font-size:0.85em">train_samples/sec</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~215</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~2.4</td>
+        <td style="text-align:center;color:#e06c75;font-weight:600">~90&times; fewer</td>
+        <td>Each training step updates many more parameters through longer computation graphs.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;font-size:0.85em">train_steps/sec</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~13.5</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~0.15</td>
+        <td style="text-align:center;color:#e06c75;font-weight:600">~90&times; fewer</td>
+        <td>Each step involves forward + backward pass through a much deeper network.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;font-size:0.85em">train_loss (final)</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~1.5&ndash;2.0</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~0.4</td>
+        <td style="text-align:center;color:#98c379;font-weight:600">Lower</td>
+        <td>Different loss targets &mdash; encoder classifies labels; decoder predicts next tokens. Not directly comparable.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;font-size:0.85em">total_flos</td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~4.0 &times; 10<sup>13</sup></td>
+        <td style="font-family:'Source Code Pro',monospace;text-align:center">~3.1 &times; 10<sup>15</sup></td>
+        <td style="text-align:center;color:#e06c75;font-weight:600">~75&times; more</td>
+        <td>Total compute cost. Decoder fine-tuning is orders of magnitude more expensive.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="insight-banner" style="margin-top:32px">
+    <h3>Key Takeaway: Decoders Trade Speed for Capability</h3>
+    <p>The decoder run used <strong>~75&times; more compute</strong> and took <strong>~53&times; longer</strong> than the encoder. This is the fundamental cost-performance tradeoff &mdash; decoder models can handle generative tasks (chat, summarization, reasoning) that encoders cannot, but they require significantly more GPU time, memory, and FLOPs per training step. When choosing between encoder vs decoder SFT, consider whether the task truly needs generation or if a classification head on an encoder is sufficient.</p>
+  </div>
+
+  <!-- Decoder screenshots -->
+  <h3 style="margin-top:40px;margin-bottom:16px;color:var(--accent)">Actual Dashboard Screenshots (Decoder Run)</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <img src="decoder/Screenshot 2026-04-06 at 17.32.37.png" alt="Decoder metrics page 1" style="width:100%;border-radius:8px;border:1px solid var(--border)">
+    <img src="decoder/Screenshot 2026-04-06 at 17.32.45.png" alt="Decoder metrics page 2" style="width:100%;border-radius:8px;border:1px solid var(--border)">
+    <img src="decoder/Screenshot 2026-04-06 at 17.32.52.png" alt="Decoder metrics page 3" style="width:100%;border-radius:8px;border:1px solid var(--border)">
+    <img src="decoder/Screenshot 2026-04-06 at 16.44.06.png" alt="Decoder metrics overview" style="width:100%;border-radius:8px;border:1px solid var(--border)">
+  </div>
+</div>
+</section>
+
+<!-- =================== THE FULL TRAINING TIMELINE =================== -->
+<section class="section" id="s-timeline">
+<div class="container">
+  <h2 class="section-title"> Training Story: Epoch by Epoch</h2>
+  <p class="section-desc">Putting it all together &mdash; here's what happened at each stage of  run.</p>
+
+  <div class="timeline">
+    <div class="timeline-item neutral">
+      <div class="timeline-epoch">EPOCH 1 &mdash; Steps 1-43</div>
+      <div class="timeline-title">The Cold Start</div>
+      <div class="timeline-desc">Model barely understands the task. Training loss is very high (~3.5), eval accuracy is only ~40%, and the grad norm is large (~4.5) because the model needs massive corrections. Learning rate is at its peak (2e-4). The model is like a new employee on their first day.</div>
+    </div>
+    <div class="timeline-item good">
+      <div class="timeline-epoch">EPOCH 2 &mdash; Steps 44-86</div>
+      <div class="timeline-title">The Big Leap</div>
+      <div class="timeline-desc">The biggest improvement happens here! Eval accuracy jumps from 40% to 65%. The model learned the major patterns &mdash; it can now distinguish roaming from billing, postpaid from prepaid for most obvious cases. Training loss drops to ~2.0. Grad norm starts decreasing.</div>
+    </div>
+    <div class="timeline-item good">
+      <div class="timeline-epoch">EPOCH 3 &mdash; Steps 87-129</div>
+      <div class="timeline-title">Steady Refinement</div>
+      <div class="timeline-desc">Eval accuracy climbs to ~75%. The model is now getting the nuanced cases &mdash; distinguishing "check data history" from "check current data", or "subscribe to roaming" from "check roaming payment". Learning rate has decayed to ~0.0001. Changes are more measured.</div>
+    </div>
+    <div class="timeline-item good" style="border-color:var(--green)">
+      <div class="timeline-epoch" style="color:var(--green)">EPOCH 4 &mdash; Steps 130-172 &nbsp;&#11088; BEST CHECKPOINT</div>
+      <div class="timeline-title" style="color:var(--green)">Peak Performance</div>
+      <div class="timeline-desc">Eval accuracy hits <strong>~80%</strong>, eval loss is at its lowest (~0.65). The model is performing its best on unseen data. If you could freeze time here, this is the model you'd want to deploy. Learning rate is down to ~0.00005.</div>
+    </div>
+    <div class="timeline-item bad">
+      <div class="timeline-epoch" style="color:var(--red)">EPOCH 5 &mdash; Steps 173-215 &nbsp;&#9888; OVERFITTING</div>
+      <div class="timeline-title" style="color:var(--red)">Too Much Studying</div>
+      <div class="timeline-desc">Eval accuracy drops to ~78%, eval loss rises to ~0.70. Training loss is still decreasing (the model is getting better at the training data), but it's now <strong>memorizing rather than learning</strong>. The model has seen each of the 285 examples 5 times &mdash; it's starting to latch onto specific wordings instead of general patterns.</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- =================== BEST PRACTICES =================== -->
+<section class="section" id="s-bestpractices">
+<div class="container">
+  <h2 class="section-title">Best Practices for Decision Making</h2>
+  <p class="section-desc">Based on what you see in  training run, here are actionable guidelines for this and future fine-tuning runs.</p>
+
+  <!-- BP 1: Checkpoint Selection -->
+  <div class="example-box" style="margin-bottom:24px">
+    <h4 style="color:var(--green)">1. Always use the best checkpoint, not the last one</h4>
+    <p style="font-size:.9rem;line-height:1.8">
+       final model (epoch 5) is <strong>not  best model</strong>. Epoch 4 had higher eval accuracy (0.80 vs 0.78) and lower eval loss (0.65 vs 0.70). Most training frameworks like HuggingFace Transformers have a <code style="color:var(--accent2)">load_best_model_at_end=True</code> option that automatically keeps the best checkpoint.
+    </p>
+    <ul class="checklist">
+      <li class="check">Set <code style="color:var(--accent2)">evaluation_strategy="epoch"</code> to evaluate after every epoch</li>
+      <li class="check">Set <code style="color:var(--accent2)">load_best_model_at_end=True</code> to auto-select the best checkpoint</li>
+      <li class="check">Set <code style="color:var(--accent2)">metric_for_best_model="eval_loss"</code> (or "eval_accuracy")</li>
+      <li class="check">Set <code style="color:var(--accent2)">save_total_limit=3</code> to avoid disk bloat from too many checkpoints</li>
+    </ul>
+  </div>
+
+  <!-- BP 2: Early Stopping -->
+  <div class="example-box" style="margin-bottom:24px">
+    <h4 style="color:var(--yellow)">2. Use early stopping to prevent overfitting</h4>
+    <p style="font-size:.9rem;line-height:1.8">
+      Instead of guessing the right number of epochs, let the training <strong>stop automatically</strong> when eval loss stops improving. If you had early stopping with patience=1, training would have stopped after epoch 4 &mdash; saving you compute and getting a better model.
+    </p>
+    <div class="formula-box" style="text-align:left;font-size:.85rem;line-height:2">
+      <span style="color:var(--text-dim)"># HuggingFace example:</span><br>
+      from transformers import EarlyStoppingCallback<br><br>
+      trainer = Trainer(<br>
+      &nbsp;&nbsp;...<br>
+      &nbsp;&nbsp;callbacks=[EarlyStoppingCallback(early_stopping_patience=2)]<br>
+      )
+    </div>
+  </div>
+
+  <!-- BP 3: More Data -->
+  <div class="example-box" style="margin-bottom:24px">
+    <h4 style="color:var(--purple)">3. With only 285 samples, consider data augmentation</h4>
+    <p style="font-size:.9rem;line-height:1.8">
+      285 samples across 10 classes = ~28.5 samples per class on average. That's very few. The model overfits because it doesn't have enough variety. Options to consider:
+    </p>
+    <div class="bp-grid" style="margin-top:12px">
+      <div class="bp-card">
+        <h4><span class="bp-num" style="background:var(--purple-bg);color:var(--purple)">A</span> <span style="color:var(--purple)">Get more labeled data</span></h4>
+        <p>The most reliable fix. Even going from 285 to 1000 samples can significantly reduce overfitting and improve generalization.</p>
+      </div>
+      <div class="bp-card">
+        <h4><span class="bp-num" style="background:var(--cyan-bg);color:var(--cyan)">B</span> <span style="color:var(--cyan)">Paraphrase augmentation</span></h4>
+        <p>Use an LLM to generate paraphrases of existing samples. "How much do I owe?" &rarr; "What's my outstanding balance?" Same intent, different wording.</p>
+      </div>
+      <div class="bp-card">
+        <h4><span class="bp-num" style="background:var(--green-bg);color:var(--green)">C</span> <span style="color:var(--green)">Back-translation</span></h4>
+        <p>Translate Thai &rarr; English &rarr; Thai. The retranslation naturally paraphrases while keeping the intent. Works well for Thai NLP.</p>
+      </div>
+      <div class="bp-card">
+        <h4><span class="bp-num" style="background:var(--orange-bg);color:var(--orange)">D</span> <span style="color:var(--orange)">Reduce epochs</span></h4>
+        <p>Train for 3-4 epochs instead of 5. With this small dataset, less is more. The sweet spot was epoch 4.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- BP 4: Monitoring Checklist -->
+  <div class="example-box" style="margin-bottom:24px">
+    <h4 style="color:var(--orange)">4. What to watch during training &mdash; the checklist</h4>
+    <p style="font-size:.9rem;margin-bottom:12px">Every time you start a fine-tuning run, monitor these signals in order of priority:</p>
+    <div style="overflow-x:auto">
+    <table class="data-table">
+      <thead><tr><th>Priority</th><th>Signal</th><th>Healthy</th><th>Alarm</th></tr></thead>
+      <tbody>
+        <tr>
+          <td style="font-weight:700;color:var(--red)">P0</td>
+          <td>Training loss</td>
+          <td style="color:var(--green);font-size:.85rem">Smoothly decreasing</td>
+          <td style="color:var(--red);font-size:.85rem">Flat, erratic, or increasing</td>
+        </tr>
+        <tr>
+          <td style="font-weight:700;color:var(--orange)">P1</td>
+          <td>Eval loss</td>
+          <td style="color:var(--green);font-size:.85rem">Decreasing with train loss</td>
+          <td style="color:var(--red);font-size:.85rem">Starts increasing = overfitting</td>
+        </tr>
+        <tr>
+          <td style="font-weight:700;color:var(--orange)">P1</td>
+          <td>Eval accuracy</td>
+          <td style="color:var(--green);font-size:.85rem">Increasing then plateaus</td>
+          <td style="color:var(--red);font-size:.85rem">Drops after plateau = overfitting</td>
+        </tr>
+        <tr>
+          <td style="font-weight:700;color:var(--yellow)">P2</td>
+          <td>Grad norm</td>
+          <td style="color:var(--green);font-size:.85rem">Gradually decreasing</td>
+          <td style="color:var(--red);font-size:.85rem">Exploding upward = unstable training</td>
+        </tr>
+        <tr>
+          <td style="font-weight:700;color:var(--text-dim)">P3</td>
+          <td>Learning rate</td>
+          <td style="color:var(--green);font-size:.85rem">Follows expected schedule</td>
+          <td style="color:var(--red);font-size:.85rem">Unexpected values = config bug</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- BP 5: Decision Flowchart -->
+  <div class="example-box">
+    <h4 style="color:var(--accent)">5. Decision flowchart: What to do next with  model</h4>
+    <div style="font-size:.9rem;line-height:2;padding:8px 0">
+      <p><strong style="color:var(--text-bright)">Q: Is  eval accuracy (0.74-0.80) good enough for production?</strong></p>
+      <div style="padding-left:20px;border-left:2px solid var(--green);margin:8px 0 8px 10px">
+        <p style="color:var(--green)"><strong>If YES:</strong> Deploy the epoch 4 checkpoint. Set up monitoring on real traffic to track accuracy drift over time.</p>
+      </div>
+      <div style="padding-left:20px;border-left:2px solid var(--yellow);margin:8px 0 8px 10px">
+        <p style="color:var(--yellow)"><strong>If NO, need higher accuracy:</strong></p>
+        <p>&bull; First, check <code style="color:var(--accent2)">per_class_metrics.csv</code> &mdash; which intents have the lowest F1? Focus data collection there.</p>
+        <p>&bull; Get more training data (especially for confused intent pairs).</p>
+        <p>&bull; Try a larger base model if compute allows.</p>
+        <p>&bull; Experiment with hyperparameters: lower LR (1e-4), fewer epochs (3-4), weight decay.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</section>
+
+<!-- =================== SUMMARY =================== -->
+<section class="section" id="s-summary">
+<div class="container">
+  <h2 class="section-title">Summary:  Training Run at a Glance</h2>
+  <div style="overflow-x:auto">
+  <table class="summary-table">
+    <thead><tr><th>Metric</th><th>Start</th><th>Best</th><th>End</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">epoch</td>
+        <td>1</td><td style="font-weight:700;color:var(--green)">4</td><td>5</td>
+        <td style="font-size:.85rem">Best checkpoint at epoch 4. Epoch 5 overfits.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">train loss</td>
+        <td>~3.5</td><td>&mdash;</td><td style="font-weight:700;color:var(--green)">~0.65</td>
+        <td style="font-size:.85rem;color:var(--green)">Healthy smooth decrease throughout.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">eval_loss</td>
+        <td>~2.5</td><td style="font-weight:700;color:var(--green)">~0.65 (E4)</td><td style="color:var(--red)">~0.70 (E5)</td>
+        <td style="font-size:.85rem;color:var(--red)">Rose at epoch 5 &mdash; overfitting signal.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">eval_accuracy</td>
+        <td>~0.40</td><td style="font-weight:700;color:var(--green)">~0.80 (E4)</td><td style="color:var(--red)">~0.78 (E5)</td>
+        <td style="font-size:.85rem;color:var(--red)">Dropped at epoch 5 &mdash; confirms overfitting.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">learning_rate</td>
+        <td>2e-4</td><td>&mdash;</td><td>~0</td>
+        <td style="font-size:.85rem;color:var(--green)">Standard linear decay. Good choice.</td>
+      </tr>
+      <tr>
+        <td style="font-family:'Source Code Pro',monospace;color:var(--accent2)">grad_norm</td>
+        <td>~4.5</td><td>&mdash;</td><td>~3.0</td>
+        <td style="font-size:.85rem;color:var(--green)">Healthy decrease. No gradient explosion.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="insight-banner warn" style="margin-top:24px">
+    <h3>Bottom Line</h3>
+    <p style="text-align:left;line-height:1.8">
+       fine-tuning run was <strong>mostly successful</strong> &mdash; the model learned well from ~285 samples and reached 80% eval accuracy. But it trained <strong>one epoch too many</strong>. The best model is the <strong style="color:var(--green)">epoch 4 checkpoint</strong>. For future runs: use early stopping, consider more training data to reduce overfitting risk, and always compare train loss vs eval loss to catch memorization early.
+    </p>
+  </div>
+</div>
+</section>
+
+<!-- =================== QUIZ =================== -->
+<section class="game-section" id="s-quiz">
+<div class="container">
+  <h2>Test  Understanding</h2>
+  <p class="desc">11 questions covering samples, batches, steps, loss curves, overfitting, and best practices</p>
+  <div class="quiz-card" id="quiz-card">
+    <div class="quiz-q" id="quiz-q"></div>
+    <div class="quiz-options" id="quiz-opts"></div>
+    <div class="quiz-feedback" id="quiz-fb"></div>
+    <div class="quiz-nav">
+      <span class="quiz-progress" id="quiz-prog"></span>
+      <button class="quiz-btn" id="quiz-next" onclick="nextQuestion()">Next</button>
+    </div>
+  </div>
+  <div id="quiz-result" style="display:none;text-align:center;margin-top:24px">
+    <div style="font-family:'Fraunces',serif;font-size:2rem;color:var(--text-bright)" id="quiz-score-text"></div>
+    <p id="quiz-grade" style="font-size:1.1rem;margin-top:8px"></p>
+    <button class="quiz-btn" style="margin-top:16px" onclick="startQuiz()">Try Again</button>
+  </div>
+</div>
+</section>
+
+<footer>
+  <div class="container">Built for learning &middot; phayathaibert-1k-run-v1 &middot; SFT Training Metrics Guide</div>
+</footer>
+
+<script>
+// QUIZ
+const questions = [
+  {
+    q: 'Your training has ~285 samples and a batch size of ~7. How many steps make up 1 epoch?',
+    opts: [
+      '7 steps (one per sample in the batch)',
+      '285 steps (one per sample)',
+      '~43 steps (285 samples \u00f7 7 per batch)',
+      '5 steps (one per epoch)'
+    ],
+    correct: 2,
+    explain: 'Steps per epoch = total samples \u00f7 batch size = 285 \u00f7 7 \u2248 43. Each step processes one batch of ~7 samples, so it takes ~43 steps to go through all 285 samples once.'
+  },
+  {
+    q: 'What exactly happens during a single training "step"?',
+    opts: [
+      'The model reads the entire dataset once',
+      'The model processes one batch (~7 samples), computes loss, calculates gradients, and updates its weights once',
+      'The model saves a checkpoint to disk',
+      'One full epoch is completed'
+    ],
+    correct: 1,
+    explain: 'One step = forward pass (predict on ~7 samples) \u2192 compute loss (how wrong?) \u2192 backward pass (calculate gradients and update weights). This is the atomic unit of learning.'
+  },
+  {
+    q: 'Over 5 epochs of training, how many times does the model see each individual sample?',
+    opts: [
+      'Once',
+      '5 times \u2014 once per epoch, but in differently shuffled batches',
+      '43 times \u2014 once per step in an epoch',
+      '215 times \u2014 once per total step'
+    ],
+    correct: 1,
+    explain: 'Each epoch = one pass through all samples. 5 epochs = each sample seen 5 times. The data is shuffled differently each epoch so the batches change, helping the model learn general patterns.'
+  },
+  {
+    q: 'The model trained for 5 epochs on ~285 samples. What does "1 epoch" mean?',
+    opts: [
+      '1 gradient update step',
+      'One complete pass through all 285 training samples',
+      '1 minute of training time',
+      'Training on 1 sample'
+    ],
+    correct: 1,
+    explain: 'One epoch = the model sees every single training sample exactly once. 5 epochs means it saw each sample 5 times total.'
+  },
+  {
+    q: 'The training loss went from ~3.5 to ~0.65. What does this tell you?',
+    opts: [
+      'The model got worse over time',
+      'The model learned nothing',
+      'The model improved significantly \u2014 its predictions on training data became much more accurate',
+      'The learning rate was too high'
+    ],
+    correct: 2,
+    explain: 'Decreasing training loss means the model\'s predictions are getting closer to the correct answers on the training data. Going from 3.5 to 0.65 is a healthy, smooth decrease.'
+  },
+  {
+    q: 'At epoch 5, eval_loss increased from 0.65 to 0.70 while training loss kept decreasing. What is this called?',
+    opts: [
+      'Underfitting',
+      'Convergence',
+      'Overfitting \u2014 the model is memorizing training data instead of learning general patterns',
+      'A hardware error'
+    ],
+    correct: 2,
+    explain: 'When training loss goes down but eval loss goes up, the model is memorizing the training data (getting better at practice questions) but getting worse at new questions. This is the textbook definition of overfitting.'
+  },
+  {
+    q: 'Which epoch produced the best model for deployment?',
+    opts: [
+      'Epoch 1 \u2014 least risk of overfitting',
+      'Epoch 3 \u2014 middle ground',
+      'Epoch 4 \u2014 highest eval accuracy (0.80) and lowest eval loss (0.65)',
+      'Epoch 5 \u2014 the final epoch is always best'
+    ],
+    correct: 2,
+    explain: 'Epoch 4 had the best eval metrics: highest accuracy (~0.80) and lowest eval loss (~0.65). After that, the model started overfitting. Always pick the checkpoint with the best eval performance, not the last one.'
+  },
+  {
+    q: 'The learning rate started at 2e-4 and linearly decayed to 0. Why not keep it constant?',
+    opts: [
+      'It would use more GPU memory',
+      'A constant high LR can cause the model to overshoot good solutions \u2014 like driving fast in a parking lot',
+      'It makes no difference',
+      'Constant LR always causes underfitting'
+    ],
+    correct: 1,
+    explain: 'A high learning rate is useful early (big corrections needed) but dangerous later (the model is near a good solution and big steps cause it to jump around instead of settling). Decaying the LR lets the model make finer adjustments as training progresses.'
+  },
+  {
+    q: 'The grad_norm went from ~4.5 to ~3.0 with some spikes. Is this healthy?',
+    opts: [
+      'No \u2014 grad norm should always be exactly 1.0',
+      'No \u2014 any spikes mean training has failed',
+      'Yes \u2014 a generally decreasing grad norm with minor spikes is normal and healthy',
+      'It doesn\'t matter at all'
+    ],
+    correct: 2,
+    explain: 'A decreasing grad norm means the model needs less correction as it learns \u2014 that\'s healthy. Small spikes are normal, especially on harder batches. You should worry only if grad norm explodes (shoots up dramatically), which signals unstable training.'
+  },
+  {
+    q: 'With only ~285 training samples across 10 classes, what\'s the biggest risk and the best mitigation?',
+    opts: [
+      'Underfitting; train for more epochs',
+      'Overfitting; get more training data or use data augmentation',
+      'Hardware failure; use a bigger GPU',
+      'Slow training; increase the learning rate'
+    ],
+    correct: 1,
+    explain: '~28.5 samples per class is very small. The model can easily memorize them (overfitting). The best fix is more data. If that\'s not possible, data augmentation (paraphrasing, back-translation) or reducing epochs helps.'
+  },
+  {
+    q: 'You want to prevent overfitting in  next run without manually choosing when to stop. What should you use?',
+    opts: [
+      'A higher learning rate',
+      'More epochs (e.g., 20)',
+      'Early stopping with patience=2 and load_best_model_at_end=True',
+      'Remove the evaluation set'
+    ],
+    correct: 2,
+    explain: 'Early stopping monitors eval loss and automatically stops training when it stops improving for a set number of evaluations (patience). Combined with load_best_model_at_end=True, you automatically get the best checkpoint without guessing.'
+  }
+];
+
+let qIdx=0, score=0, answered=false;
+function renderQ(){
+  const q=questions[qIdx];
+  document.getElementById('quiz-q').textContent=q.q;
+  const opts=document.getElementById('quiz-opts');
+  opts.innerHTML='';
+  q.opts.forEach((o,i)=>{const btn=document.createElement('div');btn.className='quiz-opt';btn.textContent=o;btn.onclick=()=>answerQ(i);opts.appendChild(btn)});
+  document.getElementById('quiz-fb').className='quiz-feedback';document.getElementById('quiz-fb').textContent='';
+  document.getElementById('quiz-prog').textContent=`Question ${qIdx+1} of ${questions.length}`;
+  document.getElementById('quiz-next').disabled=true;answered=false;
+}
+function answerQ(i){
+  if(answered)return;answered=true;
+  const q=questions[qIdx];const opts=document.querySelectorAll('.quiz-opt');
+  opts.forEach((o,j)=>{if(j===q.correct)o.classList.add('correct');else if(j===i&&i!==q.correct)o.classList.add('incorrect')});
+  const fb=document.getElementById('quiz-fb');
+  if(i===q.correct){score++;fb.className='quiz-feedback show right';fb.textContent='Correct! '+q.explain}
+  else{fb.className='quiz-feedback show wrong';fb.textContent='Not quite. '+q.explain}
+  document.getElementById('quiz-next').disabled=false;
+}
+function nextQuestion(){
+  qIdx++;
+  if(qIdx>=questions.length){
+    document.getElementById('quiz-card').style.display='none';
+    const r=document.getElementById('quiz-result');r.style.display='block';
+    document.getElementById('quiz-score-text').textContent=`You scored ${score}/${questions.length}!`;
+    const pct=score/questions.length;
+    const g=document.getElementById('quiz-grade');
+    if(pct===1)g.innerHTML='<span style="color:var(--green)">Perfect! You understand SFT training metrics inside and out.</span>';
+    else if(pct>=.75)g.innerHTML='<span style="color:var(--green)">Great job! You have a solid grasp of the key concepts.</span>';
+    else if(pct>=.5)g.innerHTML='<span style="color:var(--yellow)">Good start! Review the overfitting and best practices sections.</span>';
+    else g.innerHTML='<span style="color:var(--orange)">Worth revisiting the material above. Focus on loss curves and overfitting.</span>';
+  } else renderQ();
+}
+function startQuiz(){qIdx=0;score=0;answered=false;document.getElementById('quiz-card').style.display='block';document.getElementById('quiz-result').style.display='none';renderQ()}
+startQuiz();
+
+// SCROLL ANIMATIONS
+const observer=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting)x.target.style.animationPlayState='running'})},{threshold:.1});
+document.querySelectorAll('.fade-in').forEach(el=>{el.style.animationPlayState='paused';observer.observe(el)});
+
+// TOC DOTS
+const sections=['s-hero','s-scenario','s-screenshots','s-bigpicture','s-building-blocks','s-keymetrics','s-infra','s-infra-decoder','s-timeline','s-bestpractices','s-summary','s-quiz'];
+const toc=document.getElementById('toc');
+sections.forEach(id=>{const a=document.createElement('a');a.href='#'+id;a.dataset.section=id;toc.appendChild(a)});
+window.addEventListener('scroll',()=>{
+  const y=window.scrollY+window.innerHeight/2;
+  sections.forEach(id=>{const el=document.getElementById(id);if(!el)return;const a=toc.querySelector(`[data-section="${id}"]`);if(y>=el.offsetTop&&y<el.offsetTop+el.offsetHeight)a.classList.add('active');else a.classList.remove('active')});
+});
+</script>
+</body>
+</html>
