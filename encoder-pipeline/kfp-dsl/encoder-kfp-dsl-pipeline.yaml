@@ -1,0 +1,354 @@
+# PIPELINE DEFINITION
+# Name: llm-sft-eval-merge-pipeline
+# Description: Encoder SFT, Evaluation, and Merge Pipeline via Papermill
+# Inputs:
+#    mlflow_token: str [Default: '<<token-here>>']
+#    repo_url: str [Default: 'https://github.com/<<org>>/<<repo>>.git']
+components:
+  comp-execute-notebook:
+    executorLabel: exec-execute-notebook
+    inputDefinitions:
+      parameters:
+        mlflow_token:
+          parameterType: STRING
+        notebook_path:
+          parameterType: STRING
+        repo_url:
+          parameterType: STRING
+    outputDefinitions:
+      parameters:
+        Output:
+          parameterType: STRING
+  comp-execute-notebook-2:
+    executorLabel: exec-execute-notebook-2
+    inputDefinitions:
+      parameters:
+        mlflow_token:
+          parameterType: STRING
+        notebook_path:
+          parameterType: STRING
+        repo_url:
+          parameterType: STRING
+    outputDefinitions:
+      parameters:
+        Output:
+          parameterType: STRING
+  comp-execute-notebook-3:
+    executorLabel: exec-execute-notebook-3
+    inputDefinitions:
+      parameters:
+        mlflow_token:
+          parameterType: STRING
+        notebook_path:
+          parameterType: STRING
+        repo_url:
+          parameterType: STRING
+    outputDefinitions:
+      parameters:
+        Output:
+          parameterType: STRING
+deploymentSpec:
+  executors:
+    exec-execute-notebook:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - execute_notebook
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'papermill' \
+          \ &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.14.6'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef execute_notebook(repo_url: str, notebook_path: str, mlflow_token:\
+          \ str) -> str:\n    import subprocess\n    import os\n    import tempfile\n\
+          \n    # Inject the MLflow token for the notebook to pick up\n    os.environ[\"\
+          MLFLOW_TRACKING_TOKEN\"] = mlflow_token\n\n    # Use tempfile to guarantee\
+          \ a clean, permission-friendly, empty directory every run\n    with tempfile.TemporaryDirectory()\
+          \ as workspace_dir:\n        print(f\"Cloning repository into {workspace_dir}...\"\
+          )\n\n        # Clone the repository\n        subprocess.run([\"git\", \"\
+          clone\", repo_url, workspace_dir], check=True)\n\n        # DEBUGGING: Print\
+          \ the entire folder tree to the Kubeflow logs\n        # print(\"\\n---\
+          \ CONTENTS OF CLONED REPOSITORY ---\")\n        # subprocess.run([\"ls\"\
+          , \"-laR\", workspace_dir])\n        # print(\"-------------------------------------\\\
+          n\")\n\n        target_notebook = os.path.join(workspace_dir, notebook_path)\n\
+          \n        # Safety check to prevent Papermill from crashing blindly\n  \
+          \      if not os.path.exists(target_notebook):\n            print(f\"CRITICAL\
+          \ ERROR: Could not find {target_notebook}\")\n            print(\"Check\
+          \ the 'ls' output above to verify the actual folder structure or branch.\"\
+          )\n            return \"failed\"\n\n        output_nb = f\"/mnt/data/executed_{notebook_path.split('/')[-1]}\"\
+          \n\n        # Run the notebook headlessly using Papermill\n        try:\n\
+          \            subprocess.run([\n                \"papermill\", \n       \
+          \         target_notebook, \n                output_nb\n            ], check=True)\n\
+          \            return \"success\"\n        except subprocess.CalledProcessError\
+          \ as e:\n            print(f\"Notebook execution failed: {e}\")\n      \
+          \      return \"failed\"\n\n"
+        image: registry.redhat.io/rhoai/odh-pipeline-runtime-pytorch-cuda-py312-rhel9@sha256:aa457e7394ba73350f5c8e08c56ddba126d9472197e7669c9eb7daa2c02e6777
+        resources:
+          accelerator:
+            count: '1'
+            resourceCount: '1'
+            resourceType: nvidia.com/gpu
+            type: nvidia.com/gpu
+          cpuLimit: 4.0
+          cpuRequest: 2.0
+          memoryLimit: 8.0
+          memoryRequest: 4.0
+          resourceCpuLimit: '4'
+          resourceCpuRequest: '2'
+          resourceMemoryLimit: 8G
+          resourceMemoryRequest: 4G
+    exec-execute-notebook-2:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - execute_notebook
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'papermill' \
+          \ &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.14.6'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef execute_notebook(repo_url: str, notebook_path: str, mlflow_token:\
+          \ str) -> str:\n    import subprocess\n    import os\n    import tempfile\n\
+          \n    # Inject the MLflow token for the notebook to pick up\n    os.environ[\"\
+          MLFLOW_TRACKING_TOKEN\"] = mlflow_token\n\n    # Use tempfile to guarantee\
+          \ a clean, permission-friendly, empty directory every run\n    with tempfile.TemporaryDirectory()\
+          \ as workspace_dir:\n        print(f\"Cloning repository into {workspace_dir}...\"\
+          )\n\n        # Clone the repository\n        subprocess.run([\"git\", \"\
+          clone\", repo_url, workspace_dir], check=True)\n\n        # DEBUGGING: Print\
+          \ the entire folder tree to the Kubeflow logs\n        # print(\"\\n---\
+          \ CONTENTS OF CLONED REPOSITORY ---\")\n        # subprocess.run([\"ls\"\
+          , \"-laR\", workspace_dir])\n        # print(\"-------------------------------------\\\
+          n\")\n\n        target_notebook = os.path.join(workspace_dir, notebook_path)\n\
+          \n        # Safety check to prevent Papermill from crashing blindly\n  \
+          \      if not os.path.exists(target_notebook):\n            print(f\"CRITICAL\
+          \ ERROR: Could not find {target_notebook}\")\n            print(\"Check\
+          \ the 'ls' output above to verify the actual folder structure or branch.\"\
+          )\n            return \"failed\"\n\n        output_nb = f\"/mnt/data/executed_{notebook_path.split('/')[-1]}\"\
+          \n\n        # Run the notebook headlessly using Papermill\n        try:\n\
+          \            subprocess.run([\n                \"papermill\", \n       \
+          \         target_notebook, \n                output_nb\n            ], check=True)\n\
+          \            return \"success\"\n        except subprocess.CalledProcessError\
+          \ as e:\n            print(f\"Notebook execution failed: {e}\")\n      \
+          \      return \"failed\"\n\n"
+        image: registry.redhat.io/rhoai/odh-pipeline-runtime-pytorch-cuda-py312-rhel9@sha256:aa457e7394ba73350f5c8e08c56ddba126d9472197e7669c9eb7daa2c02e6777
+        resources:
+          accelerator:
+            count: '1'
+            resourceCount: '1'
+            resourceType: nvidia.com/gpu
+            type: nvidia.com/gpu
+          cpuLimit: 4.0
+          cpuRequest: 2.0
+          memoryLimit: 8.0
+          memoryRequest: 4.0
+          resourceCpuLimit: '4'
+          resourceCpuRequest: '2'
+          resourceMemoryLimit: 8G
+          resourceMemoryRequest: 4G
+    exec-execute-notebook-3:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - execute_notebook
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'papermill' \
+          \ &&  python3 -m pip install --quiet --no-warn-script-location 'kfp==2.14.6'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef execute_notebook(repo_url: str, notebook_path: str, mlflow_token:\
+          \ str) -> str:\n    import subprocess\n    import os\n    import tempfile\n\
+          \n    # Inject the MLflow token for the notebook to pick up\n    os.environ[\"\
+          MLFLOW_TRACKING_TOKEN\"] = mlflow_token\n\n    # Use tempfile to guarantee\
+          \ a clean, permission-friendly, empty directory every run\n    with tempfile.TemporaryDirectory()\
+          \ as workspace_dir:\n        print(f\"Cloning repository into {workspace_dir}...\"\
+          )\n\n        # Clone the repository\n        subprocess.run([\"git\", \"\
+          clone\", repo_url, workspace_dir], check=True)\n\n        # DEBUGGING: Print\
+          \ the entire folder tree to the Kubeflow logs\n        # print(\"\\n---\
+          \ CONTENTS OF CLONED REPOSITORY ---\")\n        # subprocess.run([\"ls\"\
+          , \"-laR\", workspace_dir])\n        # print(\"-------------------------------------\\\
+          n\")\n\n        target_notebook = os.path.join(workspace_dir, notebook_path)\n\
+          \n        # Safety check to prevent Papermill from crashing blindly\n  \
+          \      if not os.path.exists(target_notebook):\n            print(f\"CRITICAL\
+          \ ERROR: Could not find {target_notebook}\")\n            print(\"Check\
+          \ the 'ls' output above to verify the actual folder structure or branch.\"\
+          )\n            return \"failed\"\n\n        output_nb = f\"/mnt/data/executed_{notebook_path.split('/')[-1]}\"\
+          \n\n        # Run the notebook headlessly using Papermill\n        try:\n\
+          \            subprocess.run([\n                \"papermill\", \n       \
+          \         target_notebook, \n                output_nb\n            ], check=True)\n\
+          \            return \"success\"\n        except subprocess.CalledProcessError\
+          \ as e:\n            print(f\"Notebook execution failed: {e}\")\n      \
+          \      return \"failed\"\n\n"
+        image: registry.redhat.io/rhoai/odh-pipeline-runtime-pytorch-cuda-py312-rhel9@sha256:aa457e7394ba73350f5c8e08c56ddba126d9472197e7669c9eb7daa2c02e6777
+        resources:
+          accelerator:
+            count: '1'
+            resourceCount: '1'
+            resourceType: nvidia.com/gpu
+            type: nvidia.com/gpu
+          cpuLimit: 4.0
+          cpuRequest: 2.0
+          memoryLimit: 8.0
+          memoryRequest: 4.0
+          resourceCpuLimit: '4'
+          resourceCpuRequest: '2'
+          resourceMemoryLimit: 8G
+          resourceMemoryRequest: 4G
+pipelineInfo:
+  description: Encoder SFT, Evaluation, and Merge Pipeline via Papermill
+  name: llm-sft-eval-merge-pipeline
+root:
+  dag:
+    tasks:
+      execute-notebook:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-execute-notebook
+        inputs:
+          parameters:
+            mlflow_token:
+              componentInputParameter: mlflow_token
+            notebook_path:
+              runtimeValue:
+                constant: encoder-sft/encoder_lora_finetuning.ipynb
+            repo_url:
+              componentInputParameter: repo_url
+        taskInfo:
+          name: LoRA SFT Training
+      execute-notebook-2:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-execute-notebook-2
+        dependentTasks:
+        - execute-notebook
+        inputs:
+          parameters:
+            mlflow_token:
+              componentInputParameter: mlflow_token
+            notebook_path:
+              runtimeValue:
+                constant: encoder-sft/encoder_lora_evaluation.ipynb
+            repo_url:
+              componentInputParameter: repo_url
+        taskInfo:
+          name: Model Evaluation
+      execute-notebook-3:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-execute-notebook-3
+        dependentTasks:
+        - execute-notebook-2
+        inputs:
+          parameters:
+            mlflow_token:
+              componentInputParameter: mlflow_token
+            notebook_path:
+              runtimeValue:
+                constant: encoder-sft/encoder_lora_model_merge.ipynb
+            repo_url:
+              componentInputParameter: repo_url
+        taskInfo:
+          name: Merge Weights
+  inputDefinitions:
+    parameters:
+      mlflow_token:
+        defaultValue: <<token-here>>
+        isOptional: true
+        parameterType: STRING
+      repo_url:
+        defaultValue: https://github.com/<<org>>/<<repo>>.git
+        isOptional: true
+        parameterType: STRING
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.14.6
+---
+platforms:
+  kubernetes:
+    deploymentSpec:
+      executors:
+        exec-execute-notebook:
+          pvcMount:
+          - constant: shared-pipeline-data
+            mountPath: /mnt/data
+            pvcNameParameter:
+              runtimeValue:
+                constant: shared-pipeline-data
+          tolerations:
+          - effect: NoSchedule
+            key: nvidia.com/gpu
+            operator: Equal
+        exec-execute-notebook-2:
+          pvcMount:
+          - constant: shared-pipeline-data
+            mountPath: /mnt/data
+            pvcNameParameter:
+              runtimeValue:
+                constant: shared-pipeline-data
+          tolerations:
+          - effect: NoSchedule
+            key: nvidia.com/gpu
+            operator: Equal
+        exec-execute-notebook-3:
+          pvcMount:
+          - constant: shared-pipeline-data
+            mountPath: /mnt/data
+            pvcNameParameter:
+              runtimeValue:
+                constant: shared-pipeline-data
+          tolerations:
+          - effect: NoSchedule
+            key: nvidia.com/gpu
+            operator: Equal
