@@ -124,9 +124,6 @@ This is where everything comes together. You pass your secure credentials at run
    |---|---|
    | `repo_url` | Confirm it points to your Git repository |
    | `mlflow_token` | Paste your actual MLflow tracking token |
-   | `aws_access_key` | Paste your actual S3 Access Key |
-   | `aws_secret_key` | Paste your actual S3 Secret Key |
-   | `aws_s3_endpoint` | Provide the URL to your object storage (OpenShift ODF/ Azure) |
 
 4. Click **Create**.
 
