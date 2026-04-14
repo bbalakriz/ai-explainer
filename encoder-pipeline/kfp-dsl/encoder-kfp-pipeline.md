@@ -35,6 +35,26 @@ def execute_notebook(
     os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_key # add this
     os.environ["AWS_S3_ENDPOINT"] = aws_s3_endpoint # add this
 ...
+
+def sft_pipeline(
+    repo_url: str = "https://github.com/<<org>>/<<repo>>.git", # UPDATE THIS
+    mlflow_token: str = "<<token-here>>", # Passed at runtime in the RHOAI UI
+    aws_access_key: str = "<<aws_access_key-here>>", # add this
+    aws_secret_key: str = "<<aws_secret_key-here>>", # add this
+    aws_s3_endpoint: str = "<<aws_s3_endpoint-here>>" # add this
+):
+...
+
+    # Step C: Merge 
+    merge_step = execute_notebook(
+        repo_url=repo_url,
+        notebook_path="decoder-sft/decoder_lora_model_merge.ipynb", 
+        mlflow_token=mlflow_token,
+        aws_access_key=aws_access_key, # add this
+        aws_secret_key=aws_secret_key, # add this
+        aws_s3_endpoint=aws_s3_endpoint # add this        
+    ).set_display_name("Merge Weights").after(eval_step)
+
 ```
 
 ---
