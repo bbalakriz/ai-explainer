@@ -55,8 +55,8 @@ def execute_notebook(
     description="Decoder SFT, Evaluation, and Merge Pipeline via Papermill (Secure S3)"
 )
 def sft_pipeline(
-    repo_url: str = "https://github.com/bbalakriz/ai-explainer.git", 
-    mlflow_token: str = "sha256~KOlrcQXJ4-J1po8G510HgFsanZh4Tqy15kvrLNoAoN4"
+    repo_url: str = "https://github.com/<<org>>/<<repo>>.git", 
+    mlflow_token: str = "<<token-here>>"
 ):
     # Step A: Training 
     sft_step = execute_notebook(
