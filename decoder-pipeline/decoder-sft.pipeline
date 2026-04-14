@@ -1,0 +1,263 @@
+{
+  "doc_type": "pipeline",
+  "version": "3.0",
+  "json_schema": "http://api.dataplatform.ibm.com/schemas/common-pipeline/pipeline-flow/pipeline-flow-v3-schema.json",
+  "id": "elyra-auto-generated-pipeline",
+  "primary_pipeline": "primary",
+  "pipelines": [
+    {
+      "id": "primary",
+      "nodes": [
+        {
+          "id": "44bfd3aa-e313-4d91-89b2-7138babe3fae",
+          "type": "execution_node",
+          "op": "execute-notebook-node",
+          "app_data": {
+            "component_parameters": {
+              "dependencies": [],
+              "include_subdirectories": false,
+              "outputs": [],
+              "env_vars": [],
+              "kubernetes_pod_annotations": [],
+              "kubernetes_pod_labels": [],
+              "kubernetes_secrets": [],
+              "kubernetes_shared_mem_size": {},
+              "kubernetes_tolerations": [],
+              "mounted_volumes": [],
+              "filename": "../decoder-sft/decoder_lora_finetuning.ipynb",
+              "cpu": 2,
+              "cpu_limit": 4,
+              "memory": 4,
+              "memory_limit": 8,
+              "gpu": 1,
+              "gpu_vendor": "nvidia.com/gpu"
+            },
+            "ui_data": {
+              "label": "decoder_lora_finetuning.ipynb",
+              "image": "/notebook/encoder-sft/encoder-elyra-pipeline/static/elyra/notebook.svg",
+              "x_pos": 58,
+              "y_pos": 150,
+              "description": "Run notebook file"
+            }
+          },
+          "inputs": [
+            {
+              "id": "inPort",
+              "app_data": {
+                "ui_data": {
+                  "cardinality": {
+                    "min": 0,
+                    "max": -1
+                  },
+                  "label": "Input Port"
+                }
+              }
+            }
+          ],
+          "outputs": [
+            {
+              "id": "outPort",
+              "app_data": {
+                "ui_data": {
+                  "cardinality": {
+                    "min": 0,
+                    "max": -1
+                  },
+                  "label": "Output Port"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "de9b8b14-09f0-4a87-a197-5f5b70427aee",
+          "type": "execution_node",
+          "op": "execute-notebook-node",
+          "app_data": {
+            "component_parameters": {
+              "dependencies": [],
+              "include_subdirectories": false,
+              "outputs": [],
+              "env_vars": [],
+              "kubernetes_pod_annotations": [],
+              "kubernetes_pod_labels": [],
+              "kubernetes_secrets": [],
+              "kubernetes_shared_mem_size": {},
+              "kubernetes_tolerations": [],
+              "mounted_volumes": [],
+              "filename": "../decoder-sft/decoder_lora_evaluation.ipynb",
+              "cpu": 2,
+              "cpu_limit": 4,
+              "memory": 4,
+              "memory_limit": 8,
+              "gpu": 1
+            },
+            "ui_data": {
+              "label": "decoder_lora_evaluation.ipynb",
+              "image": "/notebook/encoder-sft/encoder-elyra-pipeline/static/elyra/notebook.svg",
+              "x_pos": 295,
+              "y_pos": 149,
+              "description": "Run notebook file"
+            }
+          },
+          "inputs": [
+            {
+              "id": "inPort",
+              "app_data": {
+                "ui_data": {
+                  "cardinality": {
+                    "min": 0,
+                    "max": -1
+                  },
+                  "label": "Input Port"
+                }
+              },
+              "links": [
+                {
+                  "id": "ca0670dd-b511-4412-9c36-83dea9250552",
+                  "node_id_ref": "44bfd3aa-e313-4d91-89b2-7138babe3fae",
+                  "port_id_ref": "outPort"
+                }
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "id": "outPort",
+              "app_data": {
+                "ui_data": {
+                  "cardinality": {
+                    "min": 0,
+                    "max": -1
+                  },
+                  "label": "Output Port"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "d9337c7c-dd52-46b0-9ac9-eaa58c6f80c8",
+          "type": "execution_node",
+          "op": "execute-notebook-node",
+          "app_data": {
+            "component_parameters": {
+              "dependencies": [],
+              "include_subdirectories": false,
+              "outputs": [],
+              "env_vars": [
+                {
+                  "env_var": "AWS_ENDPOINT_URL",
+                  "value": "http://minio-service.minio.svc.cluster.local:9000"
+                },
+                {
+                  "env_var": "AWS_ACCESS_KEY_ID",
+                  "value": "minio"
+                },
+                {
+                  "env_var": "AWS_SECRET_ACCESS_KEY",
+                  "value": "minio123"
+                }
+              ],
+              "kubernetes_pod_annotations": [],
+              "kubernetes_pod_labels": [],
+              "kubernetes_secrets": [],
+              "kubernetes_shared_mem_size": {},
+              "kubernetes_tolerations": [],
+              "mounted_volumes": [],
+              "filename": "../decoder-sft/decoder_lora_model_merge.ipynb",
+              "cpu": 2,
+              "cpu_limit": 4,
+              "memory": 4,
+              "memory_limit": 8,
+              "gpu": 1,
+              "gpu_vendor": "nvidia.com/gpu"
+            },
+            "ui_data": {
+              "label": "decoder_lora_model_merge.ipynb",
+              "image": "/notebook/encoder-sft/encoder-elyra-pipeline/static/elyra/notebook.svg",
+              "x_pos": 535,
+              "y_pos": 149,
+              "description": "Run notebook file"
+            }
+          },
+          "inputs": [
+            {
+              "id": "inPort",
+              "app_data": {
+                "ui_data": {
+                  "cardinality": {
+                    "min": 0,
+                    "max": -1
+                  },
+                  "label": "Input Port"
+                }
+              },
+              "links": [
+                {
+                  "id": "7285441d-4f97-44eb-98e6-b226550b5b24",
+                  "node_id_ref": "de9b8b14-09f0-4a87-a197-5f5b70427aee",
+                  "port_id_ref": "outPort"
+                }
+              ]
+            }
+          ],
+          "outputs": [
+            {
+              "id": "outPort",
+              "app_data": {
+                "ui_data": {
+                  "cardinality": {
+                    "min": 0,
+                    "max": -1
+                  },
+                  "label": "Output Port"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "app_data": {
+        "ui_data": {
+          "comments": []
+        },
+        "version": 8,
+        "runtime_type": "KUBEFLOW_PIPELINES",
+        "properties": {
+          "name": "decoder-sft",
+          "runtime": "Pipelines",
+          "pipeline_defaults": {
+            "kubernetes_shared_mem_size": {},
+            "mounted_volumes": [
+              {
+                "path": "/mnt/data",
+                "pvc_name": "shared-pipeline-data",
+                "read_only": false
+              }
+            ],
+            "kubernetes_pod_annotations": [],
+            "kubernetes_pod_labels": [],
+            "kubernetes_tolerations": [
+              {
+                "key": "nvidia.com/gpu",
+                "operator": "Equal",
+                "effect": "NoSchedule"
+              }
+            ],
+            "env_vars": [
+              {
+                "env_var": "MLFLOW_TRACKING_TOKEN",
+                "value": "sha256~SwOrfDlkEMdsTA2TEuNPUtpkf7uM6neQm2hYNfoPsyE"
+              }
+            ],
+            "kubernetes_secrets": [],
+            "runtime_image": "registry.redhat.io/rhoai/odh-pipeline-runtime-pytorch-cuda-py312-rhel9@sha256:aa457e7394ba73350f5c8e08c56ddba126d9472197e7669c9eb7daa2c02e6777"
+          }
+        }
+      },
+      "runtime_ref": ""
+    }
+  ],
+  "schemas": []
+}
