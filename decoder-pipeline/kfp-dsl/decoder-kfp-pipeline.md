@@ -6,58 +6,8 @@ We will be implementing, compiling, importing and executing a Kubeflow Pipeline 
 
 ## Step 1: Update Your Pipeline Script
 
-Update the `execute_notebook` component in your `decoder-kfp-dsl.py` file to accept AWS credentials as pipeline parameters. These get injected directly into the operating system environment so the notebook can authenticate natively.
+We will use the `execute_notebook` component in `decoder-kfp-dsl.py` file to accept AWS credentials as secrets. These get injected directly into the operating system environment so the notebook can authenticate natively. Ensure you create a secret named `aws-connection-minio` with the suitable values for the paramaters `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL`..
 
-Add the following parameters and environment variable assignments:
-
-```python
-from kfp import dsl
-from kfp import compiler
-from kfp import kubernetes
-
-....
-
-def execute_notebook(
-    repo_url: str, 
-    notebook_path: str, 
-    mlflow_token: str,
-    aws_access_key: str, # add this
-    aws_secret_key: str, # add this
-    aws_s3_endpoint: str # add this
-) -> str:
-    import subprocess
-    import os
-    import tempfile
-
-    # inject all secrets into the environment for the notebook to pick up natively
-    os.environ["MLFLOW_TRACKING_TOKEN"] = mlflow_token
-    os.environ["AWS_ACCESS_KEY_ID"] = aws_access_key # add this
-    os.environ["AWS_SECRET_ACCESS_KEY"] = aws_secret_key # add this
-    os.environ["AWS_S3_ENDPOINT"] = aws_s3_endpoint # add this
-...
-
-def sft_pipeline(
-    repo_url: str = "https://github.com/<<org>>/<<repo>>.git", # UPDATE THIS
-    mlflow_token: str = "<<token-here>>", # Passed at runtime in the RHOAI UI
-    aws_access_key: str = "<<aws_access_key-here>>", # add this
-    aws_secret_key: str = "<<aws_secret_key-here>>", # add this
-    aws_s3_endpoint: str = "<<aws_s3_endpoint-here>>" # add this
-):
-...
-
-    # Step C: Merge 
-    merge_step = execute_notebook(
-        repo_url=repo_url,
-        notebook_path="decoder-sft/decoder_lora_model_merge.ipynb", 
-        mlflow_token=mlflow_token,
-        aws_access_key=aws_access_key, # add this
-        aws_secret_key=aws_secret_key, # add this
-        aws_s3_endpoint=aws_s3_endpoint # add this        
-    ).set_display_name("Merge Weights").after(eval_step)
-
-```
-
----
 
 ## Step 2: Compile the Pipeline
 
@@ -104,9 +54,6 @@ This is where everything comes together. You pass your secure credentials at run
    |---|---|
    | `repo_url` | Confirm it points to your Git repository |
    | `mlflow_token` | Paste your actual MLflow tracking token |
-   | `aws_access_key` | Paste your actual S3 Access Key |
-   | `aws_secret_key` | Paste your actual S3 Secret Key |
-   | `aws_s3_endpoint` | Provide the URL to your object storage (OpenShift ODF/ Azure) |
 
 4. Click **Create**.
 
