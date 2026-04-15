@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KFP Pipeline Builder — Interactive Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;700&family=Instrument+Serif&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0b0f;
+  --bg-card: #12131a;
+  --bg-elevated: #1a1b24;
+  --border: #2a2b38;
+  --text: #e4e4ed;
+  --text-dim: #8888a0;
+  --text-muted: #55566a;
+  --sft-blue: #4d8eff;
+  --sft-blue-dim: #4d8eff22;
+  --eval-orange: #ff8c42;
+  --eval-orange-dim: #ff8c4222;
+  --merge-green: #3dd68c;
+  --merge-green-dim: #3dd68c22;
+  --retrain-red: #ff4d6a;
+  --retrain-red-dim: #ff4d6a22;
+  --purple: #a78bfa;
+  --purple-dim: #a78bfa22;
+  --elyra-teal: #2dd4bf;
+  --elyra-teal-dim: #2dd4bf22;
+  --yellow: #fbbf24;
+  --yellow-dim: #fbbf2422;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ─── HERO ─── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 2rem;
+}
+
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.15;
+  mask-image: radial-gradient(ellipse 70% 50% at 50% 50%, black, transparent);
+}
+
+.hero-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--sft-blue) 0%, transparent 70%);
+  opacity: 0.06;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse-glow 6s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.06; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.1; }
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-bottom: 2rem;
+  animation: fade-in 0.8s ease;
+}
+
+.hero-badge .dot {
+  width: 6px; height: 6px;
+  background: var(--merge-green);
+  border-radius: 50%;
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.hero h1 {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(3rem, 7vw, 5.5rem);
+  font-weight: 400;
+  text-align: center;
+  line-height: 1.1;
+  animation: fade-up 1s ease;
+  max-width: 800px;
+}
+
+.hero h1 em {
+  font-style: italic;
+  background: linear-gradient(135deg, var(--sft-blue), var(--eval-orange));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-sub {
+  margin-top: 1.5rem;
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  text-align: center;
+  max-width: 520px;
+  animation: fade-up 1s ease 0.2s both;
+}
+
+.hero-cta {
+  margin-top: 2.5rem;
+  display: flex;
+  gap: 1rem;
+  animation: fade-up 1s ease 0.4s both;
+}
+
+.hero-cta a {
+  padding: 12px 28px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cta-primary {
+  background: var(--sft-blue);
+  color: #fff;
+}
+.cta-primary:hover { box-shadow: 0 0 30px var(--sft-blue-dim); transform: translateY(-2px); }
+
+.cta-secondary {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.cta-secondary:hover { border-color: var(--text-dim); transform: translateY(-2px); }
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── SECTIONS ─── */
+section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 6rem 2rem;
+}
+
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.section-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+  margin-bottom: 1rem;
+}
+
+.section-desc {
+  color: var(--text-dim);
+  max-width: 600px;
+  margin-bottom: 3rem;
+}
+
+.section-divider {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+/* ─── CONSTRUCTS GRID ─── */
+.constructs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.25rem;
+}
+
+.construct-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.75rem;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: default;
+  position: relative;
+  overflow: hidden;
+}
+
+.construct-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--card-accent, var(--sft-blue));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.construct-card:hover {
+  border-color: var(--card-accent, var(--sft-blue));
+  transform: translateY(-3px);
+}
+
+.construct-card:hover::before { opacity: 1; }
+
+.construct-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  background: var(--card-accent-dim, var(--sft-blue-dim));
+  border: 1px solid var(--card-accent, var(--sft-blue));
+}
+
+.construct-card h3 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  color: var(--card-accent, var(--sft-blue));
+}
+
+.construct-card p {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.construct-snippet {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  line-height: 1.8;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* Category label inside constructs */
+.construct-category {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+/* ─── COMPARISON ─── */
+.comparison-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+@media (max-width: 768px) {
+  .comparison-wrapper { grid-template-columns: 1fr; }
+  .constructs-grid { grid-template-columns: 1fr; }
+  .branch-row { gap: 3rem; }
+}
+
+.compare-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.compare-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.compare-card.kfp-card::before {
+  background: linear-gradient(90deg, var(--sft-blue), var(--purple));
+}
+
+.compare-card.elyra-card::before {
+  background: linear-gradient(90deg, var(--elyra-teal), var(--merge-green));
+}
+
+.compare-card .compare-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 100px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 1.25rem;
+}
+
+.kfp-card .compare-badge {
+  background: var(--sft-blue-dim);
+  color: var(--sft-blue);
+  border: 1px solid rgba(77,142,255,0.2);
+}
+
+.elyra-card .compare-badge {
+  background: var(--elyra-teal-dim);
+  color: var(--elyra-teal);
+  border: 1px solid rgba(45,212,191,0.2);
+}
+
+.compare-card h3 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 1.6rem;
+  font-weight: 400;
+  margin-bottom: 0.5rem;
+}
+
+.compare-card .compare-desc {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin-bottom: 1.5rem;
+}
+
+.compare-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.compare-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.compare-list li .check {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  margin-top: 2px;
+}
+
+.kfp-card .check {
+  background: var(--sft-blue-dim);
+  color: var(--sft-blue);
+  border: 1px solid rgba(77,142,255,0.3);
+}
+
+.elyra-card .check {
+  background: var(--elyra-teal-dim);
+  color: var(--elyra-teal);
+  border: 1px solid rgba(45,212,191,0.3);
+}
+
+.inline-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* Advantages callout */
+.advantages-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.advantages-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sft-blue), var(--eval-orange), var(--merge-green));
+}
+
+.adv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.adv-item {
+  padding: 1.25rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.adv-item:hover {
+  border-color: var(--sft-blue);
+  transform: translateY(-2px);
+}
+
+.adv-item .adv-icon {
+  font-size: 1.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.adv-item h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
+  color: var(--text);
+}
+
+.adv-item p {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* ─── DECISION FLOWCHART ─── */
+.decision-flow {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.decision-node {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  text-align: center;
+  position: relative;
+  margin-bottom: 0;
+  transition: all 0.3s ease;
+}
+
+.decision-node:hover { border-color: var(--text-dim); }
+
+.decision-node.question {
+  background: var(--bg-elevated);
+  border-color: var(--eval-orange);
+}
+
+.decision-node.question::before {
+  content: '?';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--eval-orange);
+  color: var(--bg);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.decision-node.answer-kfp {
+  border-color: var(--sft-blue);
+  background: var(--sft-blue-dim);
+}
+
+.decision-node.answer-elyra {
+  border-color: var(--elyra-teal);
+  background: var(--elyra-teal-dim);
+}
+
+.decision-node h4 { font-size: 0.9rem; margin-bottom: 0.3rem; }
+.decision-node p { font-size: 0.8rem; color: var(--text-dim); }
+
+.decision-arrows {
+  display: flex;
+  justify-content: center;
+  gap: 6rem;
+  margin: 0.5rem 0;
+  position: relative;
+}
+
+.decision-arrows::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: calc(50% - 3rem);
+  width: 6rem;
+  height: 1px;
+  background: var(--border);
+}
+
+.decision-arrow-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  padding: 3px 10px;
+  border-radius: 100px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  position: relative;
+  z-index: 1;
+}
+
+.flow-connector {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 auto;
+}
+
+.decision-answers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* ─── PIPELINE VISUALIZATION ─── */
+.pipeline-container {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  overflow: hidden;
+}
+
+.pipeline-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--sft-blue), var(--eval-orange), var(--merge-green), transparent);
+  opacity: 0.5;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 2rem;
+  width: fit-content;
+}
+
+.view-toggle button {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.view-toggle button.active {
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.pipeline-visual {
+  position: relative;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.pipeline-visual.hidden { display: none; }
+
+.pipe-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+}
+
+.pipe-connector {
+  width: 2px;
+  height: 40px;
+  background: var(--border);
+  position: relative;
+  overflow: visible;
+}
+
+.pipe-connector::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: linear-gradient(to bottom, var(--conn-from, var(--sft-blue)), var(--conn-to, var(--eval-orange)));
+  animation: flow-down 2s ease-in-out infinite;
+}
+
+@keyframes flow-down {
+  0% { clip-path: inset(0 0 100% 0); }
+  50% { clip-path: inset(0 0 0% 0); }
+  100% { clip-path: inset(100% 0 0 0); }
+}
+
+.pipe-node {
+  position: relative;
+  padding: 20px 32px;
+  border-radius: 12px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  min-width: 200px;
+  text-align: center;
+  z-index: 2;
+}
+
+.pipe-node:hover, .pipe-node.active {
+  transform: translateY(-4px) scale(1.02);
+}
+
+.pipe-node .node-icon { font-size: 1.5rem; margin-bottom: 6px; }
+.pipe-node .node-label { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
+.pipe-node .node-sub { font-size: 0.75rem; opacity: 0.6; }
+
+.node-sft {
+  border-color: var(--sft-blue);
+  background: var(--sft-blue-dim);
+  box-shadow: 0 0 30px var(--sft-blue-dim);
+}
+.node-sft:hover, .node-sft.active { box-shadow: 0 0 50px rgba(77, 142, 255, 0.3); }
+
+.node-eval {
+  border-color: var(--eval-orange);
+  background: var(--eval-orange-dim);
+  box-shadow: 0 0 30px var(--eval-orange-dim);
+}
+.node-eval:hover, .node-eval.active { box-shadow: 0 0 50px rgba(255, 140, 66, 0.3); }
+
+.node-merge {
+  border-color: var(--merge-green);
+  background: var(--merge-green-dim);
+  box-shadow: 0 0 30px var(--merge-green-dim);
+}
+.node-merge:hover, .node-merge.active { box-shadow: 0 0 50px rgba(61, 214, 140, 0.3); }
+
+.node-retrain {
+  border-color: var(--retrain-red);
+  background: var(--retrain-red-dim);
+  box-shadow: 0 0 30px var(--retrain-red-dim);
+}
+.node-retrain:hover, .node-retrain.active { box-shadow: 0 0 50px rgba(255, 77, 106, 0.3); }
+
+.branch-row {
+  display: flex;
+  gap: 6rem;
+  align-items: flex-start;
+  position: relative;
+}
+
+.branch-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  padding: 3px 10px;
+  border-radius: 100px;
+  position: absolute;
+  top: -14px;
+  white-space: nowrap;
+}
+
+.branch-yes {
+  color: var(--merge-green);
+  background: var(--merge-green-dim);
+  left: calc(50% - 8rem);
+}
+
+.branch-no {
+  color: var(--retrain-red);
+  background: var(--retrain-red-dim);
+  right: calc(50% - 8rem);
+}
+
+.branch-arm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.pipe-connector-branch {
+  width: 2px;
+  height: 30px;
+  background: var(--border);
+}
+
+.condition-diamond {
+  width: 36px;
+  height: 36px;
+  background: var(--eval-orange);
+  transform: rotate(45deg);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0.5rem 0;
+}
+
+.condition-diamond span {
+  transform: rotate(-45deg);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #0a0b0f;
+}
+
+.node-detail {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: none;
+  animation: fade-up 0.4s ease;
+}
+
+.node-detail.visible { display: block; }
+.node-detail h4 { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; margin-bottom: 0.5rem; }
+.node-detail p { color: var(--text-dim); font-size: 0.85rem; line-height: 1.7; }
+.node-detail code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  background: var(--bg-elevated);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--eval-orange);
+}
+
+/* ─── CODE VIEW ─── */
+.pipeline-code { display: none; }
+.pipeline-code.visible { display: block; }
+
+.code-block {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-header .filename {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.code-dots { display: flex; gap: 6px; }
+.code-dots span { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+.code-dots span:nth-child(1) { background: #ff5f56; }
+.code-dots span:nth-child(2) { background: #ffbd2e; }
+.code-dots span:nth-child(3) { background: #27c93f; }
+
+.code-body {
+  padding: 1.5rem 2rem;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 1.9;
+  counter-reset: line;
+}
+
+.code-body .line {
+  display: block;
+  padding-left: 3rem;
+  position: relative;
+  white-space: pre;
+}
+
+.code-body .line::before {
+  counter-increment: line;
+  content: counter(line);
+  position: absolute;
+  left: 0;
+  color: var(--text-muted);
+  width: 2rem;
+  text-align: right;
+  user-select: none;
+}
+
+.kw { color: var(--purple); }
+.fn { color: var(--sft-blue); }
+.str { color: var(--merge-green); }
+.dec { color: var(--eval-orange); }
+.cmt { color: var(--text-muted); font-style: italic; }
+.typ { color: var(--elyra-teal); }
+.num { color: var(--retrain-red); }
+.op { color: var(--text-dim); }
+
+/* ─── ANIMATIONS ─── */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+</style>
+</head>
+<body>
+
+<!-- ───────── HERO ───────── -->
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-badge"><span class="dot"></span> KFP v2 Interactive Learning Guide</div>
+  <h1>Kubeflow <em>Pipelines</em></h1>
+  <p class="hero-sub">Learn the KFP v2 DSL constructs, compare with Elyra, then see it all come together in a real SFT pipeline.</p>
+  <div class="hero-cta">
+    <a class="cta-primary" href="#constructs">Learn Constructs</a>
+    <a class="cta-secondary" href="#comparison">KFP vs Elyra</a>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!--  SECTION 01 — KFP DSL CONSTRUCTS           -->
+<!-- ═══════════════════════════════════════════ -->
+<section id="constructs">
+  <div class="section-label reveal">01 — Building Blocks</div>
+  <h2 class="section-title reveal">KFP v2 DSL Constructs</h2>
+  <p class="section-desc reveal">Twelve core primitives from the official KFP SDK — organized by what they do. Master these and you can build any pipeline.</p>
+
+  <!-- ── COMPONENTS ── -->
+  <div style="margin-bottom: 2.5rem;">
+    <div class="reveal" style="font-family: 'Instrument Serif', serif; font-size: 1.4rem; margin-bottom: 1rem; color: var(--text);">Components — defining pipeline steps</div>
+    <div class="constructs-grid">
+
+      <div class="construct-card reveal" style="--card-accent: var(--sft-blue); --card-accent-dim: var(--sft-blue-dim);">
+        <div class="construct-icon">&#9881;&#65039;</div>
+        <span class="construct-category">Lightweight</span>
+        <h3>@dsl.component</h3>
+        <p>A hermetic Python function — all imports must be inside the function body. The simplest way to define a step. KFP serializes it into a container at runtime.</p>
+        <div class="construct-snippet"><span class="dec">@dsl.component</span>(packages_to_install=[<span class="str">"numpy"</span>])
+<span class="kw">def</span> <span class="fn">add</span>(a: <span class="typ">int</span>, b: <span class="typ">int</span>) -> <span class="typ">int</span>:
+    <span class="kw">import</span> numpy <span class="kw">as</span> np   <span class="cmt"># imports inside!</span>
+    <span class="kw">return</span> <span class="fn">int</span>(np.add(a, b))</div>
+      </div>
+
+      <div class="construct-card reveal" style="--card-accent: var(--purple); --card-accent-dim: var(--purple-dim);">
+        <div class="construct-icon">&#128230;</div>
+        <span class="construct-category">Containerized</span>
+        <h3>@dsl.component + target_image</h3>
+        <p>Removes the hermeticity constraint. Can import from adjacent modules. Use <code class="inline-code">kfp component build</code> to bake deps into the image at build time instead of install time.</p>
+        <div class="construct-snippet"><span class="dec">@dsl.component</span>(
+    base_image=<span class="str">"python:3.11"</span>,
+    target_image=<span class="str">"gcr.io/my-proj/train:v1"</span>
+)
+<span class="kw">def</span> <span class="fn">train</span>(data_path: <span class="typ">str</span>) -> <span class="typ">float</span>:
+    <span class="kw">from</span> my_utils <span class="kw">import</span> run_training
+    <span class="kw">return</span> run_training(data_path)</div>
+      </div>
+
+      <div class="construct-card reveal" style="--card-accent: var(--eval-orange); --card-accent-dim: var(--eval-orange-dim);">
+        <div class="construct-icon">&#128203;</div>
+        <span class="construct-category">Container</span>
+        <h3>@dsl.container_component</h3>
+        <p>Run any container image with arbitrary commands. Returns a <code class="inline-code">dsl.ContainerSpec</code> — no Python function, just image + command + args.</p>
+        <div class="construct-snippet"><span class="dec">@dsl.container_component</span>
+<span class="kw">def</span> <span class="fn">run_bash</span>(msg: <span class="typ">str</span>, out: <span class="typ">dsl.OutputPath</span>(<span class="typ">str</span>)):
+    <span class="kw">return</span> dsl.ContainerSpec(
+        image=<span class="str">"alpine"</span>,
+        command=[<span class="str">"sh"</span>, <span class="str">"-c"</span>],
+        args=[<span class="str">f"echo {msg} > {out}"</span>]
+    )</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PIPELINE DEFINITION ── -->
+  <div style="margin-bottom: 2.5rem;">
+    <div class="reveal" style="font-family: 'Instrument Serif', serif; font-size: 1.4rem; margin-bottom: 1rem; color: var(--text);">Pipeline — wiring & compiling</div>
+    <div class="constructs-grid">
+
+      <div class="construct-card reveal" style="--card-accent: var(--merge-green); --card-accent-dim: var(--merge-green-dim);">
+        <div class="construct-icon">&#128279;</div>
+        <h3>@dsl.pipeline</h3>
+        <p>Wire components into a DAG. Pass <code class="inline-code">task.output</code> or <code class="inline-code">task.outputs["key"]</code> between steps to create dependencies. Pipelines can also nest inside other pipelines.</p>
+        <div class="construct-snippet"><span class="dec">@dsl.pipeline</span>(name=<span class="str">"my-pipeline"</span>)
+<span class="kw">def</span> <span class="fn">my_pipeline</span>(param: <span class="typ">str</span> = <span class="str">"default"</span>):
+    s1 = <span class="fn">load_data</span>(path=param)
+    s2 = <span class="fn">train</span>(data=s1.output)
+    s2.<span class="fn">after</span>(s1)  <span class="cmt"># explicit ordering</span>
+    s2.<span class="fn">set_retry</span>(num_retries=<span class="num">3</span>)
+    s2.<span class="fn">set_cpu_limit</span>(<span class="str">"4"</span>)
+    s2.<span class="fn">set_memory_limit</span>(<span class="str">"16Gi"</span>)</div>
+      </div>
+
+      <div class="construct-card reveal" style="--card-accent: var(--yellow); --card-accent-dim: var(--yellow-dim);">
+        <div class="construct-icon">&#128220;</div>
+        <h3>compiler.Compiler().compile()</h3>
+        <p>Compiles your <code class="inline-code">@dsl.pipeline</code> function into a portable YAML IR (PipelineSpec protobuf). This YAML is what you submit to a KFP backend or deploy via kubectl.</p>
+        <div class="construct-snippet"><span class="kw">from</span> kfp <span class="kw">import</span> compiler
+
+compiler.Compiler().<span class="fn">compile</span>(
+    pipeline_func=my_pipeline,
+    package_path=<span class="str">"pipeline.yaml"</span>,
+)
+<span class="cmt"># Produces IR YAML → submit to KFP backend</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── DATA HANDLING ── -->
+  <div style="margin-bottom: 2.5rem;">
+    <div class="reveal" style="font-family: 'Instrument Serif', serif; font-size: 1.4rem; margin-bottom: 1rem; color: var(--text);">Data Handling — artifacts & parameters</div>
+    <div class="constructs-grid">
+
+      <div class="construct-card reveal" style="--card-accent: var(--elyra-teal); --card-accent-dim: var(--elyra-teal-dim);">
+        <div class="construct-icon">&#128193;</div>
+        <h3>Input / Output Artifacts</h3>
+        <p>Pass typed artifacts (Dataset, Model, Metrics, HTML, Markdown, ClassificationMetrics) between steps. Access via <code class="inline-code">.path</code>, <code class="inline-code">.uri</code>, and <code class="inline-code">.metadata</code>.</p>
+        <div class="construct-snippet"><span class="kw">from</span> kfp.dsl <span class="kw">import</span> <span class="typ">Input</span>, <span class="typ">Output</span>, <span class="typ">Dataset</span>, <span class="typ">Model</span>, <span class="typ">Metrics</span>
+
+<span class="dec">@dsl.component</span>
+<span class="kw">def</span> <span class="fn">train</span>(
+    data: <span class="typ">Input</span>[<span class="typ">Dataset</span>],      <span class="cmt"># read-only artifact</span>
+    model: <span class="typ">Output</span>[<span class="typ">Model</span>],     <span class="cmt"># pre-constructed, write to it</span>
+):
+    <span class="kw">with</span> <span class="fn">open</span>(data.path) <span class="kw">as</span> f: ...
+    save_model(model.path)
+    model.metadata[<span class="str">"framework"</span>] = <span class="str">"pytorch"</span></div>
+      </div>
+
+      <div class="construct-card reveal" style="--card-accent: var(--sft-blue); --card-accent-dim: var(--sft-blue-dim);">
+        <div class="construct-icon">&#128196;</div>
+        <h3>Parameters (small data)</h3>
+        <p>Simple Python types (<code class="inline-code">str</code>, <code class="inline-code">int</code>, <code class="inline-code">float</code>, <code class="inline-code">bool</code>, <code class="inline-code">list</code>, <code class="inline-code">dict</code>) pass as pipeline/component parameters. Used for config values, thresholds, paths.</p>
+        <div class="construct-snippet"><span class="dec">@dsl.component</span>
+<span class="kw">def</span> <span class="fn">configure</span>(
+    lr: <span class="typ">float</span>,
+    epochs: <span class="typ">int</span>,
+    tags: <span class="typ">list</span>,
+) -> <span class="typ">str</span>:
+    <span class="kw">return</span> <span class="str">f"lr={lr}, epochs={epochs}"</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── CONTROL FLOW ── -->
+  <div style="margin-bottom: 2.5rem;">
+    <div class="reveal" style="font-family: 'Instrument Serif', serif; font-size: 1.4rem; margin-bottom: 1rem; color: var(--text);">Control Flow — branching, loops, cleanup</div>
+    <div class="constructs-grid">
+
+      <div class="construct-card reveal" style="--card-accent: var(--eval-orange); --card-accent-dim: var(--eval-orange-dim);">
+        <div class="construct-icon">&#128256;</div>
+        <h3>dsl.If / dsl.Elif / dsl.Else</h3>
+        <p>KFP v2's conditional branching. Use <code class="inline-code">with dsl.If()</code> as a context manager to gate which steps execute based on upstream outputs or pipeline params.</p>
+        <div class="construct-snippet"><span class="kw">with</span> <span class="fn">dsl.If</span>(eval_task.output >= <span class="num">0.85</span>):
+    <span class="fn">merge_weights</span>(adapter=sft.output)
+<span class="kw">with</span> <span class="fn">dsl.Elif</span>(eval_task.output >= <span class="num">0.70</span>):
+    <span class="fn">retrain</span>(data=data.output, lr=<span class="num">1e-5</span>)
+<span class="kw">with</span> <span class="fn">dsl.Else</span>():
+    <span class="fn">alert_team</span>(msg=<span class="str">"Score too low"</span>)</div>
+      </div>
+
+      <div class="construct-card reveal" style="--card-accent: var(--merge-green); --card-accent-dim: var(--merge-green-dim);">
+        <div class="construct-icon">&#128257;</div>
+        <h3>dsl.OneOf</h3>
+        <p>Gather a single output from mutually exclusive branches (If/Elif/Else) so a downstream task can consume it. Requires an <code class="inline-code">dsl.Else</code> branch to guarantee exactly one result.</p>
+        <div class="construct-snippet"><span class="kw">with</span> <span class="fn">dsl.If</span>(coin.output == <span class="str">"heads"</span>):
+    t1 = <span class="fn">handle_heads</span>()
+<span class="kw">with</span> <span class="fn">dsl.Else</span>():
+    t2 = <span class="fn">handle_tails</span>()
+
+result = <span class="fn">dsl.OneOf</span>(t1.output, t2.output)
+<span class="fn">log_result</span>(value=result)</div>
+      </div>
+
+      <div class="construct-card reveal" style="--card-accent: var(--retrain-red); --card-accent-dim: var(--retrain-red-dim);">
+        <div class="construct-icon">&#9889;</div>
+        <h3>dsl.ParallelFor + dsl.Collected</h3>
+        <p>Fan out over a list in parallel with optional <code class="inline-code">parallelism</code> cap. Use <code class="inline-code">dsl.Collected</code> to gather all outputs from the loop iterations into a list for a downstream step.</p>
+        <div class="construct-snippet"><span class="kw">with</span> <span class="fn">dsl.ParallelFor</span>(
+    items=[<span class="num">1</span>, <span class="num">5</span>, <span class="num">10</span>, <span class="num">25</span>],
+    parallelism=<span class="num">2</span>
+) <span class="kw">as</span> epochs:
+    t = <span class="fn">train_model</span>(epochs=epochs)
+
+<span class="cmt"># Gather all models from loop iterations</span>
+<span class="fn">pick_best</span>(models=<span class="fn">dsl.Collected</span>(t.outputs[<span class="str">"model"</span>]))</div>
+      </div>
+
+      <div class="construct-card reveal" style="--card-accent: var(--purple); --card-accent-dim: var(--purple-dim);">
+        <div class="construct-icon">&#128737;&#65039;</div>
+        <h3>dsl.ExitHandler + PipelineTaskFinalStatus</h3>
+        <p>Guarantee a cleanup task runs after the pipeline — even if earlier steps fail. Use <code class="inline-code">PipelineTaskFinalStatus</code> in the exit task to inspect what happened.</p>
+        <div class="construct-snippet"><span class="kw">from</span> kfp.dsl <span class="kw">import</span> PipelineTaskFinalStatus
+
+<span class="dec">@dsl.component</span>
+<span class="kw">def</span> <span class="fn">cleanup</span>(status: <span class="typ">PipelineTaskFinalStatus</span>):
+    <span class="fn">print</span>(<span class="str">f"State: {status.state}"</span>)
+    <span class="fn">print</span>(<span class="str">f"Error: {status.error_message}"</span>)
+
+<span class="kw">with</span> <span class="fn">dsl.ExitHandler</span>(exit_task=<span class="fn">cleanup</span>()):
+    <span class="fn">train</span>()  <span class="cmt"># cleanup runs even if this fails</span></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!--  SECTION 02 — KFP vs ELYRA                 -->
+<!-- ═══════════════════════════════════════════ -->
+<section id="comparison">
+  <div class="section-label reveal">02 — Choose Your Tool</div>
+  <h2 class="section-title reveal">KFP DSL vs Elyra</h2>
+  <p class="section-desc reveal">Two approaches to building ML pipelines. Different strengths for different stages of your workflow.</p>
+
+  <div class="comparison-wrapper">
+    <div class="compare-card kfp-card reveal">
+      <div class="compare-badge">KFP DSL</div>
+      <h3>Code-First Pipelines</h3>
+      <p class="compare-desc">Write pipelines as Python code with full programmatic control over every aspect of execution.</p>
+      <ul class="compare-list">
+        <li><span class="check">&#10003;</span> Full conditional branching with <code class="inline-code">dsl.If / Elif / Else</code></li>
+        <li><span class="check">&#10003;</span> Parallel fan-out with <code class="inline-code">dsl.ParallelFor</code> + <code class="inline-code">dsl.Collected</code></li>
+        <li><span class="check">&#10003;</span> Type-safe artifact passing (Dataset, Model, Metrics)</li>
+        <li><span class="check">&#10003;</span> Three component types: lightweight, containerized, container</li>
+        <li><span class="check">&#10003;</span> Version control — pipelines are .py files, diffs work</li>
+        <li><span class="check">&#10003;</span> CI/CD integration — compile YAML IR and deploy in automation</li>
+        <li><span class="check">&#10003;</span> Reusable component libraries across teams</li>
+        <li><span class="check">&#10003;</span> Task configs: retry, CPU/memory limits, caching, env vars</li>
+      </ul>
+    </div>
+
+    <div class="compare-card elyra-card reveal">
+      <div class="compare-badge">Elyra</div>
+      <h3>Visual Notebook Pipelines</h3>
+      <p class="compare-desc">Drag-and-drop notebooks in JupyterLab to compose pipelines visually — no DSL to learn.</p>
+      <ul class="compare-list">
+        <li><span class="check">&#10003;</span> Visual drag-and-drop pipeline editor in JupyterLab</li>
+        <li><span class="check">&#10003;</span> Run existing .ipynb / .py / .r files as pipeline steps</li>
+        <li><span class="check">&#10003;</span> No KFP SDK knowledge required to start</li>
+        <li><span class="check">&#10003;</span> Built into JupyterLab — no context switching</li>
+        <li><span class="check">&#10003;</span> Quick prototyping of linear workflows</li>
+        <li><span class="check">&#10003;</span> Auto-generates KFP YAML under the hood</li>
+        <li><span class="check">&#10007;</span> No conditional branching (If/Elif/Else) or loops</li>
+        <li><span class="check">&#10007;</span> Limited parameterization and no typed artifacts</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="advantages-section reveal">
+    <div class="section-label">Why KFP DSL wins for production</div>
+    <h3 style="font-family: 'Instrument Serif', serif; font-size: 1.5rem; font-weight: 400;">Six advantages that matter at scale</h3>
+    <div class="adv-grid">
+      <div class="adv-item">
+        <div class="adv-icon">&#128274;</div>
+        <h4>Type Safety</h4>
+        <p>Typed artifacts and compile-time checks catch data mismatches before your GPU job runs.</p>
+      </div>
+      <div class="adv-item">
+        <div class="adv-icon">&#128221;</div>
+        <h4>Git-Native</h4>
+        <p>Pipelines are .py files — diffs, PRs, blame, and rollbacks all work naturally.</p>
+      </div>
+      <div class="adv-item">
+        <div class="adv-icon">&#9851;&#65039;</div>
+        <h4>Reusability</h4>
+        <p>Share components as Python packages. Import and compose across projects and teams.</p>
+      </div>
+      <div class="adv-item">
+        <div class="adv-icon">&#128256;</div>
+        <h4>Conditionals</h4>
+        <p>dsl.If / Elif / Else + dsl.OneOf — real branching, not just linear chains.</p>
+      </div>
+      <div class="adv-item">
+        <div class="adv-icon">&#9889;</div>
+        <h4>Parallel Execution</h4>
+        <p>ParallelFor with Collected — run sweeps, multi-model evals, or data shards concurrently.</p>
+      </div>
+      <div class="adv-item">
+        <div class="adv-icon">&#128640;</div>
+        <h4>CI/CD Ready</h4>
+        <p>Compile to YAML IR, validate, and deploy pipelines from your CI/CD automation.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!--  SECTION 03 — DECISION GUIDE               -->
+<!-- ═══════════════════════════════════════════ -->
+<section id="decision">
+  <div class="section-label reveal">03 — Decision Guide</div>
+  <h2 class="section-title reveal">When to use what?</h2>
+  <p class="section-desc reveal">Answer two questions to find your tool.</p>
+
+  <div class="decision-flow">
+    <div class="decision-node question reveal">
+      <h4>Do you need conditional branching, loops, or typed artifacts?</h4>
+      <p>e.g., dsl.If(score >= threshold), dsl.ParallelFor, Input[Model]</p>
+    </div>
+
+    <div class="flow-connector"></div>
+
+    <div class="decision-arrows reveal">
+      <div class="decision-arrow-label" style="color: var(--merge-green);">Yes</div>
+      <div class="decision-arrow-label" style="color: var(--retrain-red);">No</div>
+    </div>
+
+    <div style="height: 8px;"></div>
+
+    <div class="decision-answers reveal">
+      <div class="decision-node answer-kfp">
+        <h4 style="color: var(--sft-blue);">Use KFP DSL</h4>
+        <p>Elyra cannot express any of these. You need code-level control.</p>
+      </div>
+      <div>
+        <div class="decision-node question" style="margin-bottom: 0;">
+          <h4>Is it a linear chain of notebooks?</h4>
+          <p>notebook A &#8594; B &#8594; C, no branching</p>
+        </div>
+
+        <div class="flow-connector"></div>
+
+        <div class="decision-arrows" style="gap: 3rem;">
+          <div class="decision-arrow-label" style="color: var(--merge-green);">Yes</div>
+          <div class="decision-arrow-label" style="color: var(--retrain-red);">No</div>
+        </div>
+
+        <div style="height: 8px;"></div>
+
+        <div class="decision-answers">
+          <div class="decision-node answer-elyra">
+            <h4 style="color: var(--elyra-teal);">Use Elyra</h4>
+            <p>Fast prototyping, visual editing in JupyterLab.</p>
+          </div>
+          <div class="decision-node answer-kfp">
+            <h4 style="color: var(--sft-blue);">Use KFP DSL</h4>
+            <p>Complex DAGs need code.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height: 2rem;"></div>
+
+    <div class="decision-node reveal" style="text-align: left; margin-top: 1rem; background: var(--bg-elevated);">
+      <h4 style="margin-bottom: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--eval-orange);">Quick Reference</h4>
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <th style="padding: 8px 12px; text-align: left; color: var(--text-dim); font-weight: 500;">Scenario</th>
+            <th style="padding: 8px 12px; text-align: center; color: var(--sft-blue);">KFP</th>
+            <th style="padding: 8px 12px; text-align: center; color: var(--elyra-teal);">Elyra</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px 12px; color: var(--text-dim);">Quick notebook prototype</td>
+            <td style="padding: 8px 12px; text-align: center;">&#8212;</td>
+            <td style="padding: 8px 12px; text-align: center;">&#9733;</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px 12px; color: var(--text-dim);">Production training pipeline</td>
+            <td style="padding: 8px 12px; text-align: center;">&#9733;</td>
+            <td style="padding: 8px 12px; text-align: center;">&#8212;</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px 12px; color: var(--text-dim);">Conditional branching (If/Elif/Else)</td>
+            <td style="padding: 8px 12px; text-align: center;">&#9733;</td>
+            <td style="padding: 8px 12px; text-align: center;">&#10007;</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px 12px; color: var(--text-dim);">Hyperparameter sweep (ParallelFor)</td>
+            <td style="padding: 8px 12px; text-align: center;">&#9733;</td>
+            <td style="padding: 8px 12px; text-align: center;">&#10007;</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 8px 12px; color: var(--text-dim);">Data scientist exploration</td>
+            <td style="padding: 8px 12px; text-align: center;">&#8212;</td>
+            <td style="padding: 8px 12px; text-align: center;">&#9733;</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 12px; color: var(--text-dim);">CI/CD automated deploy</td>
+            <td style="padding: 8px 12px; text-align: center;">&#9733;</td>
+            <td style="padding: 8px 12px; text-align: center;">&#8212;</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ═══════════════════════════════════════════ -->
+<!--  SECTION 04 — FULL EXAMPLE PIPELINE         -->
+<!-- ═══════════════════════════════════════════ -->
+<section id="pipeline">
+  <div class="section-label reveal">04 — Putting It All Together</div>
+  <h2 class="section-title reveal">SFT &#8594; Eval &#8594; Conditional Merge Pipeline</h2>
+  <p class="section-desc reveal">Everything you learned above — components, artifacts, dsl.If/Else — assembled into a real fine-tuning pipeline. Click any node to see details.</p>
+
+  <div class="pipeline-container reveal">
+    <div class="view-toggle">
+      <button class="active" onclick="toggleView('visual')">Visual Pipeline</button>
+      <button onclick="toggleView('code')">Code View</button>
+    </div>
+
+    <!-- VISUAL VIEW -->
+    <div class="pipeline-visual" id="pipelineVisual">
+      <div class="pipe-row">
+        <div class="pipe-node node-sft" data-node="load" onclick="showDetail('load')" style="min-width: 180px;">
+          <div class="node-icon">&#128230;</div>
+          <div class="node-label">Load Dataset</div>
+          <div class="node-sub">Output[Dataset] artifact</div>
+        </div>
+      </div>
+
+      <div class="pipe-connector" style="--conn-from: var(--sft-blue); --conn-to: var(--sft-blue);"></div>
+
+      <div class="pipe-row">
+        <div class="pipe-node node-sft" data-node="sft" onclick="showDetail('sft')">
+          <div class="node-icon">&#129504;</div>
+          <div class="node-label">SFT Training</div>
+          <div class="node-sub">LoRA fine-tuning &#8594; Output[Model]</div>
+        </div>
+      </div>
+
+      <div class="pipe-connector" style="--conn-from: var(--sft-blue); --conn-to: var(--eval-orange);"></div>
+
+      <div class="pipe-row">
+        <div class="pipe-node node-eval" data-node="eval" onclick="showDetail('eval')">
+          <div class="node-icon">&#128202;</div>
+          <div class="node-label">Evaluation</div>
+          <div class="node-sub">Returns float score for dsl.If</div>
+        </div>
+      </div>
+
+      <div class="pipe-connector" style="height: 20px; --conn-from: var(--eval-orange); --conn-to: var(--eval-orange);"></div>
+
+      <div class="pipe-row">
+        <div class="condition-diamond"><span>IF</span></div>
+      </div>
+
+      <div style="height: 8px;"></div>
+
+      <div class="pipe-row">
+        <div class="branch-row">
+          <div class="branch-label branch-yes">dsl.If(score >= 0.85)</div>
+          <div class="branch-label branch-no">dsl.Else()</div>
+
+          <div class="branch-arm">
+            <div class="pipe-connector-branch" style="background: var(--merge-green);"></div>
+            <div class="pipe-node node-merge" data-node="merge" onclick="showDetail('merge')">
+              <div class="node-icon">&#128279;</div>
+              <div class="node-label">Merge Weights</div>
+              <div class="node-sub">LoRA &#8594; Base Model</div>
+            </div>
+          </div>
+
+          <div class="branch-arm">
+            <div class="pipe-connector-branch" style="background: var(--retrain-red);"></div>
+            <div class="pipe-node node-retrain" data-node="retrain" onclick="showDetail('retrain')">
+              <div class="node-icon">&#128260;</div>
+              <div class="node-label">Retrain</div>
+              <div class="node-sub">Lower LR, more epochs</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="node-detail" id="nodeDetail">
+        <h4 id="detailTitle"></h4>
+        <p id="detailContent"></p>
+      </div>
+    </div>
+
+    <!-- CODE VIEW -->
+    <div class="pipeline-code" id="pipelineCode">
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots"><span></span><span></span><span></span></div>
+          <div class="filename">sft_pipeline.py</div>
+        </div>
+        <div class="code-body">
+<span class="line"><span class="kw">from</span> kfp <span class="kw">import</span> dsl, compiler</span>
+<span class="line"><span class="kw">from</span> kfp.dsl <span class="kw">import</span> <span class="typ">Input</span>, <span class="typ">Output</span>, <span class="typ">Dataset</span>, <span class="typ">Model</span>, <span class="typ">Metrics</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span class="cmt"># ── Step 1: Load & prepare the dataset ──────────────────────</span></span>
+<span class="line"><span class="cmt"># Lightweight component: hermetic, all imports inside body</span></span>
+<span class="line"><span class="dec">@dsl.component</span>(base_image=<span class="str">"python:3.11"</span>)</span>
+<span class="line"><span class="kw">def</span> <span class="fn">load_dataset</span>(</span>
+<span class="line">    dataset_path: <span class="typ">str</span>,</span>
+<span class="line">    output_data: <span class="typ">Output</span>[<span class="typ">Dataset</span>],</span>
+<span class="line">):</span>
+<span class="line">    <span class="kw">import</span> json</span>
+<span class="line">    data = fetch_and_format(dataset_path)</span>
+<span class="line">    <span class="kw">with</span> <span class="fn">open</span>(output_data.path, <span class="str">"w"</span>) <span class="kw">as</span> f:</span>
+<span class="line">        json.dump(data, f)</span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span class="cmt"># ── Step 2: Supervised Fine-Tuning ──────────────────────────</span></span>
+<span class="line"><span class="dec">@dsl.component</span>(base_image=<span class="str">"pytorch/pytorch:2.1.0-cuda12.1"</span>)</span>
+<span class="line"><span class="kw">def</span> <span class="fn">sft_train</span>(</span>
+<span class="line">    train_data: <span class="typ">Input</span>[<span class="typ">Dataset</span>],</span>
+<span class="line">    base_model: <span class="typ">str</span>,</span>
+<span class="line">    learning_rate: <span class="typ">float</span>,</span>
+<span class="line">    epochs: <span class="typ">int</span>,</span>
+<span class="line">    adapter_out: <span class="typ">Output</span>[<span class="typ">Model</span>],</span>
+<span class="line">):</span>
+<span class="line">    <span class="kw">from</span> peft <span class="kw">import</span> LoraConfig, get_peft_model</span>
+<span class="line">    model = load_base(base_model)</span>
+<span class="line">    lora = LoraConfig(r=<span class="num">16</span>, lora_alpha=<span class="num">32</span>)</span>
+<span class="line">    model = get_peft_model(model, lora)</span>
+<span class="line">    train(model, train_data.path, lr=learning_rate, epochs=epochs)</span>
+<span class="line">    model.save_pretrained(adapter_out.path)</span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span class="cmt"># ── Step 3: Evaluate the fine-tuned model ───────────────────</span></span>
+<span class="line"><span class="dec">@dsl.component</span>(base_image=<span class="str">"pytorch/pytorch:2.1.0-cuda12.1"</span>)</span>
+<span class="line"><span class="kw">def</span> <span class="fn">evaluate</span>(</span>
+<span class="line">    adapter: <span class="typ">Input</span>[<span class="typ">Model</span>],</span>
+<span class="line">    eval_data: <span class="typ">Input</span>[<span class="typ">Dataset</span>],</span>
+<span class="line">    metrics_out: <span class="typ">Output</span>[<span class="typ">Metrics</span>],</span>
+<span class="line">) -> <span class="typ">float</span>:</span>
+<span class="line">    score = run_eval(adapter.path, eval_data.path)</span>
+<span class="line">    metrics_out.log_metric(<span class="str">"eval_score"</span>, score)</span>
+<span class="line">    <span class="kw">return</span> score  <span class="cmt"># float output → used by dsl.If</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span class="cmt"># ── Step 4a: Merge adapter into base model ──────────────────</span></span>
+<span class="line"><span class="dec">@dsl.component</span>(base_image=<span class="str">"pytorch/pytorch:2.1.0-cuda12.1"</span>)</span>
+<span class="line"><span class="kw">def</span> <span class="fn">merge_weights</span>(</span>
+<span class="line">    adapter: <span class="typ">Input</span>[<span class="typ">Model</span>],</span>
+<span class="line">    base_model: <span class="typ">str</span>,</span>
+<span class="line">    merged_out: <span class="typ">Output</span>[<span class="typ">Model</span>],</span>
+<span class="line">):</span>
+<span class="line">    merged = merge_lora_into_base(adapter.path, base_model)</span>
+<span class="line">    merged.save_pretrained(merged_out.path)</span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span class="cmt"># ── Step 4b: Retrain with adjusted hyperparams ─────────────</span></span>
+<span class="line"><span class="dec">@dsl.component</span>(base_image=<span class="str">"pytorch/pytorch:2.1.0-cuda12.1"</span>)</span>
+<span class="line"><span class="kw">def</span> <span class="fn">retrain</span>(</span>
+<span class="line">    train_data: <span class="typ">Input</span>[<span class="typ">Dataset</span>],</span>
+<span class="line">    base_model: <span class="typ">str</span>,</span>
+<span class="line">    adapter_out: <span class="typ">Output</span>[<span class="typ">Model</span>],</span>
+<span class="line">):</span>
+<span class="line">    model = load_base(base_model)</span>
+<span class="line">    train(model, train_data.path, lr=<span class="num">1e-5</span>, epochs=<span class="num">5</span>)</span>
+<span class="line">    model.save_pretrained(adapter_out.path)</span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span class="cmt"># ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span></span>
+<span class="line"><span class="cmt">#  Pipeline: wiring it all together with</span></span>
+<span class="line"><span class="cmt">#  dsl.If / dsl.Else for conditional branching  (KFP v2)</span></span>
+<span class="line"><span class="cmt"># ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span></span>
+<span class="line"><span class="dec">@dsl.pipeline</span>(name=<span class="str">"sft-eval-merge-pipeline"</span>)</span>
+<span class="line"><span class="kw">def</span> <span class="fn">sft_pipeline</span>(</span>
+<span class="line">    dataset_path: <span class="typ">str</span> = <span class="str">"gs://bucket/train.jsonl"</span>,</span>
+<span class="line">    base_model: <span class="typ">str</span>  = <span class="str">"meta-llama/Llama-3-8B"</span>,</span>
+<span class="line">    threshold: <span class="typ">float</span> = <span class="num">0.85</span>,</span>
+<span class="line">):</span>
+<span class="line">    <span class="cmt"># 1. Load data</span></span>
+<span class="line">    data_task = <span class="fn">load_dataset</span>(dataset_path=dataset_path)</span>
+<span class="line"></span>
+<span class="line">    <span class="cmt"># 2. Fine-tune</span></span>
+<span class="line">    sft_task = <span class="fn">sft_train</span>(</span>
+<span class="line">        train_data=data_task.outputs[<span class="str">"output_data"</span>],</span>
+<span class="line">        base_model=base_model,</span>
+<span class="line">        learning_rate=<span class="num">2e-4</span>,</span>
+<span class="line">        epochs=<span class="num">3</span>,</span>
+<span class="line">    )</span>
+<span class="line"></span>
+<span class="line">    <span class="cmt"># 3. Evaluate</span></span>
+<span class="line">    eval_task = <span class="fn">evaluate</span>(</span>
+<span class="line">        adapter=sft_task.outputs[<span class="str">"adapter_out"</span>],</span>
+<span class="line">        eval_data=data_task.outputs[<span class="str">"output_data"</span>],</span>
+<span class="line">    )</span>
+<span class="line"></span>
+<span class="line">    <span class="cmt"># 4. Conditional: dsl.If / dsl.Else (KFP v2 syntax)</span></span>
+<span class="line">    <span class="kw">with</span> <span class="fn">dsl.If</span>(eval_task.output >= threshold):</span>
+<span class="line">        <span class="fn">merge_weights</span>(</span>
+<span class="line">            adapter=sft_task.outputs[<span class="str">"adapter_out"</span>],</span>
+<span class="line">            base_model=base_model,</span>
+<span class="line">        )</span>
+<span class="line"></span>
+<span class="line">    <span class="kw">with</span> <span class="fn">dsl.Else</span>():</span>
+<span class="line">        <span class="fn">retrain</span>(</span>
+<span class="line">            train_data=data_task.outputs[<span class="str">"output_data"</span>],</span>
+<span class="line">            base_model=base_model,</span>
+<span class="line">        )</span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span class="cmt"># ── Compile to YAML IR ──────────────────────────────────────</span></span>
+<span class="line">compiler.Compiler().<span class="fn">compile</span>(</span>
+<span class="line">    pipeline_func=sft_pipeline,</span>
+<span class="line">    package_path=<span class="str">"sft_pipeline.yaml"</span>,</span>
+<span class="line">)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+// ─── View Toggle ───
+function toggleView(view) {
+  const visual = document.getElementById('pipelineVisual');
+  const code = document.getElementById('pipelineCode');
+  const buttons = document.querySelectorAll('.view-toggle button');
+  buttons.forEach(b => b.classList.remove('active'));
+  if (view === 'visual') {
+    visual.classList.remove('hidden');
+    code.classList.remove('visible');
+    buttons[0].classList.add('active');
+  } else {
+    visual.classList.add('hidden');
+    code.classList.add('visible');
+    buttons[1].classList.add('active');
+  }
+}
+
+// ─── Node Details ───
+const nodeDetails = {
+  load: {
+    title: 'Load Dataset',
+    content: 'A <code>@dsl.component</code> (lightweight) that downloads and preprocesses training data. Uses <code>Output[Dataset]</code> to write a typed artifact. Downstream steps consume it via <code>Input[Dataset]</code>. All imports are inside the function body (hermetic requirement).'
+  },
+  sft: {
+    title: 'SFT Training (Supervised Fine-Tuning)',
+    content: 'Takes <code>Input[Dataset]</code> from load_dataset and produces <code>Output[Model]</code> (LoRA adapter weights). The dependency is implicit — KFP knows sft_train must wait for load_dataset because it consumes its output artifact. Uses a GPU-enabled base image.'
+  },
+  eval: {
+    title: 'Evaluation',
+    content: 'Takes <code>Input[Model]</code> (adapter) and <code>Input[Dataset]</code> (eval set). Returns a <code>float</code> score — this is the key: the returned value becomes <code>eval_task.output</code> which is used by <code>dsl.If(eval_task.output >= threshold)</code> for conditional branching. Also logs metrics via <code>Output[Metrics]</code>.'
+  },
+  merge: {
+    title: 'Merge Weights  (dsl.If branch)',
+    content: 'Only executes when <code>dsl.If(eval_task.output >= threshold)</code> is true. Merges LoRA adapter weights into the base model to create a standalone model. Takes <code>Input[Model]</code> and writes <code>Output[Model]</code>. This is KFP v2\'s replacement for the old <code>dsl.Condition</code>.'
+  },
+  retrain: {
+    title: 'Retrain  (dsl.Else branch)',
+    content: 'Only executes when the <code>dsl.Else()</code> branch is entered — i.e., when the eval score is below threshold. Retrains with adjusted hyperparameters (lower learning rate, more epochs). Together with the merge step, this shows the KFP v2 <code>dsl.If / dsl.Else</code> pattern.'
+  }
+};
+
+function showDetail(nodeId) {
+  const detail = document.getElementById('nodeDetail');
+  const title = document.getElementById('detailTitle');
+  const content = document.getElementById('detailContent');
+  document.querySelectorAll('.pipe-node').forEach(n => n.classList.remove('active'));
+  document.querySelector(`[data-node="${nodeId}"]`).classList.add('active');
+  const info = nodeDetails[nodeId];
+  title.innerHTML = info.title;
+  content.innerHTML = info.content;
+  detail.classList.add('visible');
+}
+
+// ─── Scroll Reveal ───
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ─── Smooth scroll ───
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+</script>
+</body>
+</html>

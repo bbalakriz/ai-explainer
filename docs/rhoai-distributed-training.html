@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Red Hat OpenShift AI — Distributed Training with DDP & FSDP (Kubeflow Trainer v2)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Source+Code+Pro:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: #060a14;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'Source Code Pro', monospace; }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(239,68,68,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(239,68,68,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0c1220; }
+  ::-webkit-scrollbar-thumb { background: #2a3a5c; border-radius: 4px; }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes pulseGlow { 0%,100% { box-shadow:0 0 8px 2px rgba(239,68,68,0.15); } 50% { box-shadow:0 0 18px 4px rgba(239,68,68,0.35); } }
+  @keyframes flowDash { to { stroke-dashoffset: -24; } }
+  @keyframes barFill { from { width: 0; } }
+
+  .fade-in { animation: fadeIn 0.35s ease-out; }
+  .step-glow { animation: pulseGlow 2.5s ease-in-out infinite; }
+  .arrow-flow { stroke-dasharray: 8 5; animation: flowDash 1s linear infinite; }
+  .bar-fill { animation: barFill 0.6s ease-out; }
+</style>
+</head>
+<body class="min-h-screen">
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RHOAI COLOR THEME
+// ═══════════════════════════════════════════════════════════════════════════
+
+const C = {
+  redhat:    '#ee0000',
+  redDark:   '#a30000',
+  redLight:  'rgba(238,0,0,0.12)',
+  blue:      '#3b82f6',
+  blueLight: 'rgba(59,130,246,0.12)',
+  green:     '#10b981',
+  greenLight:'rgba(16,185,129,0.12)',
+  amber:     '#f59e0b',
+  amberLight:'rgba(245,158,11,0.12)',
+  violet:    '#8b5cf6',
+  violetLight:'rgba(139,92,246,0.12)',
+  cyan:      '#06b6d4',
+  cyanLight: 'rgba(6,182,212,0.12)',
+  pink:      '#ec4899',
+  pinkLight: 'rgba(236,72,153,0.12)',
+  slate:     '#64748b',
+  slateLight:'rgba(100,116,139,0.12)',
+  surface:   'rgba(15,23,42,0.6)',
+  border:    'rgba(30,41,59,0.6)',
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STEP DATA — RHOAI Setup Pipeline (Kubeflow Trainer v2)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const OVERVIEW_STEPS = [
+  {
+    id: 'overview',
+    title: 'Step 1: RHOAI Architecture Overview',
+    subtitle: 'What makes distributed training possible on OpenShift',
+    icon: '⊞',
+    color: C.redhat,
+    description: 'Red Hat OpenShift AI (RHOAI) provides a managed platform for running distributed training workloads on Kubernetes. Starting with RHOAI 3.2, it ships Kubeflow Trainer v2 — a unified API for distributed training that replaces the legacy per-framework CRDs (PyTorchJob, TFJob, etc.) with a single TrainJob abstraction.',
+    detail: 'Kubeflow Trainer v2 introduces a clean separation between Platform Administrators (who define ClusterTrainingRuntimes) and Data Scientists (who submit lightweight TrainJobs). The underlying infrastructure uses Kubernetes JobSet to manage distributed worker pods.',
+    components: [
+      { name: 'OpenShift Cluster', desc: 'Kubernetes platform (4.14+) with GPU-enabled worker nodes', icon: '☸', color: C.redhat },
+      { name: 'RHOAI Operator (3.2+)', desc: 'Installs and manages AI/ML components: dashboard, workbenches, Kubeflow Trainer', icon: '⚙', color: C.blue },
+      { name: 'Kubeflow Trainer v2', desc: 'Manages TrainJob + ClusterTrainingRuntime CRDs — the unified API replacing PyTorchJob', icon: '🔧', color: C.green },
+      { name: 'JobSet Operator', desc: 'Required by Trainer v2 — manages coordinated sets of Kubernetes Jobs for distributed workloads', icon: '📦', color: C.pink },
+      { name: 'NVIDIA GPU Operator', desc: 'Manages GPU drivers, device plugins, and CUDA runtime on worker nodes', icon: '🎮', color: C.amber },
+      { name: 'Node Feature Discovery (NFD)', desc: 'Detects and advertises GPU hardware capabilities to the scheduler', icon: '🔍', color: C.violet },
+      { name: 'OpenShift Data Foundation', desc: 'Provides ReadWriteMany (RWX) persistent storage via CephFS for shared model/data access', icon: '💾', color: C.cyan },
+    ],
+    arch: [
+      { layer: 'User Layer', items: ['RHOAI Dashboard', 'Jupyter Workbench', 'Kubeflow Trainer SDK (TrainerClient)'], color: C.blue },
+      { layer: 'Orchestration', items: ['Kubeflow Trainer v2 Controller', 'TrainJob → JobSet', 'Kueue (Quota/Queueing)'], color: C.green },
+      { layer: 'Runtime Templates', items: ['ClusterTrainingRuntime', 'TrainingRuntime (namespace)', 'torch-distributed (built-in)'], color: C.pink },
+      { layer: 'Compute', items: ['GPU Worker Nodes', 'NCCL Collectives', 'Pod Networking'], color: C.amber },
+      { layer: 'Storage', items: ['RWX PVCs (CephFS)', 'Model Cache', 'Checkpoint Storage'], color: C.violet },
+    ],
+  },
+  {
+    id: 'prereqs',
+    title: 'Step 2: Prerequisites & Cluster Setup',
+    subtitle: 'What you need before distributed training',
+    icon: '✓',
+    color: C.green,
+    description: 'Before running distributed training, the cluster administrator must install and configure several operators and resources. RHOAI 3.2+ ships with Kubeflow Trainer v2 support, which requires the JobSet Operator as a new prerequisite.',
+    detail: 'RHOAI 3.2+ is required for Kubeflow Trainer v2 (TrainJob API). RHOAI 3.3 (March 2026) added the Cert Manager and JobSet Operator as mandatory prerequisites. The Training Operator component must be enabled in the DataScienceCluster CR.',
+    prereqs: [
+      { category: 'Cluster Admin', items: [
+        { name: 'OpenShift 4.14+', desc: 'Base platform with GPU-capable worker nodes' },
+        { name: 'RHOAI Operator 3.2+', desc: 'Enable: dashboard, workbenches, trainingoperator components' },
+        { name: 'JobSet Operator', desc: 'NEW in v2 — required by Kubeflow Trainer to manage distributed pod groups' },
+        { name: 'Cert Manager Operator', desc: 'Required for RHOAI 3.3+ — manages TLS certificates' },
+        { name: 'NVIDIA GPU Operator', desc: 'Manages GPU drivers, CUDA toolkit, device plugin' },
+        { name: 'Node Feature Discovery', desc: 'Advertises nvidia.com/gpu resources to scheduler' },
+        { name: 'RWX Storage Class', desc: 'CephFS (OpenShift Data Foundation) or NFS for shared volumes' },
+      ]},
+      { category: 'Data Scientist', items: [
+        { name: 'RHOAI Workbench', desc: 'Jupyter environment with PyTorch notebook image' },
+        { name: 'Shared PVC (RWX)', desc: 'For model cache, checkpoints, output — accessible by all training pods' },
+        { name: 'HuggingFace Token', desc: 'For accessing gated models (Llama, Qwen, etc.)' },
+        { name: 'kubeflow SDK', desc: 'pip install kubeflow — Trainer v2 Python SDK (TrainerClient)' },
+      ]},
+    ],
+    yaml: `# DataScienceCluster CR — enable Kubeflow Trainer
+apiVersion: datasciencecluster.opendatahub.io/v1
+kind: DataScienceCluster
+metadata:
+  name: default-dsc
+spec:
+  components:
+    dashboard:
+      managementState: Managed
+    workbenches:
+      managementState: Managed
+    trainingoperator:
+      managementState: Managed    # ← Required for TrainJob + ClusterTrainingRuntime
+    kueue:
+      managementState: Managed    # ← Optional: GPU quota management`,
+  },
+  {
+    id: 'workbench',
+    title: 'Step 3: Create Workbench & Storage',
+    subtitle: 'Set up Jupyter environment with shared PVC',
+    icon: '📓',
+    color: C.blue,
+    description: 'From the RHOAI Dashboard, create a Data Science Project, then provision a Jupyter Workbench with a PyTorch notebook image and attach a ReadWriteMany (RWX) Persistent Volume Claim for shared storage.',
+    detail: 'The workbench runs as a pod in your namespace. It\'s where you\'ll write your training configuration and submit distributed jobs via the Kubeflow Trainer SDK (TrainerClient). The shared PVC is critical — it must be RWX so all training worker pods can read/write model files.',
+    steps: [
+      { action: 'Create Data Science Project', detail: 'RHOAI Dashboard → Data Science Projects → Create', icon: '📁' },
+      { action: 'Create PVC with RWX access', detail: 'Storage → Create PVC → AccessMode: ReadWriteMany → Size: 500Gi', icon: '💾' },
+      { action: 'Create Workbench', detail: 'Workbenches → Create → Image: PyTorch (CUDA 12.4) → Attach PVC', icon: '📓' },
+      { action: 'Install SDK in notebook', detail: 'pip install kubeflow kubernetes', icon: '📦' },
+    ],
+    yaml: `# PVC for shared storage (model cache + checkpoints + output)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shared
+  namespace: my-training-project
+spec:
+  accessModes:
+    - ReadWriteMany          # ← All training pods must access this
+  resources:
+    requests:
+      storage: 500Gi
+  storageClassName: ocs-storagecluster-cephfs   # ← ODF CephFS`,
+  },
+  {
+    id: 'training-config',
+    title: 'Step 4: Configure Training Parameters',
+    subtitle: 'Model, LoRA, FSDP, and training hyperparameters',
+    icon: '⚙',
+    color: C.amber,
+    description: 'Define the complete training configuration as a Python dictionary (or YAML). This includes the model path, LoRA/QLoRA settings, FSDP sharding strategy, training hyperparameters, and output paths.',
+    detail: 'The configuration is passed to fms-hf-tuning or HuggingFace SFTTrainer inside each worker pod. The Kubeflow Trainer SDK serializes it and injects it as an environment variable or ConfigMap. DDP vs FSDP is controlled entirely by these parameters — the TrainJob and ClusterTrainingRuntime are identical for both.',
+    showDDPvsFSDP: true,
+    configDDP: {
+      title: 'DDP Configuration',
+      desc: 'Full model replicated on each GPU. No parameter sharding. Each GPU needs enough VRAM for the full model + gradients + optimizer states.',
+      suitable: 'Smaller models or QLoRA (where trainable params are small)',
+      config: `# DDP — no FSDP flags needed
+# Kubeflow Trainer automatically sets up DDP
+# via torchrun with MASTER_ADDR, WORLD_SIZE, RANK
+
+parameters = {
+    # Model
+    "model_name_or_path": "Qwen/Qwen2.5-7B-Instruct",
+    "torch_dtype": "bfloat16",
+    "attn_implementation": "flash_attention_2",
+
+    # LoRA (required for DDP with 7B+ models on 16GB GPUs)
+    "use_peft": True,
+    "lora_r": 16,
+    "lora_alpha": 8,
+    "lora_dropout": 0.05,
+    "lora_target_modules": ["q_proj","v_proj","k_proj","o_proj",
+                             "gate_proj","up_proj","down_proj"],
+
+    # QLoRA — 4-bit quantization
+    "load_in_4bit": True,
+
+    # Training
+    "per_device_train_batch_size": 32,
+    "num_train_epochs": 3,
+    "learning_rate": 2e-4,
+    "bf16": True,
+    "optim": "adamw_torch_fused",
+    "gradient_checkpointing": True,
+
+    # NO fsdp flags — pure DDP
+    "output_dir": "/mnt/shared/output",
+}`,
+    },
+    configFSDP: {
+      title: 'FSDP Configuration',
+      desc: 'Model parameters sharded across GPUs. Each GPU holds 1/N of the model. Enables full fine-tuning of large models.',
+      suitable: 'Full fine-tuning or large LoRA configurations',
+      config: `# FSDP — enable sharding across GPUs
+parameters = {
+    # Model
+    "model_name_or_path": "Qwen/Qwen2.5-7B-Instruct",
+    "torch_dtype": "bfloat16",
+    "attn_implementation": "flash_attention_2",
+
+    # LoRA (optional with FSDP — can do full fine-tuning)
+    "use_peft": True,
+    "lora_r": 16,
+    "lora_alpha": 8,
+    "lora_dropout": 0.05,
+    "lora_target_modules": ["q_proj","v_proj","k_proj","o_proj",
+                             "gate_proj","up_proj","down_proj"],
+
+    # Training
+    "per_device_train_batch_size": 32,
+    "num_train_epochs": 3,
+    "learning_rate": 2e-4,
+    "bf16": True,
+    "optim": "adamw_torch_fused",
+
+    # ──── FSDP Configuration ────
+    "fsdp": "full_shard auto_wrap",
+    "fsdp_config": {
+        "activation_checkpointing": True,
+        "cpu_ram_efficient_loading": True,
+        "sync_module_states": True,
+        "use_orig_params": True,
+        "limit_all_gathers": False,
+    },
+
+    "output_dir": "/mnt/shared/output",
+}`,
+    },
+  },
+  {
+    id: 'training-func',
+    title: 'Step 5: Write the Training Function',
+    subtitle: 'Python function executed on each worker GPU',
+    icon: '🐍',
+    color: C.cyan,
+    description: 'The training function is a standard Python function that uses HuggingFace\'s SFTTrainer (Supervised Fine-Tuning Trainer) from the TRL library. The Kubeflow Trainer SDK serializes this function and ships it to each worker pod via a CustomTrainer.',
+    detail: 'The function receives the parameters dict, sets up the tokenizer, loads the dataset, configures LoRA/quantization, and runs the training loop. The distributed backend (DDP or FSDP) is handled transparently by HuggingFace Accelerate + PyTorch under the hood.',
+    code: `def main(parameters):
+    """Executed on EACH worker GPU by Kubeflow Trainer."""
+    from datasets import load_dataset
+    from transformers import AutoTokenizer, set_seed
+    from trl import (ModelConfig, ScriptArguments, SFTConfig,
+                     SFTTrainer, TrlParser, get_peft_config,
+                     get_quantization_config, get_kbit_device_map)
+
+    parser = TrlParser((ScriptArguments, SFTConfig, ModelConfig))
+    script_args, training_args, model_args = parser.parse_dict(parameters)
+    set_seed(training_args.seed)
+
+    # ── Quantization (QLoRA) ──
+    quantization_config = get_quantization_config(model_args)
+    model_kwargs = dict(
+        revision=model_args.model_revision,
+        attn_implementation=model_args.attn_implementation,
+        dtype=model_args.dtype,
+        use_cache=False,  # Required for gradient checkpointing
+        device_map=get_kbit_device_map() if quantization_config else None,
+        quantization_config=quantization_config,
+    )
+    training_args.model_init_kwargs = model_kwargs
+
+    # ── Tokenizer ──
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_args.model_name_or_path, use_fast=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    # ── Dataset ──
+    train_dataset = load_dataset("gsm8k", "main", split="train")
+    def template(sample):
+        msgs = [{"role":"user","content":sample["question"]},
+                {"role":"assistant","content":sample["answer"]}]
+        return {"text": tokenizer.apply_chat_template(msgs, tokenize=False)}
+    train_dataset = train_dataset.map(template, remove_columns=["question","answer"])
+
+    # ── Train ──
+    trainer = SFTTrainer(
+        model=model_args.model_name_or_path,
+        args=training_args,
+        train_dataset=train_dataset,
+        peft_config=get_peft_config(model_args),
+        processing_class=tokenizer,
+    )
+    trainer.train()
+    trainer.save_model(training_args.output_dir)`,
+  },
+  {
+    id: 'runtime',
+    title: 'Step 6: ClusterTrainingRuntime (Platform Admin)',
+    subtitle: 'Reusable infrastructure template — the Trainer v2 key innovation',
+    icon: '🏗',
+    color: C.pink,
+    description: 'Kubeflow Trainer v2 introduces a role separation: Platform Administrators define ClusterTrainingRuntimes (infrastructure blueprints), and Data Scientists submit lightweight TrainJobs that reference them. This replaces the old PyTorchJob model where every job had to inline its full pod spec.',
+    detail: 'A ClusterTrainingRuntime is cluster-scoped (available in all namespaces) and defines: the container image, the ML framework (torch), processes-per-node, and any default pod configuration. RHOAI ships a built-in "torch-distributed" runtime out of the box. Admins can also create TrainingRuntime (namespace-scoped) for team-specific setups.',
+    showRoleSeparation: true,
+    runtimeYaml: `# ClusterTrainingRuntime — defined by Platform Admin
+# Available to all namespaces in the cluster
+apiVersion: trainer.kubeflow.org/v1alpha1
+kind: ClusterTrainingRuntime
+metadata:
+  name: torch-distributed
+  labels:
+    trainer.kubeflow.org/framework: torch
+spec:
+  mlPolicy:
+    numNodes: 1                    # ← Default, overridden by TrainJob
+    torch:
+      numProcPerNode: auto         # ← Auto-detect GPUs per node
+  template:
+    spec:
+      replicatedJobs:
+        - name: node
+          template:
+            spec:
+              template:
+                spec:
+                  containers:
+                    - name: trainer
+                      image: quay.io/modh/training:py311-cuda124-torch251
+                      env:
+                      - name: NCCL_DEBUG
+                        value: "INFO"
+                      - name: PYTORCH_CUDA_ALLOC_CONF
+                        value: "expandable_segments:True"
+                      resources:
+                        limits:
+                          nvidia.com/gpu: 1
+                          memory: 64Gi
+                          cpu: "4"
+                      volumeMounts:
+                      - name: dshm
+                        mountPath: /dev/shm
+                  volumes:
+                  - name: dshm
+                    emptyDir:
+                      medium: Memory
+                      sizeLimit: 16Gi`,
+    roles: [
+      { role: 'Platform Admin', icon: '🔧', color: C.pink, creates: 'ClusterTrainingRuntime / TrainingRuntime',
+        responsibilities: ['Define container images (CUDA, ROCm)', 'Set GPU/memory/CPU resource limits', 'Configure NCCL and networking', 'Set up scheduling policies (gang-scheduling, Kueue)', 'Manage shared volume templates'] },
+      { role: 'Data Scientist', icon: '🧪', color: C.blue, creates: 'TrainJob',
+        responsibilities: ['Reference a runtime by name', 'Provide training function or image', 'Set numNodes (how many GPUs)', 'Pass training parameters (model, LoRA, FSDP)', 'Monitor logs and collect results'] },
+    ],
+  },
+  {
+    id: 'submit-trainjob',
+    title: 'Step 7: Submit the TrainJob',
+    subtitle: 'Data Scientist submits a lightweight job referencing the runtime',
+    icon: '🚀',
+    color: C.blue,
+    description: 'Use the Kubeflow Trainer Python SDK (TrainerClient) to submit a TrainJob. The SDK creates a TrainJob Custom Resource that references the ClusterTrainingRuntime. The Trainer controller then reconciles it into a Kubernetes JobSet with coordinated worker pods.',
+    detail: 'In Trainer v2, TrainerClient.train() replaces the old TrainingClient.create_job(). The train() method accepts a CustomTrainer (for your own function) or a BuiltinTrainer (e.g., TorchTune). It references a runtime and lets you override numNodes, resources, and environment.',
+    showJobCreation: true,
+    code: `from kubeflow.trainer import TrainerClient, CustomTrainer
+from kubeflow.trainer import KubernetesBackendConfig
+from kubernetes.client import (V1Volume, V1VolumeMount,
+    V1PersistentVolumeClaimVolumeSource)
+
+# ── Connect to cluster ──
+client = TrainerClient()
+
+# ── Submit distributed TrainJob ──
+job_name = client.train(
+    # ──── Runtime Reference ────
+    runtime="torch-distributed",       # ← ClusterTrainingRuntime name
+
+    # ──── Training Code ────
+    trainer=CustomTrainer(
+        func=main,                     # ← Your training function from Step 5
+        num_nodes=4,                   # ← 4 GPUs across nodes
+        resources_per_node={
+            "gpu": 1,                  # ← 1 GPU per node/worker
+            "memory": "64Gi",
+            "cpu": 4,
+        },
+    ),
+
+    # ──── Backend Configuration ────
+    backend_config=KubernetesBackendConfig(
+        image="quay.io/modh/training:py311-cuda124-torch251",
+        env_vars={
+            "HF_HOME": "/mnt/shared/.cache",
+            "HF_TOKEN": "<your-token>",
+            "NCCL_DEBUG": "INFO",
+        },
+        volumes=[V1Volume(
+            name="shared",
+            persistent_volume_claim=V1PersistentVolumeClaimVolumeSource(
+                claim_name="shared"))],
+        volume_mounts=[V1VolumeMount(
+            name="shared", mount_path="/mnt/shared")],
+    ),
+)
+
+print(f"TrainJob submitted: {job_name}")`,
+    codeAlt: `# ──── Alternative: using fms-hf-tuning container directly ────
+# No need to define a training function — the container image
+# already includes SFTTrainer. Just pass config as env var.
+
+from kubeflow.trainer import TrainerClient, CustomTrainerContainer
+
+client = TrainerClient()
+
+job_name = client.train(
+    runtime="torch-distributed",
+    trainer=CustomTrainerContainer(
+        image="quay.io/foundation-model-stack/fms-hf-tuning:v3.1-rc",
+        num_nodes=4,
+        resources_per_node={"gpu": 1, "memory": "160Gi", "cpu": 8},
+        env_vars={
+            "SFT_TRAINER_CONFIG_JSON_ENV_VAR": config_b64,  # ← base64-encoded config
+            "HF_HOME": "/mnt/shared/.cache",
+        },
+    ),
+)`,
+  },
+  {
+    id: 'trainjob-lifecycle',
+    title: 'Step 8: TrainJob Lifecycle',
+    subtitle: 'What happens when the Trainer controller reconciles your job',
+    icon: '☸',
+    color: C.redhat,
+    description: 'When you submit a TrainJob, the Kubeflow Trainer v2 controller watches for the new CR, resolves the referenced ClusterTrainingRuntime, and creates a Kubernetes JobSet — the underlying mechanism that manages coordinated worker pods with injected distributed training environment variables.',
+    detail: 'Unlike the legacy PyTorchJob (which had explicit Master/Worker replica specs), Trainer v2 uses a unified "node" abstraction backed by Kubernetes JobSet. The controller injects MASTER_ADDR, MASTER_PORT, WORLD_SIZE, and RANK into each pod automatically.',
+    lifecycle: [
+      { phase: 'TrainJob CR Created', desc: 'SDK creates the TrainJob Custom Resource in the namespace', icon: '📝', color: C.blue,
+        resources: ['TrainJob/qwen-sft (trainer.kubeflow.org/v1alpha1)'] },
+      { phase: 'Runtime Resolved', desc: 'Controller looks up the referenced ClusterTrainingRuntime to get the infrastructure template', icon: '🔗', color: C.pink,
+        resources: ['ClusterTrainingRuntime/torch-distributed → template resolved'] },
+      { phase: 'JobSet Created', desc: 'Controller merges TrainJob spec + Runtime template → creates a Kubernetes JobSet with N replicated jobs', icon: '📦', color: C.green,
+        resources: ['JobSet/qwen-sft (jobset.x-k8s.io/v1alpha2)'] },
+      { phase: 'Worker Pods Created', desc: 'JobSet controller creates N pods (one per node) with MASTER_ADDR, WORLD_SIZE, RANK injected', icon: '⚡', color: C.cyan,
+        resources: ['Pod/qwen-sft-node-0-0 (rank 0)', 'Pod/qwen-sft-node-0-1 (rank 1)', '...Pod/qwen-sft-node-0-3 (rank 3)'] },
+      { phase: 'NCCL Rendezvous', desc: 'All pods connect via c10d backend, form the distributed process group for DDP or FSDP', icon: '🤝', color: C.violet,
+        resources: ['torch.distributed.init_process_group(backend="nccl")'] },
+      { phase: 'Training Begins', desc: 'DDP or FSDP wraps the model (based on parameters), training loop runs synchronized across all GPUs', icon: '🏃', color: C.green,
+        resources: ['Forward → Backward → AllReduce/ReduceScatter → Update'] },
+      { phase: 'Progress Reported', desc: 'Training metrics propagated to TrainJob status (v2.2+) via KubeflowTrainerCallback', icon: '📊', color: C.amber,
+        resources: ['TrainJob.status.progress (loss, epoch, tokens/sec)'] },
+      { phase: 'Job Completes', desc: 'Model checkpoint saved to shared PVC, pods terminate, TrainJob status → Succeeded', icon: '✅', color: C.green,
+        resources: ['Output: /mnt/shared/output/'] },
+    ],
+    envVars: [
+      { name: 'MASTER_ADDR', value: 'qwen-sft-node-0-0', desc: 'DNS of the rank-0 pod (auto-configured by Trainer)' },
+      { name: 'MASTER_PORT', value: '29500', desc: 'Port for distributed rendezvous' },
+      { name: 'WORLD_SIZE', value: '4', desc: 'Total number of GPU processes' },
+      { name: 'RANK', value: '0..3', desc: 'Unique rank for each worker pod' },
+      { name: 'LOCAL_RANK', value: '0', desc: 'Rank within the node (0 when 1 GPU per node)' },
+      { name: 'NCCL_DEBUG', value: 'INFO', desc: 'NCCL logging level for debugging' },
+      { name: 'HF_HOME', value: '/mnt/shared/.cache', desc: 'Shared model cache directory' },
+    ],
+  },
+  {
+    id: 'trainjob-yaml',
+    title: 'Step 9: TrainJob + Runtime YAML (Under the Hood)',
+    subtitle: 'The Kubernetes resources the SDK generates',
+    icon: '📄',
+    color: C.violet,
+    description: 'The Kubeflow Trainer SDK generates a TrainJob CR that references a ClusterTrainingRuntime. You can also create these YAMLs directly with kubectl/oc. Compared to the old PyTorchJob (which required separate Master and Worker replica specs), the TrainJob is dramatically simpler.',
+    detail: 'The TrainJob just specifies: what runtime to use, how many nodes, the training code/image, and parameters. All infrastructure details (image, resources, volumes, env vars) come from the ClusterTrainingRuntime. This clean separation is the key Trainer v2 design improvement.',
+    showMigration: true,
+    trainjobYaml: `# TrainJob — created by Data Scientist (or SDK)
+# This is ALL the data scientist needs to write
+apiVersion: trainer.kubeflow.org/v1alpha1
+kind: TrainJob
+metadata:
+  name: qwen-sft
+  namespace: my-training-project
+spec:
+  # ──── Reference the runtime (defined by Platform Admin) ────
+  runtimeRef:
+    name: torch-distributed
+    apiGroup: trainer.kubeflow.org
+    kind: ClusterTrainingRuntime
+
+  # ──── Training spec (Data Scientist's concern) ────
+  trainer:
+    numNodes: 4                       # ← 4 GPUs
+    image: quay.io/modh/training:py311-cuda124-torch251
+    command:
+      - "python3"
+      - "/mnt/shared/train.py"        # ← Training script
+    env:
+      - name: HF_HOME
+        value: /mnt/shared/.cache
+      - name: HF_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: hf-secret
+            key: token
+    volumeMounts:
+      - name: shared
+        mountPath: /mnt/shared
+
+  # ──── Pod overrides (optional) ────
+  podSpecOverrides:
+    - targetReplicatedJobs: [node]
+      containers:
+        - name: trainer
+          volumeMounts:
+            - name: shared
+              mountPath: /mnt/shared
+      volumes:
+        - name: shared
+          persistentVolumeClaim:
+            claimName: shared`,
+    oldPytorchjobYaml: `# Legacy PyTorchJob (Training Operator v1) — DEPRECATED
+# Note: required separate Master + Worker specs
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: qwen-sft
+spec:
+  pytorchReplicaSpecs:
+    Master:                           # ← Master/Worker split
+      replicas: 1
+      template:
+        spec:
+          containers:
+          - name: pytorch
+            image: quay.io/modh/training:py311-cuda124-torch251
+            ports:
+            - containerPort: 29500    # ← Manual port config
+            resources:                # ← Repeated in every replica
+              limits:
+                nvidia.com/gpu: 1
+                memory: 64Gi
+            volumeMounts:             # ← Repeated in every replica
+            - name: shared
+              mountPath: /mnt/shared
+    Worker:                           # ← Duplicated spec
+      replicas: 3
+      template:
+        spec:
+          containers:
+          - name: pytorch
+            image: quay.io/modh/training:py311-cuda124-torch251
+            # ... same spec repeated ...`,
+  },
+  {
+    id: 'monitor',
+    title: 'Step 10: Monitor & Retrieve Results',
+    subtitle: 'Track training, collect checkpoints, clean up',
+    icon: '📊',
+    color: C.green,
+    description: 'Monitor training progress via the Trainer SDK, TensorBoard, or the OpenShift console. Trainer v2.2+ supports built-in progress reporting via KubeflowTrainerCallback — training metrics (loss, epoch) propagate directly to the TrainJob status.',
+    detail: 'The Trainer SDK provides log streaming and job status queries. TensorBoard can visualize loss curves if configured in training args. The OpenShift console shows pod status, GPU utilization, and network bandwidth.',
+    monitorCode: `# ── Stream training logs ──
+client.get_job_logs(
+    name="qwen-sft",
+    follow=True,    # Stream in real-time
+)
+
+# ── Check job status (v2.2+ includes training progress) ──
+job = client.get_job(name="qwen-sft")
+print(job.status)    # Includes loss, epoch, tokens/sec
+
+# ── After training: merge LoRA adapters ──
+from peft import PeftModel
+from transformers import AutoModelForCausalLM
+import torch
+
+base = AutoModelForCausalLM.from_pretrained(
+    "Qwen/Qwen2.5-7B-Instruct",
+    torch_dtype=torch.bfloat16)
+
+model = PeftModel.from_pretrained(base, "/mnt/shared/output/checkpoint-best/")
+model = model.merge_and_unload()    # ← Merge LoRA into base weights
+model.save_pretrained("/mnt/shared/merged-model/")
+
+# ── Clean up ──
+client.delete_job(name="qwen-sft")`,
+    monitoring: [
+      { tool: 'SDK Logs', desc: 'client.get_job_logs() — real-time training output', icon: '📜' },
+      { tool: 'TrainJob Status', desc: 'v2.2+: loss, epoch, tokens/sec propagated to TrainJob.status via KubeflowTrainerCallback', icon: '📊' },
+      { tool: 'TensorBoard', desc: 'Loss curves, learning rate, GPU utilization — set report_to: [tensorboard]', icon: '📈' },
+      { tool: 'OpenShift Console', desc: 'Workloads → Pods — GPU memory, network bandwidth dashboards', icon: '🖥' },
+      { tool: 'oc CLI', desc: 'oc get trainjob, oc get jobset, oc logs pod/qwen-sft-node-0-0 -f', icon: '⌨' },
+    ],
+  },
+  {
+    id: 'ddp-vs-fsdp-decision',
+    title: 'Step 11: DDP vs FSDP Decision Guide',
+    subtitle: 'When to use which strategy on RHOAI',
+    icon: '⚖',
+    color: C.amber,
+    description: 'Choosing between Distributed Data Parallel (DDP) and Fully Sharded Data Parallel (FSDP) depends on model size, GPU memory, and whether you\'re doing full fine-tuning or parameter-efficient tuning (LoRA/QLoRA).',
+    detail: 'On RHOAI with Trainer v2, the configuration difference is minimal — you add fsdp and fsdp_config to your training parameters. The TrainJob, ClusterTrainingRuntime, and entire infrastructure remain identical. The key question is: does your model + optimizer fit on a single GPU?',
+    comparison: [
+      { aspect: 'RHOAI Config Difference', ddp: 'No FSDP flags needed — DDP is the default', fsdp: 'Add fsdp: "full_shard auto_wrap" + fsdp_config dict' },
+      { aspect: 'TrainJob Setup', ddp: 'Identical — same TrainJob + runtime reference', fsdp: 'Identical — same TrainJob + runtime reference' },
+      { aspect: 'ClusterTrainingRuntime', ddp: 'Same: torch-distributed', fsdp: 'Same: torch-distributed' },
+      { aspect: 'When to Use', ddp: 'QLoRA + small LoRA adapters (fits on 1 GPU)', fsdp: 'Full fine-tuning or large models that exceed 1 GPU\'s memory' },
+      { aspect: 'Memory per GPU', ddp: 'Full model + full optimizer replicated', fsdp: 'Model + optimizer sharded across all GPUs' },
+      { aspect: 'Communication', ddp: 'AllReduce gradients once per step', fsdp: 'All-Gather params (2×) + Reduce-Scatter grads per step' },
+      { aspect: 'Network Overhead', ddp: 'Lower — one gradient sync', fsdp: 'Higher — parameter gathering + gradient scattering' },
+      { aspect: 'Throughput', ddp: 'Higher tokens/sec for small models', fsdp: 'Lower tokens/sec but enables larger models' },
+      { aspect: 'Container Image', ddp: 'Same: quay.io/modh/training:py311-cuda124-torch251', fsdp: 'Same: quay.io/modh/training:py311-cuda124-torch251' },
+      { aspect: 'NCCL Backend', ddp: 'Same: backend="nccl" (auto-configured by Trainer)', fsdp: 'Same: backend="nccl" (auto-configured by Trainer)' },
+    ],
+    scenarios: [
+      { scenario: 'Qwen2.5-7B + QLoRA on 4× T4 (16GB)', recommendation: 'DDP', reason: 'QLoRA model = ~3.8GB per GPU — fits easily, DDP is simpler and faster', color: C.blue },
+      { scenario: 'Qwen2.5-7B full fine-tune on 4× T4', recommendation: 'FSDP + Offload', reason: 'Full model = 84GB total — must shard across GPUs + CPU offload', color: C.violet },
+      { scenario: 'Llama-3.1-70B + LoRA on 8× A100 (80GB)', recommendation: 'FSDP', reason: '70B fp16 = 140GB — cannot fit on 1 GPU even with LoRA, must shard base model', color: C.violet },
+      { scenario: 'Llama-3.1-8B + QLoRA on 8× A100', recommendation: 'DDP', reason: 'QLoRA 8B easily fits on 80GB A100, DDP gives better throughput', color: C.blue },
+    ],
+  },
+];
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMPONENTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function CodeBlock({ code, title, language = 'python' }) {
+  const lines = code.trim().split('\n');
+  return (
+    <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(0,0,0,0.5)', border: `1px solid ${C.border}` }}>
+      {title && (
+        <div className="px-4 py-2 flex items-center gap-2" style={{ background: 'rgba(15,23,42,0.8)', borderBottom: `1px solid ${C.border}` }}>
+          <span className="mono text-xs" style={{ color: C.cyan }}>{language}</span>
+          <span className="text-xs opacity-60">— {title}</span>
+        </div>
+      )}
+      <pre className="p-4 overflow-x-auto">
+        <code className="mono text-xs leading-relaxed">
+          {lines.map((line, i) => {
+            const isComment = line.trim().startsWith('#') || line.trim().startsWith('//');
+            const hasHighlight = line.includes('←');
+            return (
+              <div key={i} className="flex">
+                <span className="select-none opacity-20 mr-4 text-right" style={{ minWidth: '24px' }}>{i + 1}</span>
+                <span style={{
+                  color: isComment ? '#6b7280' : hasHighlight ? '#fbbf24' : '#e2e8f0',
+                  fontStyle: isComment ? 'italic' : 'normal',
+                }}>{line}</span>
+              </div>
+            );
+          })}
+        </code>
+      </pre>
+    </div>
+  );
+}
+
+function ArchDiagram({ layers }) {
+  return (
+    <div className="space-y-1">
+      {layers.map((layer, i) => (
+        <div key={i} className="fade-in" style={{ animationDelay: `${i * 0.1}s` }}>
+          <div className="rounded-lg p-3" style={{
+            background: `linear-gradient(135deg, ${layer.color}10 0%, ${layer.color}05 100%)`,
+            border: `1px solid ${layer.color}30`,
+          }}>
+            <div className="text-xs font-semibold mb-2 opacity-70">{layer.layer}</div>
+            <div className="flex flex-wrap gap-2">
+              {layer.items.map((item, j) => (
+                <span key={j} className="mono text-xs px-2 py-1 rounded-md" style={{
+                  background: `${layer.color}15`,
+                  border: `1px solid ${layer.color}25`,
+                  color: layer.color,
+                }}>{item}</span>
+              ))}
+            </div>
+          </div>
+          {i < layers.length - 1 && (
+            <div className="flex justify-center py-0.5">
+              <span className="text-xs opacity-30">▼</span>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StepTimeline({ steps, currentStep, setStep }) {
+  return (
+    <div className="flex flex-wrap gap-1.5 justify-center mb-8">
+      {steps.map((s, i) => (
+        <button key={i} onClick={() => setStep(i)}
+          className="px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300 cursor-pointer"
+          style={{
+            background: currentStep === i ? `${s.color}18` : 'rgba(15,23,42,0.4)',
+            border: `1px solid ${currentStep === i ? `${s.color}50` : 'rgba(30,41,59,0.5)'}`,
+            color: currentStep === i ? s.color : '#64748b',
+            boxShadow: currentStep === i ? `0 0 15px ${s.color}15` : 'none',
+          }}>
+          <span className="mr-1">{s.icon}</span>
+          <span className="hidden lg:inline">{s.title.replace(/^Step \d+: /, '')}</span>
+          <span className="lg:hidden">{i + 1}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function LifecycleDiagram({ lifecycle }) {
+  return (
+    <div className="relative">
+      {lifecycle.map((phase, i) => (
+        <div key={i} className="flex items-start gap-4 mb-1 fade-in" style={{ animationDelay: `${i * 0.08}s` }}>
+          <div className="flex flex-col items-center" style={{ minWidth: '28px' }}>
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+              style={{ background: `${phase.color}20`, border: `2px solid ${phase.color}60`, color: phase.color }}>
+              {i + 1}
+            </div>
+            {i < lifecycle.length - 1 && (
+              <div className="w-0.5 flex-1 my-1" style={{ background: `${phase.color}30`, minHeight: '20px' }} />
+            )}
+          </div>
+          <div className="flex-1 pb-3">
+            <div className="font-semibold text-sm" style={{ color: phase.color }}>{phase.phase}</div>
+            <div className="text-xs opacity-60 mt-0.5">{phase.desc}</div>
+            <div className="flex flex-wrap gap-1 mt-1.5">
+              {phase.resources.map((r, j) => (
+                <span key={j} className="mono text-xs px-2 py-0.5 rounded" style={{
+                  background: `${phase.color}10`, border: `1px solid ${phase.color}20`, color: phase.color, fontSize: '10px',
+                }}>{r}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ComparisonTable({ comparison }) {
+  return (
+    <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
+      <table className="w-full text-xs">
+        <thead>
+          <tr style={{ background: 'rgba(15,23,42,0.8)' }}>
+            <th className="text-left p-3 font-semibold opacity-60">Aspect</th>
+            <th className="text-left p-3 font-semibold" style={{ color: C.blue }}>DDP (Distributed Data Parallel)</th>
+            <th className="text-left p-3 font-semibold" style={{ color: C.violet }}>FSDP (Fully Sharded Data Parallel)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {comparison.map((row, i) => (
+            <tr key={i} style={{ background: i % 2 === 0 ? 'rgba(15,23,42,0.3)' : 'rgba(15,23,42,0.5)', borderTop: `1px solid ${C.border}` }}>
+              <td className="p-3 font-medium opacity-80">{row.aspect}</td>
+              <td className="p-3 opacity-70">{row.ddp}</td>
+              <td className="p-3 opacity-70">{row.fsdp}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STEP VIEWS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function StepOverview({ step }) {
+  return (
+    <div className="space-y-6 fade-in">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {step.components.map((comp, i) => (
+          <div key={i} className="rounded-xl p-4 fade-in" style={{
+            animationDelay: `${i * 0.08}s`,
+            background: `linear-gradient(135deg, ${comp.color}08 0%, transparent 100%)`,
+            border: `1px solid ${comp.color}25`,
+          }}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">{comp.icon}</span>
+              <span className="font-semibold text-sm" style={{ color: comp.color }}>{comp.name}</span>
+            </div>
+            <div className="text-xs opacity-60 leading-relaxed">{comp.desc}</div>
+          </div>
+        ))}
+      </div>
+      <div>
+        <h3 className="text-sm font-semibold mb-3 opacity-70">Architecture Layers</h3>
+        <ArchDiagram layers={step.arch} />
+      </div>
+    </div>
+  );
+}
+
+function StepPrereqs({ step }) {
+  return (
+    <div className="space-y-6 fade-in">
+      {step.prereqs.map((cat, i) => (
+        <div key={i}>
+          <h3 className="text-sm font-semibold mb-3" style={{ color: i === 0 ? C.redhat : C.blue }}>
+            {i === 0 ? '🔒' : '👤'} {cat.category}
+          </h3>
+          <div className="space-y-2">
+            {cat.items.map((item, j) => (
+              <div key={j} className="flex items-start gap-3 rounded-lg p-3 fade-in" style={{
+                animationDelay: `${j * 0.06}s`,
+                background: C.surface,
+                border: `1px solid ${C.border}`,
+              }}>
+                <span className="text-sm mt-0.5" style={{ color: C.green }}>✓</span>
+                <div>
+                  <div className="text-sm font-medium">{item.name}</div>
+                  <div className="text-xs opacity-50 mt-0.5">{item.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      <CodeBlock code={step.yaml} title="DataScienceCluster CR" language="yaml" />
+    </div>
+  );
+}
+
+function StepWorkbench({ step }) {
+  return (
+    <div className="space-y-6 fade-in">
+      <div className="space-y-3">
+        {step.steps.map((s, i) => (
+          <div key={i} className="flex items-start gap-4 fade-in" style={{ animationDelay: `${i * 0.1}s` }}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+              style={{ background: `${C.blue}20`, border: `2px solid ${C.blue}50`, color: C.blue }}>
+              {i + 1}
+            </div>
+            <div className="flex-1 rounded-xl p-4" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+              <div className="flex items-center gap-2 mb-1">
+                <span>{s.icon}</span>
+                <span className="font-semibold text-sm">{s.action}</span>
+              </div>
+              <div className="mono text-xs opacity-50">{s.detail}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <CodeBlock code={step.yaml} title="Shared PVC (ReadWriteMany)" language="yaml" />
+    </div>
+  );
+}
+
+function StepTrainingConfig({ step }) {
+  const [tab, setTab] = useState('fsdp');
+  const config = tab === 'ddp' ? step.configDDP : step.configFSDP;
+  return (
+    <div className="space-y-4 fade-in">
+      <div className="flex gap-2 justify-center">
+        {['ddp', 'fsdp'].map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all"
+            style={{
+              background: tab === t ? (t === 'ddp' ? `${C.blue}18` : `${C.violet}18`) : 'rgba(15,23,42,0.4)',
+              border: `1px solid ${tab === t ? (t === 'ddp' ? `${C.blue}50` : `${C.violet}50`) : 'rgba(30,41,59,0.5)'}`,
+              color: tab === t ? (t === 'ddp' ? C.blue : C.violet) : '#64748b',
+            }}>
+            {t === 'ddp' ? 'DDP Config' : 'FSDP Config'}
+          </button>
+        ))}
+      </div>
+      <div className="rounded-xl p-4" style={{
+        background: tab === 'ddp' ? C.blueLight : C.violetLight,
+        border: `1px solid ${tab === 'ddp' ? C.blue : C.violet}30`,
+      }}>
+        <div className="font-semibold text-sm mb-1" style={{ color: tab === 'ddp' ? C.blue : C.violet }}>{config.title}</div>
+        <div className="text-xs opacity-60">{config.desc}</div>
+        <div className="text-xs mt-2 opacity-40">Best for: {config.suitable}</div>
+      </div>
+      <CodeBlock code={config.config} title={config.title} language="python" />
+      {tab === 'fsdp' && (
+        <div className="rounded-xl p-4" style={{ background: C.amberLight, border: `1px solid ${C.amber}30` }}>
+          <div className="font-semibold text-xs mb-2" style={{ color: C.amber }}>FSDP Sharding Strategies</div>
+          <div className="space-y-1 text-xs opacity-70">
+            <div><span className="mono" style={{ color: C.amber }}>full_shard</span> — Shard parameters, gradients, and optimizer states (most memory savings)</div>
+            <div><span className="mono" style={{ color: C.amber }}>shard_grad_op</span> — Shard only gradients and optimizer states (less communication)</div>
+            <div><span className="mono" style={{ color: C.amber }}>auto_wrap</span> — Automatically wrap transformer layers as FSDP units</div>
+            <div><span className="mono" style={{ color: C.amber }}>activation_checkpointing</span> — Recompute activations during backward to save memory</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StepTrainingFunc({ step }) {
+  return (
+    <div className="space-y-4 fade-in">
+      <div className="rounded-xl p-4" style={{ background: C.cyanLight, border: `1px solid ${C.cyan}30` }}>
+        <div className="font-semibold text-xs mb-2" style={{ color: C.cyan }}>How does the same function work for DDP and FSDP?</div>
+        <div className="text-xs opacity-70 space-y-1">
+          <div>• The training function is <strong>identical</strong> for both DDP and FSDP</div>
+          <div>• HuggingFace <span className="mono" style={{ color: C.cyan }}>SFTTrainer</span> + <span className="mono" style={{ color: C.cyan }}>Accelerate</span> read the fsdp/fsdp_config from the parameters dict</div>
+          <div>• If fsdp flags are present → FSDP wrapping is applied</div>
+          <div>• If fsdp flags are absent → standard DDP is used (default)</div>
+          <div>• Kubeflow Trainer sets up <span className="mono" style={{ color: C.cyan }}>torchrun</span> with MASTER_ADDR, WORLD_SIZE, RANK on each pod</div>
+        </div>
+      </div>
+      <CodeBlock code={step.code} title="Training Function (same for DDP & FSDP)" language="python" />
+    </div>
+  );
+}
+
+function StepRuntime({ step }) {
+  return (
+    <div className="space-y-6 fade-in">
+      {/* Role separation cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {step.roles.map((r, i) => (
+          <div key={i} className="rounded-xl p-5 fade-in" style={{
+            animationDelay: `${i * 0.1}s`,
+            background: `${r.color}08`,
+            border: `1px solid ${r.color}25`,
+          }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xl">{r.icon}</span>
+              <div>
+                <div className="font-semibold text-sm" style={{ color: r.color }}>{r.role}</div>
+                <div className="mono text-xs opacity-40">Creates: {r.creates}</div>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {r.responsibilities.map((resp, j) => (
+                <div key={j} className="flex items-start gap-2 text-xs opacity-70">
+                  <span style={{ color: r.color }}>•</span>
+                  <span>{resp}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Flow diagram */}
+      <div className="rounded-xl p-4" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+        <div className="text-xs font-semibold mb-3 opacity-70">How TrainJob + Runtime Work Together</div>
+        <div className="flex flex-col md:flex-row items-center gap-3 justify-center">
+          <div className="rounded-lg px-4 py-3 text-center" style={{ background: `${C.pink}12`, border: `1px solid ${C.pink}30` }}>
+            <div className="mono text-xs font-bold" style={{ color: C.pink }}>ClusterTrainingRuntime</div>
+            <div className="text-xs opacity-40 mt-1">image, GPU, NCCL, volumes</div>
+          </div>
+          <span className="text-lg opacity-30">+</span>
+          <div className="rounded-lg px-4 py-3 text-center" style={{ background: `${C.blue}12`, border: `1px solid ${C.blue}30` }}>
+            <div className="mono text-xs font-bold" style={{ color: C.blue }}>TrainJob</div>
+            <div className="text-xs opacity-40 mt-1">numNodes, function, params</div>
+          </div>
+          <span className="text-lg opacity-30">→</span>
+          <div className="rounded-lg px-4 py-3 text-center" style={{ background: `${C.green}12`, border: `1px solid ${C.green}30` }}>
+            <div className="mono text-xs font-bold" style={{ color: C.green }}>JobSet</div>
+            <div className="text-xs opacity-40 mt-1">N coordinated worker pods</div>
+          </div>
+        </div>
+      </div>
+
+      <CodeBlock code={step.runtimeYaml} title="ClusterTrainingRuntime (Platform Admin creates this)" language="yaml" />
+
+      <div className="rounded-xl p-4" style={{ background: C.amberLight, border: `1px solid ${C.amber}30` }}>
+        <div className="font-semibold text-xs mb-2" style={{ color: C.amber }}>Built-in Runtimes shipped with RHOAI</div>
+        <div className="space-y-1 text-xs opacity-70">
+          <div><span className="mono" style={{ color: C.amber }}>torch-distributed</span> — PyTorch distributed training (DDP/FSDP)</div>
+          <div><span className="mono" style={{ color: C.amber }}>deepspeed-distributed</span> — DeepSpeed ZeRO distributed training</div>
+          <div><span className="mono" style={{ color: C.amber }}>mlx-distributed</span> — Apple MLX distributed training</div>
+          <div className="pt-1 opacity-50">Admins can create custom runtimes for specific hardware profiles, network configs, or team policies.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StepSubmitJob({ step }) {
+  const [showAlt, setShowAlt] = useState(false);
+  return (
+    <div className="space-y-5 fade-in">
+      <div className="flex gap-2 justify-center">
+        <button onClick={() => setShowAlt(false)}
+          className="px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all"
+          style={{
+            background: !showAlt ? `${C.blue}18` : 'rgba(15,23,42,0.4)',
+            border: `1px solid ${!showAlt ? `${C.blue}50` : 'rgba(30,41,59,0.5)'}`,
+            color: !showAlt ? C.blue : '#64748b',
+          }}>CustomTrainer (your function)</button>
+        <button onClick={() => setShowAlt(true)}
+          className="px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all"
+          style={{
+            background: showAlt ? `${C.pink}18` : 'rgba(15,23,42,0.4)',
+            border: `1px solid ${showAlt ? `${C.pink}50` : 'rgba(30,41,59,0.5)'}`,
+            color: showAlt ? C.pink : '#64748b',
+          }}>CustomTrainerContainer (fms-hf-tuning)</button>
+      </div>
+
+      <CodeBlock
+        code={showAlt ? step.codeAlt : step.code}
+        title={showAlt ? "Submit TrainJob with pre-built fms-hf-tuning image" : "Submit TrainJob via Trainer SDK"}
+        language="python" />
+
+      <div className="rounded-xl p-4" style={{ background: C.greenLight, border: `1px solid ${C.green}30` }}>
+        <div className="font-semibold text-xs mb-2" style={{ color: C.green }}>What the SDK does behind the scenes</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs opacity-70">
+          <div className="space-y-1">
+            <div className="font-medium opacity-100">1. Serializes your function</div>
+            <div className="opacity-60">Pickles <span className="mono">main()</span> + parameters into the container</div>
+          </div>
+          <div className="space-y-1">
+            <div className="font-medium opacity-100">2. Creates TrainJob CR</div>
+            <div className="opacity-60">Generates <span className="mono">trainer.kubeflow.org/v1alpha1</span> TrainJob</div>
+          </div>
+          <div className="space-y-1">
+            <div className="font-medium opacity-100">3. References the runtime</div>
+            <div className="opacity-60">Points <span className="mono">runtimeRef</span> to ClusterTrainingRuntime</div>
+          </div>
+          <div className="space-y-1">
+            <div className="font-medium opacity-100">4. Controller creates JobSet</div>
+            <div className="opacity-60">Trainer merges TrainJob + Runtime → JobSet → N pods with env vars</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StepLifecycle({ step }) {
+  return (
+    <div className="space-y-6 fade-in">
+      <LifecycleDiagram lifecycle={step.lifecycle} />
+      <div>
+        <h3 className="text-sm font-semibold mb-3 opacity-70">Injected Environment Variables (per Pod)</h3>
+        <div className="rounded-xl overflow-hidden" style={{ border: `1px solid ${C.border}` }}>
+          <table className="w-full text-xs">
+            <thead>
+              <tr style={{ background: 'rgba(15,23,42,0.8)' }}>
+                <th className="text-left p-2.5 mono font-semibold" style={{ color: C.redhat }}>Variable</th>
+                <th className="text-left p-2.5 mono font-semibold" style={{ color: C.amber }}>Value</th>
+                <th className="text-left p-2.5 font-semibold opacity-50">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {step.envVars.map((v, i) => (
+                <tr key={i} style={{ background: i % 2 === 0 ? 'rgba(15,23,42,0.3)' : 'rgba(15,23,42,0.5)', borderTop: `1px solid ${C.border}` }}>
+                  <td className="p-2.5 mono" style={{ color: C.cyan }}>{v.name}</td>
+                  <td className="p-2.5 mono" style={{ color: C.amber }}>{v.value}</td>
+                  <td className="p-2.5 opacity-50">{v.desc}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {/* Pod topology diagram */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 opacity-70">Pod Topology (Kubernetes JobSet)</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {['Node 0 (Rank 0)', 'Node 1 (Rank 1)', 'Node 2 (Rank 2)', 'Node 3 (Rank 3)'].map((label, i) => {
+            const colors = [C.violet, C.blue, C.green, C.amber];
+            return (
+              <div key={i} className="rounded-xl p-3 text-center fade-in" style={{
+                animationDelay: `${i * 0.1}s`,
+                background: `${colors[i]}10`,
+                border: `1px solid ${colors[i]}30`,
+              }}>
+                <div className="text-lg mb-1">⚡</div>
+                <div className="text-xs font-semibold" style={{ color: colors[i] }}>{label}</div>
+                <div className="mono text-xs opacity-40 mt-1">nvidia.com/gpu: 1</div>
+                <div className="mono text-xs opacity-40">mem: 64Gi, cpu: 4</div>
+                <div className="mt-2 rounded px-2 py-0.5 text-xs" style={{ background: `${colors[i]}15`, fontSize: '9px' }}>
+                  /mnt/shared (RWX)
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-3 text-center">
+          <svg width="100%" height="40" viewBox="0 0 600 40">
+            <line x1="75" y1="20" x2="525" y2="20" stroke={C.redhat} strokeWidth="2" strokeDasharray="6 4" className="arrow-flow" />
+            <text x="300" y="14" textAnchor="middle" fill={C.redhat} fontSize="10" fontFamily="'Source Code Pro', monospace">NCCL Ring / Tree AllReduce</text>
+            <text x="300" y="34" textAnchor="middle" fill="#64748b" fontSize="9" fontFamily="'Source Code Pro', monospace">JobSet: qwen-sft → c10d rendezvous on port 29500</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StepYaml({ step }) {
+  const [tab, setTab] = useState('trainjob');
+  return (
+    <div className="space-y-4 fade-in">
+      <div className="flex gap-2 justify-center">
+        <button onClick={() => setTab('trainjob')}
+          className="px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all"
+          style={{
+            background: tab === 'trainjob' ? `${C.green}18` : 'rgba(15,23,42,0.4)',
+            border: `1px solid ${tab === 'trainjob' ? `${C.green}50` : 'rgba(30,41,59,0.5)'}`,
+            color: tab === 'trainjob' ? C.green : '#64748b',
+          }}>TrainJob (Trainer v2)</button>
+        <button onClick={() => setTab('legacy')}
+          className="px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-all"
+          style={{
+            background: tab === 'legacy' ? `${C.slate}18` : 'rgba(15,23,42,0.4)',
+            border: `1px solid ${tab === 'legacy' ? `${C.slate}50` : 'rgba(30,41,59,0.5)'}`,
+            color: tab === 'legacy' ? C.slate : '#64748b',
+          }}>Legacy PyTorchJob (v1) — deprecated</button>
+      </div>
+
+      {tab === 'trainjob' ? (
+        <>
+          <div className="rounded-xl p-4" style={{ background: C.greenLight, border: `1px solid ${C.green}30` }}>
+            <div className="font-semibold text-xs mb-1" style={{ color: C.green }}>TrainJob is dramatically simpler</div>
+            <div className="text-xs opacity-60 space-y-1">
+              <div>• Data Scientist only specifies: <strong>runtime ref + numNodes + training code + parameters</strong></div>
+              <div>• Infrastructure (image, resources, volumes, NCCL) comes from the <strong>ClusterTrainingRuntime</strong></div>
+              <div>• No more duplicated Master/Worker pod specs — unified "node" abstraction via JobSet</div>
+            </div>
+          </div>
+          <CodeBlock code={step.trainjobYaml} title="TrainJob YAML (Kubeflow Trainer v2)" language="yaml" />
+        </>
+      ) : (
+        <>
+          <div className="rounded-xl p-4" style={{ background: C.slateLight, border: `1px solid ${C.slate}30` }}>
+            <div className="font-semibold text-xs mb-1" style={{ color: C.slate }}>Legacy PyTorchJob — deprecated in Trainer v2</div>
+            <div className="text-xs opacity-60 space-y-1">
+              <div>• Source code frozen at <span className="mono">release-1.9</span> branch</div>
+              <div>• Required separate Master + Worker replica specs with duplicated configs</div>
+              <div>• No role separation — data scientist had to know all infrastructure details</div>
+              <div>• Migrate to TrainJob + ClusterTrainingRuntime for new workloads</div>
+            </div>
+          </div>
+          <CodeBlock code={step.oldPytorchjobYaml} title="Legacy PyTorchJob (deprecated — for reference only)" language="yaml" />
+        </>
+      )}
+    </div>
+  );
+}
+
+function StepMonitor({ step }) {
+  return (
+    <div className="space-y-5 fade-in">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {step.monitoring.map((m, i) => (
+          <div key={i} className="rounded-xl p-4 fade-in" style={{
+            animationDelay: `${i * 0.08}s`,
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+          }}>
+            <div className="flex items-center gap-2 mb-1">
+              <span>{m.icon}</span>
+              <span className="font-semibold text-sm" style={{ color: C.green }}>{m.tool}</span>
+            </div>
+            <div className="text-xs opacity-50">{m.desc}</div>
+          </div>
+        ))}
+      </div>
+      <CodeBlock code={step.monitorCode} title="Monitor, Merge LoRA, Clean Up" language="python" />
+    </div>
+  );
+}
+
+function StepDecision({ step }) {
+  return (
+    <div className="space-y-6 fade-in">
+      <ComparisonTable comparison={step.comparison} />
+      <div>
+        <h3 className="text-sm font-semibold mb-3 opacity-70">Scenario Recommendations</h3>
+        <div className="space-y-2">
+          {step.scenarios.map((s, i) => (
+            <div key={i} className="rounded-xl p-4 fade-in" style={{
+              animationDelay: `${i * 0.08}s`,
+              background: `${s.color}08`,
+              border: `1px solid ${s.color}25`,
+            }}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="text-sm font-medium">{s.scenario}</div>
+                  <div className="text-xs opacity-50 mt-1">{s.reason}</div>
+                </div>
+                <span className="mono text-xs font-bold px-3 py-1 rounded-full flex-shrink-0" style={{
+                  background: `${s.color}15`,
+                  border: `1px solid ${s.color}40`,
+                  color: s.color,
+                }}>→ {s.recommendation}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-xl p-4" style={{ background: C.amberLight, border: `1px solid ${C.amber}30` }}>
+        <div className="font-semibold text-xs mb-2" style={{ color: C.amber }}>Key Insight</div>
+        <div className="text-xs opacity-70">
+          On RHOAI, the <strong>infrastructure setup is identical</strong> for DDP and FSDP — same TrainJob, same ClusterTrainingRuntime, same pods, same storage, same NCCL backend.
+          The only difference is <strong>a few lines in the training config</strong> (the <span className="mono" style={{ color: C.amber }}>fsdp</span> and <span className="mono" style={{ color: C.amber }}>fsdp_config</span> parameters).
+          This means you can switch between DDP and FSDP by changing configuration alone — no infrastructure changes needed.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StepView({ step }) {
+  const renderers = {
+    overview: StepOverview,
+    prereqs: StepPrereqs,
+    workbench: StepWorkbench,
+    'training-config': StepTrainingConfig,
+    'training-func': StepTrainingFunc,
+    'runtime': StepRuntime,
+    'submit-trainjob': StepSubmitJob,
+    'trainjob-lifecycle': StepLifecycle,
+    'trainjob-yaml': StepYaml,
+    monitor: StepMonitor,
+    'ddp-vs-fsdp-decision': StepDecision,
+  };
+  const Renderer = renderers[step.id];
+  if (!Renderer) return null;
+  return <Renderer step={step} />;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════════════════════════
+
+function App() {
+  const [step, setStep] = useState(0);
+  const current = OVERVIEW_STEPS[step];
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setStep(s => Math.min(s + 1, OVERVIEW_STEPS.length - 1));
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setStep(s => Math.max(s - 1, 0));
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  return (
+    <div className="relative z-10 max-w-6xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <div className="flex items-center justify-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: C.redLight, border: `1px solid ${C.redhat}40` }}>
+            <svg viewBox="0 0 36 36" width="24" height="24">
+              <path d="M18 3L3 10.5v15L18 33l15-7.5v-15L18 3z" fill={C.redhat} opacity="0.8"/>
+              <path d="M18 8l-10 5v10l10 5 10-5V13L18 8z" fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.5"/>
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold">
+            <span style={{ color: C.redhat }}>Red Hat OpenShift AI</span>
+            <span className="opacity-40"> — </span>
+            <span className="opacity-80">Distributed Training Guide</span>
+          </h1>
+        </div>
+        <p className="text-sm opacity-50">
+          Step-by-step: DDP & FSDP on RHOAI with Kubeflow Trainer v2
+        </p>
+        <p className="mt-1 mono text-xs opacity-30">
+          RHOAI 3.2+  |  Kubeflow Trainer v2.2  |  TrainJob + ClusterTrainingRuntime  |  NCCL Backend
+        </p>
+      </div>
+
+      {/* Step Timeline */}
+      <StepTimeline steps={OVERVIEW_STEPS} currentStep={step} setStep={setStep} />
+
+      {/* Current Step Content */}
+      <div key={step} className="fade-in">
+        {/* Step Header */}
+        <div className="rounded-2xl p-6 mb-6" style={{
+          background: `linear-gradient(135deg, ${current.color}08 0%, transparent 60%)`,
+          border: `1px solid ${current.color}25`,
+        }}>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl step-glow"
+              style={{ background: `${current.color}15`, border: `1px solid ${current.color}40` }}>
+              {current.icon}
+            </div>
+            <div>
+              <h2 className="text-lg font-bold" style={{ color: current.color }}>{current.title}</h2>
+              <p className="text-xs opacity-50">{current.subtitle}</p>
+            </div>
+          </div>
+          <p className="text-sm opacity-70 leading-relaxed">{current.description}</p>
+          {current.detail && (
+            <p className="text-xs opacity-40 mt-2 leading-relaxed">{current.detail}</p>
+          )}
+        </div>
+
+        {/* Step Body */}
+        <StepView step={current} />
+
+        {/* Navigation */}
+        <div className="flex justify-between items-center mt-8 pt-4" style={{ borderTop: `1px solid ${C.border}` }}>
+          <button onClick={() => setStep(s => Math.max(s - 1, 0))}
+            className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all"
+            style={{
+              background: step > 0 ? C.surface : 'transparent',
+              border: `1px solid ${step > 0 ? C.border : 'transparent'}`,
+              color: step > 0 ? '#e2e8f0' : 'transparent',
+              pointerEvents: step > 0 ? 'auto' : 'none',
+            }}>
+            ← Previous
+          </button>
+          <span className="mono text-xs opacity-30">{step + 1} / {OVERVIEW_STEPS.length}</span>
+          <button onClick={() => setStep(s => Math.min(s + 1, OVERVIEW_STEPS.length - 1))}
+            className="px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all"
+            style={{
+              background: step < OVERVIEW_STEPS.length - 1 ? `${C.redhat}15` : 'transparent',
+              border: `1px solid ${step < OVERVIEW_STEPS.length - 1 ? `${C.redhat}40` : 'transparent'}`,
+              color: step < OVERVIEW_STEPS.length - 1 ? C.redhat : 'transparent',
+              pointerEvents: step < OVERVIEW_STEPS.length - 1 ? 'auto' : 'none',
+            }}>
+            Next →
+          </button>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="text-center mt-12 pt-6 opacity-30" style={{ borderTop: `1px solid ${C.border}` }}>
+        <p className="text-xs">Red Hat OpenShift AI — Distributed Training with DDP & FSDP</p>
+        <p className="text-xs mt-1 mono opacity-60">
+          Kubeflow Trainer v2.2 | RHOAI 3.2+ | TrainJob + ClusterTrainingRuntime | opendatahub-io/distributed-workloads
+        </p>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

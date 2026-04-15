@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Distributed Data Parallel (DDP) vs Fully Sharded Data Parallel (FSDP) — Training Explainer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Source+Code+Pro:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: #060a14;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'Source Code Pro', monospace; }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0c1220; }
+  ::-webkit-scrollbar-thumb { background: #2a3a5c; border-radius: 4px; }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes pulseGlow { 0%,100% { box-shadow:0 0 8px 2px rgba(59,130,246,0.15); } 50% { box-shadow:0 0 18px 4px rgba(59,130,246,0.35); } }
+  @keyframes errorPulse { 0%,100% { box-shadow:0 0 8px 2px rgba(239,68,68,0.2); } 50% { box-shadow:0 0 20px 6px rgba(239,68,68,0.5); } }
+  @keyframes successPulse { 0%,100% { box-shadow:0 0 8px 2px rgba(34,197,94,0.15); } 50% { box-shadow:0 0 18px 4px rgba(34,197,94,0.35); } }
+  @keyframes flowDash { to { stroke-dashoffset: -24; } }
+  @keyframes barFill { from { width: 0; } }
+  @keyframes commPulse { 0%,100% { opacity:0.4; } 50% { opacity:1; } }
+
+  .fade-in { animation: fadeIn 0.35s ease-out; }
+  .gpu-active { animation: pulseGlow 2.5s ease-in-out infinite; }
+  .gpu-error { animation: errorPulse 1.2s ease-in-out infinite; }
+  .gpu-success { animation: successPulse 2.5s ease-in-out infinite; }
+  .arrow-flow { stroke-dasharray: 8 5; animation: flowDash 1s linear infinite; }
+  .comm-pulse { animation: commPulse 1.5s ease-in-out infinite; }
+  .bar-fill { animation: barFill 0.5s ease-out; }
+</style>
+</head>
+<body class="min-h-screen">
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CONSTANTS & DATA
+// ═══════════════════════════════════════════════════════════════════════════
+
+const MODEL = {
+  name: "Qwen2.5-7B",
+  params: "7B",
+  layers: 28,
+  hidden: 3584,
+  fp16Size: 14.0,
+  gradSize: 14.0,
+  optimSize: 56.0,
+  totalDDP: 84.0,
+  gpuName: "NVIDIA T4",
+  gpuVRAM: 16.0,
+  numGPUs: 4,
+  // QLoRA specifics
+  qlora4bitSize: 3.5,      // 7B × 0.5 bytes
+  loraRank: 64,
+  loraParams: "160M",      // ~2.3% of 7B
+  loraFp16: 0.3,           // 160M × 2 bytes
+  loraGrads: 0.3,
+  loraOptim: 1.3,          // 160M × 8 bytes (Adam fp32)
+};
+
+const COLORS = {
+  params:     { bg: '#3b82f6', bgLight: 'rgba(59,130,246,0.15)',  border: 'rgba(59,130,246,0.4)',  label: 'Parameters' },
+  grads:      { bg: '#10b981', bgLight: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.4)',  label: 'Gradients' },
+  optimizer:  { bg: '#f59e0b', bgLight: 'rgba(245,158,11,0.15)',  border: 'rgba(245,158,11,0.4)',  label: 'Optimizer' },
+  activations:{ bg: '#8b5cf6', bgLight: 'rgba(139,92,246,0.15)',  border: 'rgba(139,92,246,0.4)',  label: 'Activations' },
+  data:       { bg: '#06b6d4', bgLight: 'rgba(6,182,212,0.15)',   border: 'rgba(6,182,212,0.4)',   label: 'Data' },
+  comm:       { bg: '#fbbf24', bgLight: 'rgba(251,191,36,0.15)',  border: 'rgba(251,191,36,0.4)',  label: 'Communication' },
+  temp:       { bg: '#64748b', bgLight: 'rgba(100,116,139,0.15)', border: 'rgba(100,116,139,0.5)', label: 'Temporary' },
+  lora:       { bg: '#ec4899', bgLight: 'rgba(236,72,153,0.15)',  border: 'rgba(236,72,153,0.4)',  label: 'LoRA Adapters' },
+  frozen:     { bg: '#475569', bgLight: 'rgba(71,85,105,0.15)',   border: 'rgba(71,85,105,0.4)',   label: 'Frozen (4-bit)' },
+};
+
+const GPU_COLORS = ['#3b82f6','#10b981','#f59e0b','#8b5cf6'];
+
+const MODE_COLORS = {
+  ddp: '#f59e0b',
+  fsdp: '#3b82f6',
+  bnb_ddp: '#ec4899',
+  bnb_fsdp: '#8b5cf6',
+};
+
+// ── Distributed Data Parallel (DDP) Step Definitions ────────────────────
+const DDP_STEPS = [
+  {
+    title: "Step 1: Model Replication",
+    subtitle: "Full model copied to every GPU",
+    description: "In Distributed Data Parallel (DDP), the complete Qwen2.5-7B model is replicated onto each GPU. The model state is broadcast from Rank 0 to ensure all replicas start with identical weights.",
+    detail: "7B parameters × 2 bytes (fp16) = 14 GB per GPU. With 4 GPUs, that's 56 GB of redundant model storage across the cluster.",
+    formula: "Memory = N × 2 bytes = 7B × 2 = 14 GB per GPU",
+    gpuContents: [
+      [{ type:'params', label:'Full Model', size:'14.0 GB', width:100 }],
+      [{ type:'params', label:'Full Model', size:'14.0 GB', width:100 }],
+      [{ type:'params', label:'Full Model', size:'14.0 GB', width:100 }],
+      [{ type:'params', label:'Full Model', size:'14.0 GB', width:100 }],
+    ],
+    memory: [{ p:14,g:0,o:0,a:0 },{ p:14,g:0,o:0,a:0 },{ p:14,g:0,o:0,a:0 },{ p:14,g:0,o:0,a:0 }],
+    commType: 'broadcast',
+    status: ['active','active','active','active'],
+    showAdam: false,
+  },
+  {
+    title: "Step 2: Data Distribution",
+    subtitle: "Training batch split across GPUs via DistributedSampler",
+    description: "The training batch is evenly divided into mini-batches using PyTorch's DistributedSampler. Each GPU receives different data samples but processes them through the same model.",
+    detail: "For a global batch of 32 samples: each GPU gets 8 samples. Different data → different gradients → must synchronize later.",
+    formula: "Mini-batch per GPU = Global Batch ÷ World Size = 32 ÷ 4 = 8 samples",
+    gpuContents: [
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'data', label:'Mini-batch 0', size:'8 samples', width:30 }],
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'data', label:'Mini-batch 1', size:'8 samples', width:30 }],
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'data', label:'Mini-batch 2', size:'8 samples', width:30 }],
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'data', label:'Mini-batch 3', size:'8 samples', width:30 }],
+    ],
+    memory: [{ p:14,g:0,o:0,a:0.1 },{ p:14,g:0,o:0,a:0.1 },{ p:14,g:0,o:0,a:0.1 },{ p:14,g:0,o:0,a:0.1 }],
+    commType: 'none', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 3: Forward Pass",
+    subtitle: "Independent forward computation on each GPU",
+    description: "Each GPU runs the forward pass independently on its mini-batch. Activations are stored in memory for the backward pass (needed for gradient computation).",
+    detail: "All 4 GPUs compute simultaneously — this is where DDP's speedup comes from. Each produces different outputs because the input data differs.",
+    formula: "Activations ≈ 1-2 GB (depends on batch size and sequence length)",
+    gpuContents: [
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'data', label:'Data 0', size:'', width:20 },{ type:'activations', label:'Activations', size:'~2 GB', width:50 }],
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'data', label:'Data 1', size:'', width:20 },{ type:'activations', label:'Activations', size:'~2 GB', width:50 }],
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'data', label:'Data 2', size:'', width:20 },{ type:'activations', label:'Activations', size:'~2 GB', width:50 }],
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'data', label:'Data 3', size:'', width:20 },{ type:'activations', label:'Activations', size:'~2 GB', width:50 }],
+    ],
+    memory: [{ p:14,g:0,o:0,a:2 },{ p:14,g:0,o:0,a:2 },{ p:14,g:0,o:0,a:2 },{ p:14,g:0,o:0,a:2 }],
+    commType: 'none', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 4: Backward Pass & Gradients",
+    subtitle: "Each GPU computes LOCAL gradients independently",
+    description: "Loss is computed on each GPU, then backpropagation generates gradients. Each GPU's gradients are different because they were computed on different mini-batches.",
+    detail: "Gradients have the same shape as parameters → 14 GB additional memory. Total so far: 14 (model) + 14 (gradients) + 2 (activations) = 30 GB. Already exceeds 16 GB T4!",
+    formula: "Gradients = N × 2 bytes = 7B × 2 = 14 GB (same size as model)",
+    gpuContents: [
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'grads', label:'Local Grads ∇0', size:'14 GB', width:100 }],
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'grads', label:'Local Grads ∇1', size:'14 GB', width:100 }],
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'grads', label:'Local Grads ∇2', size:'14 GB', width:100 }],
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'grads', label:'Local Grads ∇3', size:'14 GB', width:100 }],
+    ],
+    memory: [{ p:14,g:14,o:0,a:2 },{ p:14,g:14,o:0,a:2 },{ p:14,g:14,o:0,a:2 },{ p:14,g:14,o:0,a:2 }],
+    commType: 'none', status: ['error','error','error','error'], showAdam: false,
+  },
+  {
+    title: "Step 5: AllReduce — Gradient Sync",
+    subtitle: "Ring AllReduce: scatter-reduce + all-gather",
+    description: "The Ring AllReduce algorithm synchronizes gradients across all GPUs in a ring topology. It has two phases:\n\n1. Scatter-Reduce (N-1 steps): Each GPU sends gradient chunks clockwise. At each step, the receiving GPU adds the incoming chunk to its local chunk. After 3 steps, each GPU has one fully-reduced chunk.\n\n2. All-Gather (N-1 steps): The fully-reduced chunks are circulated around the ring. After 3 more steps, every GPU has the complete averaged gradient.",
+    detail: "Total data transferred per GPU: 2 × (N-1)/N × gradient_size ≈ 2 × gradient_size. This is bandwidth-optimal — adding more GPUs doesn't increase per-GPU communication!",
+    formula: "Transfer = 2 × (W-1)/W × |∇| = 2 × 0.75 × 14 GB = 21 GB per GPU",
+    gpuContents: [
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'grads', label:'Avg Grads ∇', size:'14 GB', width:100 }],
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'grads', label:'Avg Grads ∇', size:'14 GB', width:100 }],
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'grads', label:'Avg Grads ∇', size:'14 GB', width:100 }],
+      [{ type:'params', label:'Full Model', size:'14 GB', width:100 },{ type:'grads', label:'Avg Grads ∇', size:'14 GB', width:100 }],
+    ],
+    memory: [{ p:14,g:14,o:0,a:0 },{ p:14,g:14,o:0,a:0 },{ p:14,g:14,o:0,a:0 },{ p:14,g:14,o:0,a:0 }],
+    commType: 'ring', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 6: Optimizer Update",
+    subtitle: "Adam (Adaptive Moment Estimation) needs massive fp32 state",
+    description: "The optimizer updates parameters using the averaged gradients. Adam stores two fp32 states per parameter:\n\n• First moment (momentum): 7B × 4 bytes = 28 GB\n• Second moment (variance): 7B × 4 bytes = 28 GB\n\nTotal optimizer memory: 56 GB per GPU.",
+    detail: "With optimizer states, each GPU needs: 14 (params) + 14 (grads) + 56 (optimizer) = 84 GB. A T4 has only 16 GB. DDP is completely impossible for Qwen2.5-7B on T4!",
+    formula: "Optimizer = 2 × N × 4 bytes = 2 × 7B × 4 = 56 GB per GPU",
+    gpuContents: [
+      [{ type:'params', label:'Model', size:'14 GB', width:100 },{ type:'grads', label:'Grads', size:'14 GB', width:100 },{ type:'optimizer', label:'Adam States', size:'56 GB', width:100 }],
+      [{ type:'params', label:'Model', size:'14 GB', width:100 },{ type:'grads', label:'Grads', size:'14 GB', width:100 },{ type:'optimizer', label:'Adam States', size:'56 GB', width:100 }],
+      [{ type:'params', label:'Model', size:'14 GB', width:100 },{ type:'grads', label:'Grads', size:'14 GB', width:100 },{ type:'optimizer', label:'Adam States', size:'56 GB', width:100 }],
+      [{ type:'params', label:'Model', size:'14 GB', width:100 },{ type:'grads', label:'Grads', size:'14 GB', width:100 },{ type:'optimizer', label:'Adam States', size:'56 GB', width:100 }],
+    ],
+    memory: [{ p:14,g:14,o:56,a:0 },{ p:14,g:14,o:56,a:0 },{ p:14,g:14,o:56,a:0 },{ p:14,g:14,o:56,a:0 }],
+    commType: 'none', status: ['error','error','error','error'],
+    showAdam: true,
+  },
+  {
+    title: "Step 7: Memory Analysis — DDP Fails",
+    subtitle: "84 GB required vs 16 GB available",
+    description: "Distributed Data Parallel requires each GPU to store the complete model, all gradients, and full optimizer states. For Qwen2.5-7B, this totals 84 GB per GPU — over 5× the T4's 16 GB VRAM.\n\nEven just the model (14 GB) + gradients (14 GB) = 28 GB already exceeds the T4's capacity. DDP is fundamentally incompatible with training large language models on consumer GPUs.",
+    detail: "DDP works well when the model fits comfortably on a single GPU (typically <2B parameters for T4). For larger models, we need Fully Sharded Data Parallel (FSDP) or quantization techniques like QLoRA.",
+    formula: "DDP Total = N×2 + N×2 + N×8 = N×12 = 7B×12 = 84 GB >> 16 GB",
+    gpuContents: [
+      [{ type:'params', label:'Model 14GB', size:'', width:40 },{ type:'grads', label:'Grads 14GB', size:'', width:40 },{ type:'optimizer', label:'Optim 56GB', size:'', width:100 }],
+      [{ type:'params', label:'Model 14GB', size:'', width:40 },{ type:'grads', label:'Grads 14GB', size:'', width:40 },{ type:'optimizer', label:'Optim 56GB', size:'', width:100 }],
+      [{ type:'params', label:'Model 14GB', size:'', width:40 },{ type:'grads', label:'Grads 14GB', size:'', width:40 },{ type:'optimizer', label:'Optim 56GB', size:'', width:100 }],
+      [{ type:'params', label:'Model 14GB', size:'', width:40 },{ type:'grads', label:'Grads 14GB', size:'', width:40 },{ type:'optimizer', label:'Optim 56GB', size:'', width:100 }],
+    ],
+    memory: [{ p:14,g:14,o:56,a:0 },{ p:14,g:14,o:56,a:0 },{ p:14,g:14,o:56,a:0 },{ p:14,g:14,o:56,a:0 }],
+    commType: 'none', status: ['error','error','error','error'], showAdam: false,
+  },
+];
+
+// ── Fully Sharded Data Parallel (FSDP) Step Definitions ─────────────────
+const FSDP_STEPS = [
+  {
+    title: "Step 1: Parameter Sharding",
+    subtitle: "Model split across GPUs — each holds 1/4",
+    description: "Fully Sharded Data Parallel (FSDP) shards all model parameters across GPUs. Each parameter tensor is chunked along dimension 0, and each GPU stores only its 1/4 shard. No GPU holds the full model.",
+    detail: "Qwen2.5-7B has 28 transformer layers. Parameters are flattened and divided evenly. Each GPU stores ~1.75B parameters = 3.5 GB in fp16.",
+    formula: "Shard size = N/W × 2 bytes = 7B/4 × 2 = 3.5 GB per GPU",
+    gpuContents: [
+      [{ type:'params', label:'Shard 0', size:'3.5 GB', width:25, shard:true }],
+      [{ type:'params', label:'Shard 1', size:'3.5 GB', width:25, shard:true }],
+      [{ type:'params', label:'Shard 2', size:'3.5 GB', width:25, shard:true }],
+      [{ type:'params', label:'Shard 3', size:'3.5 GB', width:25, shard:true }],
+    ],
+    memory: [{ p:3.5,g:0,o:0,a:0 },{ p:3.5,g:0,o:0,a:0 },{ p:3.5,g:0,o:0,a:0 },{ p:3.5,g:0,o:0,a:0 }],
+    commType: 'none', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 2: All-Gather (Pre-Forward)",
+    subtitle: "Reconstruct full layer parameters temporarily",
+    description: "Before processing a layer, FSDP runs an All-Gather to collect parameter shards from all GPUs. Each GPU temporarily holds the full parameters for that FSDP unit (typically one transformer layer).\n\nSteps 2–4 repeat for each of the 28 layers: gather → compute → free → next layer. This runs on a separate CUDA stream to overlap with computation on the previous layer.",
+    detail: "Only ONE layer's full params are gathered at a time (~0.5 GB per layer), not the entire model. This keeps peak memory manageable.",
+    formula: "Temp memory = Layer params × 2 bytes ≈ 250M × 2 = 0.5 GB",
+    gpuContents: [
+      [{ type:'params', label:'Shard 0', size:'3.5 GB', width:25, shard:true },{ type:'temp', label:'Gathered S1', size:'', width:25, temp:true },{ type:'temp', label:'Gathered S2', size:'', width:25, temp:true },{ type:'temp', label:'Gathered S3', size:'', width:25, temp:true }],
+      [{ type:'temp', label:'Gathered S0', size:'', width:25, temp:true },{ type:'params', label:'Shard 1', size:'3.5 GB', width:25, shard:true },{ type:'temp', label:'Gathered S2', size:'', width:25, temp:true },{ type:'temp', label:'Gathered S3', size:'', width:25, temp:true }],
+      [{ type:'temp', label:'Gathered S0', size:'', width:25, temp:true },{ type:'temp', label:'Gathered S1', size:'', width:25, temp:true },{ type:'params', label:'Shard 2', size:'3.5 GB', width:25, shard:true },{ type:'temp', label:'Gathered S3', size:'', width:25, temp:true }],
+      [{ type:'temp', label:'Gathered S0', size:'', width:25, temp:true },{ type:'temp', label:'Gathered S1', size:'', width:25, temp:true },{ type:'temp', label:'Gathered S2', size:'', width:25, temp:true },{ type:'params', label:'Shard 3', size:'3.5 GB', width:25, shard:true }],
+    ],
+    memory: [{ p:3.5,g:0,o:0,a:0.5 },{ p:3.5,g:0,o:0,a:0.5 },{ p:3.5,g:0,o:0,a:0.5 },{ p:3.5,g:0,o:0,a:0.5 }],
+    commType: 'allgather', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 3: Forward Pass",
+    subtitle: "Compute with full layer parameters, store ~70 MB activations",
+    description: "With the complete layer parameters assembled via All-Gather, each GPU runs the forward pass on its own mini-batch through this layer. Activations (~70 MB per layer) are stored for the backward pass.\n\nActivations accumulate as the loop progresses across layers: layer 1 → 70 MB, layer 2 → 140 MB, ... layer 28 → ~2 GB.",
+    detail: "This is identical to a normal forward pass — FSDP is transparent to the computation. The gathered parameters act as regular full-sized tensors. Each layer produces ~70 MB of activations (2 GB total / 28 layers).",
+    formula: "Each GPU: full layer params (temp) + mini-batch → activations (~70 MB/layer)",
+    gpuContents: [
+      [{ type:'params', label:'Full Layer (temp)', size:'~0.5 GB', width:100, temp:true },{ type:'data', label:'Data 0', size:'', width:20 },{ type:'activations', label:'Layer Activations', size:'~70 MB', width:30 }],
+      [{ type:'params', label:'Full Layer (temp)', size:'~0.5 GB', width:100, temp:true },{ type:'data', label:'Data 1', size:'', width:20 },{ type:'activations', label:'Layer Activations', size:'~70 MB', width:30 }],
+      [{ type:'params', label:'Full Layer (temp)', size:'~0.5 GB', width:100, temp:true },{ type:'data', label:'Data 2', size:'', width:20 },{ type:'activations', label:'Layer Activations', size:'~70 MB', width:30 }],
+      [{ type:'params', label:'Full Layer (temp)', size:'~0.5 GB', width:100, temp:true },{ type:'data', label:'Data 3', size:'', width:20 },{ type:'activations', label:'Layer Activations', size:'~70 MB', width:30 }],
+    ],
+    memory: [{ p:3.5,g:0,o:0,a:0.57 },{ p:3.5,g:0,o:0,a:0.57 },{ p:3.5,g:0,o:0,a:0.57 },{ p:3.5,g:0,o:0,a:0.57 }],
+    commType: 'none', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 4: Reshard After Forward",
+    subtitle: "Free gathered params — back to shard only",
+    description: "After the forward pass through a layer, the temporarily gathered parameters are freed (reshard_after_forward=True). Each GPU returns to holding only its own shard.\n\nThis is the key memory optimization: full parameters exist only during computation, not in steady state. Steps 2–4 repeat for all 28 layers. After all layers complete, each GPU holds its shard + ~2 GB of accumulated activations (28 layers × ~70 MB).",
+    detail: "The FSDPParam.free_unsharded_param() method explicitly frees the storage. This happens automatically via post-forward hooks. The gather-compute-free cycle repeats 28 times, but activations from all layers persist for the backward pass.",
+    formula: "Memory freed per layer = (W-1)/W × 0.5 GB ≈ 0.375 GB | Activations accumulated = 28 × 70 MB ≈ 2 GB",
+    gpuContents: [
+      [{ type:'params', label:'Shard 0', size:'3.5 GB', width:25, shard:true },{ type:'activations', label:'Stored Activations', size:'~2 GB', width:50 }],
+      [{ type:'params', label:'Shard 1', size:'3.5 GB', width:25, shard:true },{ type:'activations', label:'Stored Activations', size:'~2 GB', width:50 }],
+      [{ type:'params', label:'Shard 2', size:'3.5 GB', width:25, shard:true },{ type:'activations', label:'Stored Activations', size:'~2 GB', width:50 }],
+      [{ type:'params', label:'Shard 3', size:'3.5 GB', width:25, shard:true },{ type:'activations', label:'Stored Activations', size:'~2 GB', width:50 }],
+    ],
+    memory: [{ p:3.5,g:0,o:0,a:2 },{ p:3.5,g:0,o:0,a:2 },{ p:3.5,g:0,o:0,a:2 },{ p:3.5,g:0,o:0,a:2 }],
+    commType: 'none', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 5: All-Gather (Pre-Backward)",
+    subtitle: "Re-gather full layer params for gradient computation",
+    description: "Since parameters were freed after forward, they must be gathered again before the backward pass. Another All-Gather collects all shards.\n\nSteps 5–7 repeat for each of the 28 layers in reverse order (layer 28 → 1). This is the trade-off of FSDP: more communication in exchange for less memory. The all-gather can be prefetched to overlap with backward computation on the next layer.",
+    detail: "FSDP trades communication for memory. DDP communicates gradients once (AllReduce). FSDP communicates parameters twice (All-Gather × 2) plus gradients once (Reduce-Scatter).",
+    formula: "Same All-Gather as pre-forward: temporarily assemble full layer params",
+    gpuContents: [
+      [{ type:'params', label:'Shard 0', size:'3.5 GB', width:25, shard:true },{ type:'temp', label:'S1', size:'', width:25, temp:true },{ type:'temp', label:'S2', size:'', width:25, temp:true },{ type:'temp', label:'S3', size:'', width:25, temp:true }],
+      [{ type:'temp', label:'S0', size:'', width:25, temp:true },{ type:'params', label:'Shard 1', size:'3.5 GB', width:25, shard:true },{ type:'temp', label:'S2', size:'', width:25, temp:true },{ type:'temp', label:'S3', size:'', width:25, temp:true }],
+      [{ type:'temp', label:'S0', size:'', width:25, temp:true },{ type:'temp', label:'S1', size:'', width:25, temp:true },{ type:'params', label:'Shard 2', size:'3.5 GB', width:25, shard:true },{ type:'temp', label:'S3', size:'', width:25, temp:true }],
+      [{ type:'temp', label:'S0', size:'', width:25, temp:true },{ type:'temp', label:'S1', size:'', width:25, temp:true },{ type:'temp', label:'S2', size:'', width:25, temp:true },{ type:'params', label:'Shard 3', size:'3.5 GB', width:25, shard:true }],
+    ],
+    memory: [{ p:3.5,g:0,o:0,a:2.5 },{ p:3.5,g:0,o:0,a:2.5 },{ p:3.5,g:0,o:0,a:2.5 },{ p:3.5,g:0,o:0,a:2.5 }],
+    commType: 'allgather', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 6: Backward Pass + Reduce-Scatter",
+    subtitle: "Compute layer grads, then reduce-scatter to shard owners",
+    description: "With full layer parameters re-assembled, the backward pass computes 0.5 GB of unsharded gradients for this layer. These are immediately Reduce-Scattered: each GPU keeps only its 1/4 shard (0.125 GB). As each layer completes, its stored activations (~70 MB) are freed.\n\nGradient shards accumulate across layers: 28 layers × 0.125 GB/layer = 3.5 GB total per GPU.",
+    detail: "The backward + reduce-scatter happens per layer within the loop. At no point does a GPU hold 28 layers of unsharded gradients — only one layer's full grads exist temporarily (0.5 GB) before being reduce-scattered to 0.125 GB per GPU.",
+    formula: "Per layer: 0.5 GB full grads → Reduce-Scatter → 0.125 GB shard | 28 × 0.125 = 3.5 GB",
+    gpuContents: [
+      [{ type:'params', label:'Full Layer (temp)', size:'', width:100, temp:true },{ type:'grads', label:'Layer Grads (temp)', size:'~0.5 GB', width:60, temp:true },{ type:'grads', label:'Accum Shard', size:'~0.125 GB', width:25, shard:true }],
+      [{ type:'params', label:'Full Layer (temp)', size:'', width:100, temp:true },{ type:'grads', label:'Layer Grads (temp)', size:'~0.5 GB', width:60, temp:true },{ type:'grads', label:'Accum Shard', size:'~0.125 GB', width:25, shard:true }],
+      [{ type:'params', label:'Full Layer (temp)', size:'', width:100, temp:true },{ type:'grads', label:'Layer Grads (temp)', size:'~0.5 GB', width:60, temp:true },{ type:'grads', label:'Accum Shard', size:'~0.125 GB', width:25, shard:true }],
+      [{ type:'params', label:'Full Layer (temp)', size:'', width:100, temp:true },{ type:'grads', label:'Layer Grads (temp)', size:'~0.5 GB', width:60, temp:true },{ type:'grads', label:'Accum Shard', size:'~0.125 GB', width:25, shard:true }],
+    ],
+    memory: [{ p:3.5,g:0.625,o:0,a:2 },{ p:3.5,g:0.625,o:0,a:2 },{ p:3.5,g:0.625,o:0,a:2 },{ p:3.5,g:0.625,o:0,a:2 }],
+    commType: 'none', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 7: Reduce-Scatter Complete",
+    subtitle: "All gradient shards accumulated — activations freed",
+    description: "After all 28 layers complete the backward loop, each GPU holds its accumulated gradient shard (3.5 GB) and all activations have been freed.\n\nReduce-Scatter = Reduce + Scatter in one operation. GPU 0 gets the reduced gradient for shard 0, GPU 1 for shard 1, etc. No GPU ever held more than one layer's unsharded gradients (0.5 GB) at a time.",
+    detail: "Each GPU ends up with N/W gradient values = 7B/4 × 2 bytes = 3.5 GB, accumulated 0.125 GB at a time across 28 layers via per-layer Reduce-Scatter.",
+    formula: "Gradient shard = 28 layers × (0.5 GB / 4 GPUs) = 28 × 0.125 = 3.5 GB per GPU",
+    gpuContents: [
+      [{ type:'params', label:'Shard 0', size:'3.5 GB', width:25, shard:true },{ type:'grads', label:'Grad Shard 0', size:'3.5 GB', width:25, shard:true }],
+      [{ type:'params', label:'Shard 1', size:'3.5 GB', width:25, shard:true },{ type:'grads', label:'Grad Shard 1', size:'3.5 GB', width:25, shard:true }],
+      [{ type:'params', label:'Shard 2', size:'3.5 GB', width:25, shard:true },{ type:'grads', label:'Grad Shard 2', size:'3.5 GB', width:25, shard:true }],
+      [{ type:'params', label:'Shard 3', size:'3.5 GB', width:25, shard:true },{ type:'grads', label:'Grad Shard 3', size:'3.5 GB', width:25, shard:true }],
+    ],
+    memory: [{ p:3.5,g:3.5,o:0,a:0 },{ p:3.5,g:3.5,o:0,a:0 },{ p:3.5,g:3.5,o:0,a:0 },{ p:3.5,g:3.5,o:0,a:0 }],
+    commType: 'reducescatter', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 8: Local Optimizer Update",
+    subtitle: "Each GPU updates ONLY its parameter shard",
+    description: "Each GPU runs the Adam (Adaptive Moment Estimation) optimizer on only its local parameter shard using its local gradient shard. The optimizer states (momentum + variance) are also sharded — each GPU stores only 1/4 of the optimizer states.",
+    detail: "Optimizer states per GPU: 1.75B params × 4 bytes × 2 states = 14 GB. Total steady-state: 3.5 (params) + 3.5 (grads) + 14 (optimizer) = 21 GB per GPU.",
+    formula: "Optimizer shard = N/W × 8 bytes = 7B/4 × 8 = 14 GB per GPU",
+    gpuContents: [
+      [{ type:'params', label:'Shard 0', size:'3.5 GB', width:25, shard:true },{ type:'grads', label:'Grad S0', size:'3.5 GB', width:25, shard:true },{ type:'optimizer', label:'Optim S0', size:'14 GB', width:50, shard:true }],
+      [{ type:'params', label:'Shard 1', size:'3.5 GB', width:25, shard:true },{ type:'grads', label:'Grad S1', size:'3.5 GB', width:25, shard:true },{ type:'optimizer', label:'Optim S1', size:'14 GB', width:50, shard:true }],
+      [{ type:'params', label:'Shard 2', size:'3.5 GB', width:25, shard:true },{ type:'grads', label:'Grad S2', size:'3.5 GB', width:25, shard:true },{ type:'optimizer', label:'Optim S2', size:'14 GB', width:50, shard:true }],
+      [{ type:'params', label:'Shard 3', size:'3.5 GB', width:25, shard:true },{ type:'grads', label:'Grad S3', size:'3.5 GB', width:25, shard:true },{ type:'optimizer', label:'Optim S3', size:'14 GB', width:50, shard:true }],
+    ],
+    memory: [{ p:3.5,g:3.5,o:14,a:0 },{ p:3.5,g:3.5,o:14,a:0 },{ p:3.5,g:3.5,o:14,a:0 },{ p:3.5,g:3.5,o:14,a:0 }],
+    commType: 'none', status: ['active','active','active','active'],
+    showAdam: true,
+  },
+  {
+    title: "Step 9: Memory Analysis — FSDP Savings",
+    subtitle: "21 GB steady-state, ~7 GB with CPU offload",
+    description: "Fully Sharded Data Parallel reduces per-GPU memory from 84 GB (DDP) to 21 GB — a 4× reduction. While 21 GB still exceeds a T4's 16 GB, FSDP enables additional optimizations:\n\n• CPU Offloading: Move optimizer states to CPU RAM → only 7 GB on GPU\n• Gradient Checkpointing: Recompute activations instead of storing → saves ~2 GB\n• 8-bit Optimizers: Use bitsandbytes 8-bit Adam → halves optimizer memory\n\nWith CPU offload + gradient checkpointing: ~7 GB per GPU. Fits on T4!",
+    detail: "FSDP is the foundation that makes large model training possible on consumer GPUs. Combined with CPU offloading, it reduces GPU memory from 84 GB to ~7 GB — a 12× reduction.",
+    formula: "FSDP + CPU Offload = N/W×2 + N/W×2 = 3.5 + 3.5 = 7 GB on GPU",
+    gpuContents: [
+      [{ type:'params', label:'Shard 0', size:'3.5 GB', width:25, shard:true },{ type:'grads', label:'Grad S0', size:'3.5 GB', width:25, shard:true }],
+      [{ type:'params', label:'Shard 1', size:'3.5 GB', width:25, shard:true },{ type:'grads', label:'Grad S1', size:'3.5 GB', width:25, shard:true }],
+      [{ type:'params', label:'Shard 2', size:'3.5 GB', width:25, shard:true },{ type:'grads', label:'Grad S2', size:'3.5 GB', width:25, shard:true }],
+      [{ type:'params', label:'Shard 3', size:'3.5 GB', width:25, shard:true },{ type:'grads', label:'Grad S3', size:'3.5 GB', width:25, shard:true }],
+    ],
+    memory: [{ p:3.5,g:3.5,o:0,a:0 },{ p:3.5,g:3.5,o:0,a:0 },{ p:3.5,g:3.5,o:0,a:0 },{ p:3.5,g:3.5,o:0,a:0 }],
+    commType: 'none', status: ['success','success','success','success'], showAdam: false,
+  },
+];
+
+// ── QLoRA + DDP Step Definitions ────────────────────────────────────────
+const BNB_DDP_STEPS = [
+  {
+    title: "Step 1: 4-bit Quantization (NF4)",
+    subtitle: "bitsandbytes loads Qwen2.5-7B in 4-bit NormalFloat",
+    description: "Using bitsandbytes, the model is loaded in 4-bit NormalFloat (NF4) format — a data type designed specifically for normally-distributed neural network weights. Each parameter is stored in just 0.5 bytes instead of 2 bytes (fp16).\n\nThe base model is FROZEN — no gradients will be computed for these 7B parameters. During forward pass, 4-bit weights are dequantized on-the-fly to fp16/bf16 for matrix multiplication, then discarded.",
+    detail: "NF4 quantization reduces model memory by 4×: from 14 GB (fp16) to 3.5 GB (4-bit). The model quality loss is minimal because NF4 is information-theoretically optimal for normally-distributed weights.",
+    formula: "4-bit model = N × 0.5 bytes = 7B × 0.5 = 3.5 GB (vs 14 GB in fp16)",
+    gpuContents: [
+      [{ type:'frozen', label:'4-bit Model (frozen)', size:'3.5 GB', width:100 }],
+      [{ type:'frozen', label:'4-bit Model (frozen)', size:'3.5 GB', width:100 }],
+      [{ type:'frozen', label:'4-bit Model (frozen)', size:'3.5 GB', width:100 }],
+      [{ type:'frozen', label:'4-bit Model (frozen)', size:'3.5 GB', width:100 }],
+    ],
+    memory: [{ p:3.5,g:0,o:0,a:0 },{ p:3.5,g:0,o:0,a:0 },{ p:3.5,g:0,o:0,a:0 },{ p:3.5,g:0,o:0,a:0 }],
+    commType: 'none', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 2: LoRA Adapter Injection",
+    subtitle: "Small trainable matrices added alongside frozen layers",
+    description: "Low-Rank Adaptation (LoRA) injects small trainable matrices into the frozen model. For each target layer (Q, K, V, O projections across 28 transformer layers), two small matrices A (down-project) and B (up-project) are added.\n\nWith rank=64 applied to all linear layers:\n• Trainable params: ~160M (only 2.3% of the 7B base)\n• LoRA memory: ~0.3 GB in fp16\n\nThe output of a layer becomes: y = W_frozen(x) + B·A(x), where W is frozen (4-bit) and A,B are trainable (fp16).",
+    detail: "QLoRA = Quantized base (4-bit bitsandbytes) + LoRA adapters (fp16). Only LoRA weights receive gradients, slashing memory for gradients and optimizer states by ~44× compared to full fine-tuning.",
+    formula: "LoRA params = rank × hidden × 2 × num_layers × num_projections ≈ 160M = 0.3 GB",
+    gpuContents: [
+      [{ type:'frozen', label:'4-bit Base (frozen)', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA Adapters', size:'0.3 GB', width:30 }],
+      [{ type:'frozen', label:'4-bit Base (frozen)', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA Adapters', size:'0.3 GB', width:30 }],
+      [{ type:'frozen', label:'4-bit Base (frozen)', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA Adapters', size:'0.3 GB', width:30 }],
+      [{ type:'frozen', label:'4-bit Base (frozen)', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA Adapters', size:'0.3 GB', width:30 }],
+    ],
+    memory: [{ p:3.8,g:0,o:0,a:0 },{ p:3.8,g:0,o:0,a:0 },{ p:3.8,g:0,o:0,a:0 },{ p:3.8,g:0,o:0,a:0 }],
+    commType: 'none', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 3: DDP Replication",
+    subtitle: "Quantized model + LoRA adapters replicated to all GPUs",
+    description: "Just like standard Distributed Data Parallel, the entire model (4-bit base + fp16 LoRA adapters) is replicated to each GPU. Rank 0 broadcasts the state to all others.\n\nThe critical difference: the replicated model is only 3.8 GB per GPU instead of 14 GB, because the base weights are in 4-bit format.",
+    detail: "DDP replication now costs 3.8 GB per GPU instead of 14 GB — a 3.7× reduction from quantization alone. The 4-bit base weights are identical on all GPUs; only LoRA adapters will be updated.",
+    formula: "Per GPU = 3.5 GB (4-bit base) + 0.3 GB (LoRA fp16) = 3.8 GB",
+    gpuContents: [
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:30 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:30 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:30 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:30 }],
+    ],
+    memory: [{ p:3.8,g:0,o:0,a:0 },{ p:3.8,g:0,o:0,a:0 },{ p:3.8,g:0,o:0,a:0 },{ p:3.8,g:0,o:0,a:0 }],
+    commType: 'broadcast', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 4: Data Distribution",
+    subtitle: "Same as vanilla DDP — batch split across GPUs",
+    description: "Identical to standard DDP: the training batch is split using DistributedSampler. Each GPU gets its own mini-batch of different training examples.",
+    detail: "Data distribution is unchanged by quantization or LoRA — it's purely a data parallelism concern.",
+    formula: "Mini-batch per GPU = Global Batch ÷ 4 = 8 samples each",
+    gpuContents: [
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'data', label:'Data 0', size:'', width:20 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'data', label:'Data 1', size:'', width:20 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'data', label:'Data 2', size:'', width:20 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'data', label:'Data 3', size:'', width:20 }],
+    ],
+    memory: [{ p:3.8,g:0,o:0,a:0.1 },{ p:3.8,g:0,o:0,a:0.1 },{ p:3.8,g:0,o:0,a:0.1 },{ p:3.8,g:0,o:0,a:0.1 }],
+    commType: 'none', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 5: Forward Pass (Dequantize + LoRA)",
+    subtitle: "4-bit → fp16 on-the-fly, then add LoRA contribution",
+    description: "During forward pass, for each layer:\n1. The 4-bit frozen weights are dequantized to fp16 on-the-fly\n2. Standard matrix multiplication: h = W_dequant · x\n3. LoRA contribution added: h = h + B · (A · x)\n4. Activations are stored for backward pass\n\nThe dequantized fp16 weights are temporary and discarded after use — they don't persist in memory.",
+    detail: "Dequantization adds a small compute overhead but saves massive memory. The full fp16 layer never exists simultaneously in memory — only one block at a time is dequantized.",
+    formula: "Activations ≈ 2 GB | Total so far: 3.8 + 2 = 5.8 GB (well under 16 GB)",
+    gpuContents: [
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'activations', label:'Activations', size:'~2 GB', width:50 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'activations', label:'Activations', size:'~2 GB', width:50 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'activations', label:'Activations', size:'~2 GB', width:50 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'activations', label:'Activations', size:'~2 GB', width:50 }],
+    ],
+    memory: [{ p:3.8,g:0,o:0,a:2 },{ p:3.8,g:0,o:0,a:2 },{ p:3.8,g:0,o:0,a:2 },{ p:3.8,g:0,o:0,a:2 }],
+    commType: 'none', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 6: Backward Pass — LoRA Gradients Only",
+    subtitle: "Gradients computed for 160M LoRA params, not 7B base params",
+    description: "The backward pass computes gradients ONLY for the trainable LoRA adapter parameters. The 7B frozen base model parameters do not receive gradients — they are excluded from the computation graph.\n\nLoRA gradients: 160M params × 2 bytes = 0.3 GB per GPU.\nCompare to full fine-tuning gradients: 7B × 2 = 14 GB per GPU.\nThat's a 47× reduction in gradient memory!",
+    detail: "This is the key insight of QLoRA: by freezing the base model and only training tiny adapters, gradient memory drops from 14 GB to 0.3 GB. The gradient computation still flows through the frozen layers (for chain rule), but no gradient tensors are stored for them.",
+    formula: "LoRA grads = 160M × 2 bytes = 0.3 GB (vs 14 GB for full model = 47× less)",
+    gpuContents: [
+      [{ type:'frozen', label:'4-bit Base (no grad)', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'LoRA Grads', size:'0.3 GB', width:20 }],
+      [{ type:'frozen', label:'4-bit Base (no grad)', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'LoRA Grads', size:'0.3 GB', width:20 }],
+      [{ type:'frozen', label:'4-bit Base (no grad)', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'LoRA Grads', size:'0.3 GB', width:20 }],
+      [{ type:'frozen', label:'4-bit Base (no grad)', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'LoRA Grads', size:'0.3 GB', width:20 }],
+    ],
+    memory: [{ p:3.8,g:0.3,o:0,a:2 },{ p:3.8,g:0.3,o:0,a:2 },{ p:3.8,g:0.3,o:0,a:2 },{ p:3.8,g:0.3,o:0,a:2 }],
+    commType: 'none', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 7: AllReduce — LoRA Gradients Only",
+    subtitle: "Ring AllReduce syncs 0.3 GB instead of 14 GB",
+    description: "Ring AllReduce synchronizes only the LoRA adapter gradients across GPUs. Since LoRA gradients are only 0.3 GB (vs 14 GB for full model gradients), this communication step is ~47× faster.\n\nThe AllReduce algorithm is identical to vanilla DDP — the only difference is the size of the data being synchronized.",
+    detail: "Communication time is proportional to data size. Syncing 0.3 GB of LoRA gradients vs 14 GB of full gradients means the AllReduce bottleneck is nearly eliminated.",
+    formula: "AllReduce data = 2 × (W-1)/W × 0.3 GB ≈ 0.45 GB per GPU (vs 21 GB)",
+    gpuContents: [
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'Avg LoRA ∇', size:'0.3 GB', width:20 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'Avg LoRA ∇', size:'0.3 GB', width:20 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'Avg LoRA ∇', size:'0.3 GB', width:20 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'Avg LoRA ∇', size:'0.3 GB', width:20 }],
+    ],
+    memory: [{ p:3.8,g:0.3,o:0,a:0 },{ p:3.8,g:0.3,o:0,a:0 },{ p:3.8,g:0.3,o:0,a:0 },{ p:3.8,g:0.3,o:0,a:0 }],
+    commType: 'ring', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 8: Optimizer Update — LoRA Only",
+    subtitle: "Adam updates 160M params instead of 7B",
+    description: "Adam (Adaptive Moment Estimation) optimizer updates only the LoRA adapter parameters. Since there are only 160M trainable params:\n\n• Momentum (m): 160M × 4 bytes = 0.64 GB\n• Variance (v): 160M × 4 bytes = 0.64 GB\n• Total optimizer states: ~1.3 GB per GPU\n\nCompare to full fine-tuning optimizer: 7B × 8 = 56 GB per GPU — a 43× reduction!",
+    detail: "The optimizer only tracks states for trainable parameters. By reducing trainable params from 7B to 160M, optimizer memory drops from 56 GB to 1.3 GB.",
+    formula: "LoRA optimizer = 160M × 8 bytes = 1.3 GB (vs 56 GB = 43× less)",
+    gpuContents: [
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'∇', size:'0.3 GB', width:15 },{ type:'optimizer', label:'Adam (LoRA)', size:'1.3 GB', width:40 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'∇', size:'0.3 GB', width:15 },{ type:'optimizer', label:'Adam (LoRA)', size:'1.3 GB', width:40 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'∇', size:'0.3 GB', width:15 },{ type:'optimizer', label:'Adam (LoRA)', size:'1.3 GB', width:40 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'∇', size:'0.3 GB', width:15 },{ type:'optimizer', label:'Adam (LoRA)', size:'1.3 GB', width:40 }],
+    ],
+    memory: [{ p:3.8,g:0.3,o:1.3,a:0 },{ p:3.8,g:0.3,o:1.3,a:0 },{ p:3.8,g:0.3,o:1.3,a:0 },{ p:3.8,g:0.3,o:1.3,a:0 }],
+    commType: 'none', status: ['active','active','active','active'],
+    showAdam: true,
+  },
+  {
+    title: "Step 9: Memory Analysis — QLoRA + DDP Fits!",
+    subtitle: "~7.4 GB per GPU — easily fits on T4",
+    description: "QLoRA + Distributed Data Parallel reduces per-GPU memory from 84 GB (vanilla DDP) to just ~7.4 GB — an 11× reduction!\n\nBreakdown per GPU:\n• 4-bit base model (frozen): 3.5 GB\n• LoRA adapters (fp16): 0.3 GB\n• LoRA gradients: 0.3 GB\n• Adam optimizer (LoRA only): 1.3 GB\n• Activations: ~2 GB\n• Total: ~7.4 GB → fits in 16 GB with room for larger batches!",
+    detail: "Quantization (4-bit) + LoRA (train only 2.3%) combine to reduce every memory component: model 4× smaller, gradients 47× smaller, optimizer 43× smaller. This makes DDP viable even for 7B models on T4 GPUs.",
+    formula: "Total = 3.5 + 0.3 + 0.3 + 1.3 + 2.0 = 7.4 GB << 16 GB",
+    gpuContents: [
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'∇', size:'0.3 GB', width:15 },{ type:'optimizer', label:'Optim', size:'1.3 GB', width:35 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'∇', size:'0.3 GB', width:15 },{ type:'optimizer', label:'Optim', size:'1.3 GB', width:35 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'∇', size:'0.3 GB', width:15 },{ type:'optimizer', label:'Optim', size:'1.3 GB', width:35 }],
+      [{ type:'frozen', label:'4-bit Base', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA', size:'0.3 GB', width:20 },{ type:'grads', label:'∇', size:'0.3 GB', width:15 },{ type:'optimizer', label:'Optim', size:'1.3 GB', width:35 }],
+    ],
+    memory: [{ p:3.8,g:0.3,o:1.3,a:2 },{ p:3.8,g:0.3,o:1.3,a:2 },{ p:3.8,g:0.3,o:1.3,a:2 },{ p:3.8,g:0.3,o:1.3,a:2 }],
+    commType: 'none', status: ['success','success','success','success'], showAdam: false,
+  },
+];
+
+// ── QLoRA + FSDP Step Definitions ───────────────────────────────────────
+const BNB_FSDP_STEPS = [
+  {
+    title: "Step 1: 4-bit Quantization (NF4)",
+    subtitle: "Same bitsandbytes quantization as QLoRA + DDP",
+    description: "The Qwen2.5-7B model is loaded in 4-bit NormalFloat (NF4) format using bitsandbytes, reducing model memory from 14 GB to 3.5 GB. The base model is frozen.\n\nLoRA adapters (rank=64, ~160M params, 0.3 GB in fp16) are injected into the frozen layers as trainable parameters.",
+    detail: "The quantization and LoRA injection steps are identical to QLoRA + DDP. The difference starts at how we distribute the model across GPUs.",
+    formula: "4-bit model (3.5 GB) + LoRA adapters (0.3 GB) = 3.8 GB total model",
+    gpuContents: [
+      [{ type:'frozen', label:'4-bit Base (frozen)', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA Adapters', size:'0.3 GB', width:30 }],
+      [{ type:'frozen', label:'4-bit Base (frozen)', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA Adapters', size:'0.3 GB', width:30 }],
+      [{ type:'frozen', label:'4-bit Base (frozen)', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA Adapters', size:'0.3 GB', width:30 }],
+      [{ type:'frozen', label:'4-bit Base (frozen)', size:'3.5 GB', width:100 },{ type:'lora', label:'LoRA Adapters', size:'0.3 GB', width:30 }],
+    ],
+    memory: [{ p:3.8,g:0,o:0,a:0 },{ p:3.8,g:0,o:0,a:0 },{ p:3.8,g:0,o:0,a:0 },{ p:3.8,g:0,o:0,a:0 }],
+    commType: 'none', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 2: FSDP Sharding",
+    subtitle: "Shard 4-bit base + LoRA + optimizer across 4 GPUs",
+    description: "Fully Sharded Data Parallel shards everything across GPUs — including the 4-bit quantized base model, the LoRA adapters, and (later) the optimizer states.\n\nPer GPU after sharding:\n• 4-bit base shard: 3.5/4 = 0.875 GB\n• LoRA adapter shard: 0.3/4 = 0.075 GB\n• Total: ~0.95 GB per GPU",
+    detail: "Even though the 4-bit model is already small (3.5 GB), sharding it 4 ways brings each GPU's share down to under 1 GB. This frees massive headroom for batch size or longer sequences.",
+    formula: "Per GPU = 3.5/4 + 0.3/4 = 0.875 + 0.075 = 0.95 GB",
+    gpuContents: [
+      [{ type:'frozen', label:'Base Shard 0', size:'0.875 GB', width:25, shard:true },{ type:'lora', label:'LoRA S0', size:'0.075 GB', width:15, shard:true }],
+      [{ type:'frozen', label:'Base Shard 1', size:'0.875 GB', width:25, shard:true },{ type:'lora', label:'LoRA S1', size:'0.075 GB', width:15, shard:true }],
+      [{ type:'frozen', label:'Base Shard 2', size:'0.875 GB', width:25, shard:true },{ type:'lora', label:'LoRA S2', size:'0.075 GB', width:15, shard:true }],
+      [{ type:'frozen', label:'Base Shard 3', size:'0.875 GB', width:25, shard:true },{ type:'lora', label:'LoRA S3', size:'0.075 GB', width:15, shard:true }],
+    ],
+    memory: [{ p:0.95,g:0,o:0,a:0 },{ p:0.95,g:0,o:0,a:0 },{ p:0.95,g:0,o:0,a:0 },{ p:0.95,g:0,o:0,a:0 }],
+    commType: 'none', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 3: All-Gather + Forward Pass",
+    subtitle: "Per-layer loop (×28): gather → dequantize → forward → reshard",
+    description: "For each of the 28 transformer layers:\n1. All-Gather collects all shards of the layer (base + LoRA)\n2. 4-bit weights dequantized to fp16 on-the-fly\n3. Forward pass: h = W_dequant(x) + B·A(x)\n4. Activations stored (~70 MB per layer)\n5. Non-owned shards freed (reshard)\n\nThis per-layer gather-compute-free cycle is identical to vanilla FSDP, but operates on much smaller tensors thanks to 4-bit quantization. After all 28 layers: ~2 GB accumulated activations.",
+    detail: "Each layer's full 4-bit weights are ~125 MB (3.5 GB / 28 layers), gathered from 4 shards of ~31 MB each. Compare to vanilla FSDP which gathers ~500 MB per layer in fp16 — 4× less communication.",
+    formula: "Per-layer gather = 4 × ~31 MB = ~125 MB (4-bit) vs ~500 MB (fp16) = 4× less comm",
+    gpuContents: [
+      [{ type:'frozen', label:'Full Layer (temp)', size:'~125 MB', width:100, temp:true },{ type:'lora', label:'LoRA Layer', size:'', width:20, temp:true },{ type:'activations', label:'Activations', size:'', width:40 }],
+      [{ type:'frozen', label:'Full Layer (temp)', size:'~125 MB', width:100, temp:true },{ type:'lora', label:'LoRA Layer', size:'', width:20, temp:true },{ type:'activations', label:'Activations', size:'', width:40 }],
+      [{ type:'frozen', label:'Full Layer (temp)', size:'~125 MB', width:100, temp:true },{ type:'lora', label:'LoRA Layer', size:'', width:20, temp:true },{ type:'activations', label:'Activations', size:'', width:40 }],
+      [{ type:'frozen', label:'Full Layer (temp)', size:'~125 MB', width:100, temp:true },{ type:'lora', label:'LoRA Layer', size:'', width:20, temp:true },{ type:'activations', label:'Activations', size:'', width:40 }],
+    ],
+    memory: [{ p:0.95,g:0,o:0,a:2.0 },{ p:0.95,g:0,o:0,a:2.0 },{ p:0.95,g:0,o:0,a:2.0 },{ p:0.95,g:0,o:0,a:2.0 }],
+    commType: 'allgather', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 4: All-Gather + Backward Pass",
+    subtitle: "Per-layer loop (×28 reverse): gather → backward → reduce-scatter",
+    description: "For each layer in reverse (28 → 1), layers are re-gathered for the backward pass. Gradients are computed only for the LoRA adapter parameters — the frozen 4-bit base receives no gradients.\n\nPer layer: 11 MB unsharded LoRA grads → Reduce-Scatter → ~2.8 MB shard kept per GPU. Accumulated across 28 layers: 28 × 2.8 MB = 0.075 GB. Activations are freed as each layer completes (~70 MB freed per layer).",
+    detail: "Gradient computation flows through the frozen layers (chain rule requires it), but no gradient tensors are stored for the 7B frozen parameters. Only LoRA grads are materialized and reduce-scattered per layer.",
+    formula: "Per-layer LoRA grads = (160M/28) × 2 bytes ≈ 11 MB → shard = 11/4 ≈ 2.8 MB | 28 × 2.8 = 0.075 GB",
+    gpuContents: [
+      [{ type:'frozen', label:'Base Shard 0', size:'0.875 GB', width:25, shard:true },{ type:'lora', label:'LoRA S0', size:'0.075 GB', width:15, shard:true },{ type:'grads', label:'∇ Shard 0', size:'0.075 GB', width:15, shard:true }],
+      [{ type:'frozen', label:'Base Shard 1', size:'0.875 GB', width:25, shard:true },{ type:'lora', label:'LoRA S1', size:'0.075 GB', width:15, shard:true },{ type:'grads', label:'∇ Shard 1', size:'0.075 GB', width:15, shard:true }],
+      [{ type:'frozen', label:'Base Shard 2', size:'0.875 GB', width:25, shard:true },{ type:'lora', label:'LoRA S2', size:'0.075 GB', width:15, shard:true },{ type:'grads', label:'∇ Shard 2', size:'0.075 GB', width:15, shard:true }],
+      [{ type:'frozen', label:'Base Shard 3', size:'0.875 GB', width:25, shard:true },{ type:'lora', label:'LoRA S3', size:'0.075 GB', width:15, shard:true },{ type:'grads', label:'∇ Shard 3', size:'0.075 GB', width:15, shard:true }],
+    ],
+    memory: [{ p:0.95,g:0.075,o:0,a:0 },{ p:0.95,g:0.075,o:0,a:0 },{ p:0.95,g:0.075,o:0,a:0 },{ p:0.95,g:0.075,o:0,a:0 }],
+    commType: 'allgather', status: ['active','active','active','active'], showAdam: false,
+  },
+  {
+    title: "Step 5: Reduce-Scatter + Optimizer Update",
+    subtitle: "Distribute LoRA grads, update sharded LoRA params",
+    description: "Reduce-Scatter distributes the reduced LoRA gradients to each GPU's shard. Then Adam updates only the local LoRA parameter shard.\n\nOptimizer states per GPU (sharded):\n• Momentum shard: 160M/4 × 4 bytes = 0.16 GB\n• Variance shard: 160M/4 × 4 bytes = 0.16 GB\n• Total optimizer shard: ~0.33 GB per GPU",
+    detail: "The sharded optimizer stores states for only 40M parameters (160M / 4 GPUs). This is 170× less memory than vanilla DDP's 7B-parameter optimizer (56 GB vs 0.33 GB).",
+    formula: "Optimizer shard = (160M/4) × 8 = 0.33 GB per GPU (vs 56 GB = 170× less)",
+    gpuContents: [
+      [{ type:'frozen', label:'Base S0', size:'0.875 GB', width:25, shard:true },{ type:'lora', label:'LoRA S0', size:'0.075 GB', width:15, shard:true },{ type:'grads', label:'∇ S0', size:'0.075 GB', width:15, shard:true },{ type:'optimizer', label:'Optim S0', size:'0.33 GB', width:25, shard:true }],
+      [{ type:'frozen', label:'Base S1', size:'0.875 GB', width:25, shard:true },{ type:'lora', label:'LoRA S1', size:'0.075 GB', width:15, shard:true },{ type:'grads', label:'∇ S1', size:'0.075 GB', width:15, shard:true },{ type:'optimizer', label:'Optim S1', size:'0.33 GB', width:25, shard:true }],
+      [{ type:'frozen', label:'Base S2', size:'0.875 GB', width:25, shard:true },{ type:'lora', label:'LoRA S2', size:'0.075 GB', width:15, shard:true },{ type:'grads', label:'∇ S2', size:'0.075 GB', width:15, shard:true },{ type:'optimizer', label:'Optim S2', size:'0.33 GB', width:25, shard:true }],
+      [{ type:'frozen', label:'Base S3', size:'0.875 GB', width:25, shard:true },{ type:'lora', label:'LoRA S3', size:'0.075 GB', width:15, shard:true },{ type:'grads', label:'∇ S3', size:'0.075 GB', width:15, shard:true },{ type:'optimizer', label:'Optim S3', size:'0.33 GB', width:25, shard:true }],
+    ],
+    memory: [{ p:0.95,g:0.075,o:0.33,a:0 },{ p:0.95,g:0.075,o:0.33,a:0 },{ p:0.95,g:0.075,o:0.33,a:0 },{ p:0.95,g:0.075,o:0.33,a:0 }],
+    commType: 'reducescatter', status: ['active','active','active','active'],
+    showAdam: true,
+  },
+  {
+    title: "Step 6: Memory Analysis — QLoRA + FSDP",
+    subtitle: "~3.4 GB per GPU — massive headroom on T4",
+    description: "QLoRA + Fully Sharded Data Parallel achieves extraordinary memory efficiency:\n\n• 4-bit base shard: 0.875 GB\n• LoRA adapter shard: 0.075 GB\n• LoRA gradient shard: 0.075 GB\n• Adam optimizer shard: 0.33 GB\n• Activations: ~2 GB\n• Total: ~3.4 GB per GPU\n\nThis is 25× less than vanilla DDP (84 GB) and leaves ~12.6 GB of headroom on a T4 for larger batches, longer sequences, or even larger models.",
+    detail: "With only 3.4 GB per GPU, you could theoretically train models up to ~30B parameters using QLoRA + FSDP on 4× T4 GPUs. This combination unlocks large model training on consumer-grade hardware.",
+    formula: "Total = 0.875 + 0.075 + 0.075 + 0.33 + 2.0 = 3.4 GB << 16 GB",
+    gpuContents: [
+      [{ type:'frozen', label:'Base S0', size:'0.875', width:25, shard:true },{ type:'lora', label:'LoRA', size:'0.075', width:10, shard:true },{ type:'grads', label:'∇', size:'0.075', width:10, shard:true },{ type:'optimizer', label:'Opt', size:'0.33', width:20, shard:true }],
+      [{ type:'frozen', label:'Base S1', size:'0.875', width:25, shard:true },{ type:'lora', label:'LoRA', size:'0.075', width:10, shard:true },{ type:'grads', label:'∇', size:'0.075', width:10, shard:true },{ type:'optimizer', label:'Opt', size:'0.33', width:20, shard:true }],
+      [{ type:'frozen', label:'Base S2', size:'0.875', width:25, shard:true },{ type:'lora', label:'LoRA', size:'0.075', width:10, shard:true },{ type:'grads', label:'∇', size:'0.075', width:10, shard:true },{ type:'optimizer', label:'Opt', size:'0.33', width:20, shard:true }],
+      [{ type:'frozen', label:'Base S3', size:'0.875', width:25, shard:true },{ type:'lora', label:'LoRA', size:'0.075', width:10, shard:true },{ type:'grads', label:'∇', size:'0.075', width:10, shard:true },{ type:'optimizer', label:'Opt', size:'0.33', width:20, shard:true }],
+    ],
+    memory: [{ p:0.95,g:0.075,o:0.33,a:2 },{ p:0.95,g:0.075,o:0.33,a:2 },{ p:0.95,g:0.075,o:0.33,a:2 },{ p:0.95,g:0.075,o:0.33,a:2 }],
+    commType: 'none', status: ['success','success','success','success'], showAdam: false,
+  },
+];
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMPONENTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function ModelSpec() {
+  return (
+    <div className="flex flex-wrap gap-3 justify-center mb-6">
+      {[
+        { label:'Model', value: MODEL.name, color:'#3b82f6' },
+        { label:'Params', value: MODEL.params, color:'#8b5cf6' },
+        { label:'Layers', value: MODEL.layers, color:'#10b981' },
+        { label:'FP16 Size', value:`${MODEL.fp16Size} GB`, color:'#f59e0b' },
+        { label:'GPU', value: MODEL.gpuName, color:'#06b6d4' },
+        { label:'VRAM', value:`${MODEL.gpuVRAM} GB`, color:'#ef4444' },
+        { label:'GPUs', value:`${MODEL.numGPUs}×`, color:'#ec4899' },
+      ].map(s => (
+        <div key={s.label} className="flex items-center gap-2 px-3 py-1.5 rounded-lg mono text-xs" style={{ background:'rgba(15,23,42,0.8)', border:`1px solid ${s.color}33` }}>
+          <span className="opacity-50">{s.label}</span>
+          <span style={{ color: s.color }} className="font-semibold">{s.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Legend() {
+  return (
+    <div className="flex flex-wrap gap-4 justify-center py-3 px-4 rounded-xl" style={{ background:'rgba(15,23,42,0.6)' }}>
+      {Object.entries(COLORS).filter(([k]) => !['comm','temp'].includes(k)).map(([key, c]) => (
+        <div key={key} className="flex items-center gap-2 text-xs">
+          <div className="w-3 h-3 rounded-sm" style={{ background: c.bg }} />
+          <span className="opacity-70">{c.label}</span>
+        </div>
+      ))}
+      <div className="flex items-center gap-2 text-xs">
+        <div className="w-3 h-3 rounded-sm border-2 border-dashed" style={{ borderColor:'#64748b', background:'transparent' }} />
+        <span className="opacity-70">Temporary (gathered)</span>
+      </div>
+    </div>
+  );
+}
+
+function TabBar({ mode, setMode, setStep }) {
+  const tabs = [
+    { id:'ddp',      label:'DDP',       subtitle:'Distributed Data Parallel', icon:'⊞' },
+    { id:'fsdp',     label:'FSDP',      subtitle:'Fully Sharded Data Parallel', icon:'⊟' },
+    { id:'bnb_ddp',  label:'QLoRA+DDP', subtitle:'4-bit + LoRA + DDP', icon:'◈' },
+    { id:'bnb_fsdp', label:'QLoRA+FSDP',subtitle:'4-bit + LoRA + FSDP', icon:'◉' },
+    { id:'compare',  label:'Compare',   subtitle:'All Approaches', icon:'⊜' },
+  ];
+  return (
+    <div className="flex gap-1.5 justify-center mb-8 flex-wrap">
+      {tabs.map(t => (
+        <button key={t.id} onClick={() => { setMode(t.id); setStep(0); }}
+          className="px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 cursor-pointer"
+          style={{
+            background: mode === t.id ? 'rgba(59,130,246,0.15)' : 'rgba(15,23,42,0.4)',
+            border: `1px solid ${mode === t.id ? 'rgba(59,130,246,0.5)' : 'rgba(30,41,59,0.5)'}`,
+            color: mode === t.id ? '#93c5fd' : '#64748b',
+            boxShadow: mode === t.id ? '0 0 20px rgba(59,130,246,0.1)' : 'none',
+          }}>
+          <span className="mr-1.5 text-base">{t.icon}</span>
+          <span className="font-semibold">{t.label}</span>
+          <span className="ml-1.5 opacity-50 text-xs hidden lg:inline">{t.subtitle}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function StepTimeline({ steps, currentStep, setStep }) {
+  return (
+    <div className="flex items-center justify-center gap-1 mb-6 flex-wrap">
+      {steps.map((s, i) => (
+        <React.Fragment key={i}>
+          <button onClick={() => setStep(i)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-all cursor-pointer whitespace-nowrap"
+            style={{
+              background: i === currentStep ? 'rgba(59,130,246,0.2)' : i < currentStep ? 'rgba(16,185,129,0.1)' : 'rgba(15,23,42,0.4)',
+              border: `1px solid ${i === currentStep ? 'rgba(59,130,246,0.5)' : i < currentStep ? 'rgba(16,185,129,0.3)' : 'rgba(30,41,59,0.3)'}`,
+              color: i === currentStep ? '#93c5fd' : i < currentStep ? '#6ee7b7' : '#475569',
+            }}>
+            <span className="mono font-semibold" style={{ fontSize:'10px' }}>{i+1}</span>
+            <span className="hidden md:inline">{s.title.replace(/Step \d+: /, '')}</span>
+          </button>
+          {i < steps.length - 1 && <div className="w-3 h-px" style={{ background:'#1e293b' }} />}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function ContentBlock({ item }) {
+  const c = COLORS[item.type] || COLORS.temp;
+  const isTemp = item.temp;
+  return (
+    <div className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs mono"
+      style={{
+        background: isTemp ? 'transparent' : c.bgLight,
+        border: isTemp ? `1.5px dashed ${c.border}` : `1px solid ${c.border}`,
+        maxWidth: '100%', opacity: isTemp ? 0.6 : 1,
+      }}>
+      <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: isTemp ? 'transparent' : c.bg, border: isTemp ? `1px solid ${c.bg}` : 'none' }} />
+      <span className="truncate" style={{ color: c.bg, fontSize:'10px' }}>{item.label}</span>
+      {item.size && <span className="opacity-50 flex-shrink-0" style={{ fontSize:'9px' }}>{item.size}</span>}
+    </div>
+  );
+}
+
+function GPUCard({ index, contents, memory, status, vram }) {
+  const total = memory.p + memory.g + memory.o + memory.a;
+  const isOOM = total > vram;
+  const statusClass = status === 'error' ? 'gpu-error' : status === 'success' ? 'gpu-success' : 'gpu-active';
+  return (
+    <div className={`rounded-xl p-3 transition-all duration-300 ${statusClass}`}
+      style={{ background:'#0f1729', border:`1px solid ${isOOM ? 'rgba(239,68,68,0.4)' : status === 'success' ? 'rgba(34,197,94,0.3)' : 'rgba(30,58,138,0.3)'}`, minWidth:0 }}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: GPU_COLORS[index] }} />
+          <span className="font-semibold text-sm">GPU {index}</span>
+        </div>
+        <span className="mono text-xs" style={{ color: isOOM ? '#ef4444' : '#64748b', fontSize:'10px' }}>{total.toFixed(1)}/{vram} GB</span>
+      </div>
+      <div className="flex flex-col gap-1 mb-2 min-h-[40px]">
+        {contents.map((item, i) => <ContentBlock key={i} item={item} />)}
+      </div>
+      <div className="h-3 rounded-full overflow-hidden flex" style={{ background:'#1a2340' }}>
+        {memory.p > 0 && <div className="h-full bar-fill" style={{ width:`${(memory.p/vram)*100}%`, background:COLORS.params.bg }} />}
+        {memory.g > 0 && <div className="h-full bar-fill" style={{ width:`${(memory.g/vram)*100}%`, background:COLORS.grads.bg }} />}
+        {memory.o > 0 && <div className="h-full bar-fill" style={{ width:`${(memory.o/vram)*100}%`, background:COLORS.optimizer.bg }} />}
+        {memory.a > 0 && <div className="h-full bar-fill" style={{ width:`${(memory.a/vram)*100}%`, background:COLORS.activations.bg }} />}
+        {isOOM && <div className="h-full flex-1 bar-fill" style={{ background:'repeating-linear-gradient(45deg, #ef4444 0px, #ef4444 3px, #991b1b 3px, #991b1b 6px)' }} />}
+      </div>
+      {isOOM && <div className="mt-1.5 text-center"><span className="mono text-xs px-2 py-0.5 rounded-full" style={{ background:'rgba(239,68,68,0.15)', color:'#ef4444', border:'1px solid rgba(239,68,68,0.3)', fontSize:'10px' }}>OOM! {total.toFixed(0)} GB &gt; {vram} GB</span></div>}
+      {status === 'success' && !isOOM && <div className="mt-1.5 text-center"><span className="mono text-xs px-2 py-0.5 rounded-full" style={{ background:'rgba(34,197,94,0.15)', color:'#22c55e', border:'1px solid rgba(34,197,94,0.3)', fontSize:'10px' }}>FITS! {total.toFixed(1)} GB</span></div>}
+    </div>
+  );
+}
+
+// ── Adam Explainer (expandable) ──────────────────────────────────────────
+function AdamExplainer() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-xl mb-4 overflow-hidden" style={{ background:'rgba(245,158,11,0.05)', border:'1px solid rgba(245,158,11,0.2)' }}>
+      <button onClick={() => setOpen(!open)} className="w-full px-4 py-3 flex items-center justify-between cursor-pointer text-left" style={{ background:'rgba(245,158,11,0.08)' }}>
+        <div className="flex items-center gap-2">
+          <span style={{ color:'#f59e0b', fontSize:'14px' }}>{open ? '▼' : '▶'}</span>
+          <span className="font-semibold text-sm" style={{ color:'#f59e0b' }}>What is Adam (Adaptive Moment Estimation)?</span>
+        </div>
+        <span className="text-xs opacity-40">{open ? 'collapse' : 'expand'}</span>
+      </button>
+      {open && (
+        <div className="px-4 py-4 space-y-4 fade-in">
+          <div>
+            <div className="text-xs font-semibold mb-2 opacity-70">Why Not Simple SGD?</div>
+            <div className="text-xs opacity-70 leading-relaxed">
+              Simple Stochastic Gradient Descent (SGD) uses a single learning rate for all parameters. For a large model like Qwen2.5-7B with 7 billion parameters, different parameters need different learning rates. Some parameters have stable, consistent gradients and can tolerate larger updates, while others have noisy, volatile gradients and need smaller, more cautious updates.
+            </div>
+          </div>
+          <div>
+            <div className="text-xs font-semibold mb-2 opacity-70">How Adam Solves This</div>
+            <div className="text-xs opacity-70 leading-relaxed">
+              Adam maintains <strong>two running averages per parameter</strong>:
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+              <div className="rounded-lg p-3" style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.15)' }}>
+                <div className="text-xs font-semibold mb-1" style={{ color:'#fbbf24' }}>1st Moment "m" (Momentum)</div>
+                <div className="text-xs opacity-60">Exponential moving average of gradients. Acts as momentum — smooths out noisy gradient directions so the optimizer doesn't oscillate.</div>
+              </div>
+              <div className="rounded-lg p-3" style={{ background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.15)' }}>
+                <div className="text-xs font-semibold mb-1" style={{ color:'#fbbf24' }}>2nd Moment "v" (Variance)</div>
+                <div className="text-xs opacity-60">Exponential moving average of squared gradients. Adapts the learning rate per-parameter — parameters with large or noisy gradients get smaller updates.</div>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-lg p-3" style={{ background:'rgba(6,182,212,0.07)', border:'1px solid rgba(6,182,212,0.15)' }}>
+            <div className="text-xs font-semibold mb-2" style={{ color:'#22d3ee' }}>Simple Example — 2 Parameters Over 4 Steps</div>
+            <div className="mono text-xs opacity-70 space-y-1" style={{ fontSize:'10px' }}>
+              <div>Param A gradients: [0.10, 0.12, 0.11, 0.09] <span className="opacity-40">← stable, consistent</span></div>
+              <div>Param B gradients: [2.00, -1.50, 3.00, -2.50] <span className="opacity-40">← noisy, volatile</span></div>
+              <div className="pt-2"><span style={{ color:'#ef4444' }}>SGD (lr=0.01):</span> Same step size for both. A moves too slow, B oscillates wildly.</div>
+              <div className="pt-1"><span style={{ color:'#22c55e' }}>Adam:</span> Sees A is stable (low variance) → larger effective lr → faster convergence.</div>
+              <div>{'           '}Sees B is noisy (high variance) → smaller effective lr → dampened oscillation.</div>
+            </div>
+          </div>
+          <div className="rounded-lg p-3" style={{ background:'rgba(239,68,68,0.06)', border:'1px solid rgba(239,68,68,0.15)' }}>
+            <div className="text-xs font-semibold mb-1" style={{ color:'#ef4444' }}>The Memory Cost</div>
+            <div className="text-xs opacity-70 leading-relaxed">
+              Each of the 7B parameters needs <strong>two extra fp32 values</strong> (m and v): 7B × 4 bytes × 2 = <strong>56 GB</strong> of optimizer state alone. This often dominates the total memory budget, exceeding even the model parameters themselves.
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Communication Overlay SVG ────────────────────────────────────────────
+function CommOverlay({ type }) {
+  if (type === 'none') return null;
+  const w = 600, h = 80;
+
+  if (type === 'broadcast') {
+    return (
+      <div className="flex justify-center my-2 comm-pulse">
+        <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+          <defs><marker id="arr-b" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0,0 8,3 0,6" fill="#3b82f6" /></marker></defs>
+          <text x={w/2} y={16} textAnchor="middle" fill="#3b82f6" fontSize="11" fontFamily="Source Code Pro">Broadcast from Rank 0</text>
+          {[1,2,3].map(i => <line key={i} x1={75} y1={32} x2={75+i*150} y2={60} stroke="#3b82f6" strokeWidth="1.5" className="arrow-flow" markerEnd="url(#arr-b)" />)}
+        </svg>
+      </div>
+    );
+  }
+  if (type === 'ring') {
+    return (
+      <div className="flex justify-center my-3">
+        <div className="rounded-xl px-6 py-4" style={{ background:'rgba(251,191,36,0.05)', border:'1px solid rgba(251,191,36,0.15)' }}>
+          <div className="text-center mb-3"><span className="mono text-xs font-semibold" style={{ color:'#fbbf24' }}>Ring AllReduce Topology</span></div>
+          <svg width="360" height="160" viewBox="0 0 360 160">
+            <defs><marker id="arr-y" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0,0 7,2.5 0,5" fill="#fbbf24" /></marker></defs>
+            {[{ x:180,y:20,label:'GPU 0' },{ x:320,y:80,label:'GPU 1' },{ x:180,y:140,label:'GPU 2' },{ x:40,y:80,label:'GPU 3' }].map((g,i) => (
+              <g key={i}><circle cx={g.x} cy={g.y} r="22" fill="#0f1729" stroke={GPU_COLORS[i]} strokeWidth="2" /><text x={g.x} y={g.y+4} textAnchor="middle" fill={GPU_COLORS[i]} fontSize="10" fontFamily="Source Code Pro" fontWeight="600">{g.label}</text></g>
+            ))}
+            {[{x1:202,y1:25,x2:298,y2:68},{x1:325,y1:102,x2:202,y2:135},{x1:158,y1:140,x2:62,y2:102},{x1:40,y1:58,x2:158,y2:25}].map((a,i) => (
+              <line key={i} x1={a.x1} y1={a.y1} x2={a.x2} y2={a.y2} stroke="#fbbf24" strokeWidth="2" className="arrow-flow" markerEnd="url(#arr-y)" />
+            ))}
+            <text x={280} y={45} fill="#fbbf24" fontSize="9" fontFamily="Source Code Pro" opacity="0.7">Phase 1:</text>
+            <text x={280} y={56} fill="#fbbf24" fontSize="9" fontFamily="Source Code Pro" opacity="0.7">Scatter-Reduce</text>
+            <text x={30} y={130} fill="#fbbf24" fontSize="9" fontFamily="Source Code Pro" opacity="0.5">Phase 2:</text>
+            <text x={30} y={141} fill="#fbbf24" fontSize="9" fontFamily="Source Code Pro" opacity="0.5">All-Gather</text>
+          </svg>
+          <div className="text-center mt-2 space-y-1">
+            <div className="mono text-xs opacity-60" style={{ fontSize:'10px' }}>Phase 1 (Scatter-Reduce): 3 rounds — each GPU reduces one chunk</div>
+            <div className="mono text-xs opacity-60" style={{ fontSize:'10px' }}>Phase 2 (All-Gather): 3 rounds — fully reduced chunks shared to all</div>
+            <div className="mono text-xs opacity-40" style={{ fontSize:'9px' }}>Total data per GPU: 2 × (W-1)/W × |grad| — bandwidth optimal</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (type === 'allgather') {
+    return (
+      <div className="flex justify-center my-2 comm-pulse">
+        <div className="rounded-xl px-5 py-3" style={{ background:'rgba(59,130,246,0.05)', border:'1px solid rgba(59,130,246,0.15)' }}>
+          <svg width="360" height="80" viewBox="0 0 360 80">
+            <defs><marker id="arr-ag" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0,0 7,2.5 0,5" fill="#3b82f6" /></marker></defs>
+            <text x="180" y="14" textAnchor="middle" fill="#3b82f6" fontSize="11" fontFamily="Source Code Pro" fontWeight="600">All-Gather: Each GPU sends its shard to all others</text>
+            {[0,1,2,3].map(i => { const x=45+i*90; return (<g key={i}><rect x={x-15} y={28} width="30" height="20" rx="4" fill={GPU_COLORS[i]} opacity="0.2" stroke={GPU_COLORS[i]} strokeWidth="1" /><text x={x} y={42} textAnchor="middle" fill={GPU_COLORS[i]} fontSize="8" fontFamily="Source Code Pro">S{i}</text>{[0,1,2,3].filter(j=>j!==i).map(j => { const x2=45+j*90; return <line key={j} x1={x} y1={50} x2={x2} y2={66} stroke={GPU_COLORS[i]} strokeWidth="1" opacity="0.4" className="arrow-flow" markerEnd="url(#arr-ag)" />; })}</g>); })}
+            {[0,1,2,3].map(i => { const x=45+i*90; return <text key={i} x={x} y={78} textAnchor="middle" fill="#64748b" fontSize="8" fontFamily="Source Code Pro">GPU {i}</text>; })}
+          </svg>
+        </div>
+      </div>
+    );
+  }
+  if (type === 'reducescatter') {
+    return (
+      <div className="flex justify-center my-2 comm-pulse">
+        <div className="rounded-xl px-5 py-3" style={{ background:'rgba(16,185,129,0.05)', border:'1px solid rgba(16,185,129,0.15)' }}>
+          <svg width="420" height="90" viewBox="0 0 420 90">
+            <defs><marker id="arr-rs" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0,0 7,2.5 0,5" fill="#10b981" /></marker></defs>
+            <text x="210" y="14" textAnchor="middle" fill="#10b981" fontSize="11" fontFamily="Source Code Pro" fontWeight="600">Reduce-Scatter: Sum gradients, each GPU gets its shard</text>
+            {[0,1,2,3].map(i => { const x=52+i*100; return (<g key={i}><rect x={x-35} y={24} width="70" height="18" rx="3" fill="rgba(16,185,129,0.1)" stroke="#10b981" strokeWidth="1" /><text x={x} y={36} textAnchor="middle" fill="#10b981" fontSize="8" fontFamily="Source Code Pro">Full Grad {i}</text><line x1={x} y1={44} x2={x} y2={62} stroke="#10b981" strokeWidth="1.5" className="arrow-flow" markerEnd="url(#arr-rs)" /><rect x={x-20} y={65} width="40" height="16" rx="3" fill="rgba(16,185,129,0.2)" stroke="#10b981" strokeWidth="1.5" /><text x={x} y={76} textAnchor="middle" fill="#10b981" fontSize="8" fontFamily="Source Code Pro" fontWeight="600">Shard {i}</text></g>); })}
+          </svg>
+          <div className="text-center mono text-xs opacity-50" style={{ fontSize:'9px' }}>Each GPU keeps only 1/4 of the reduced gradient — no GPU holds the full averaged gradient</div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+}
+
+function MemoryDetail({ memories, vram }) {
+  return (
+    <div className="rounded-xl p-4" style={{ background:'#0c1220', border:'1px solid #1e293b' }}>
+      <div className="text-xs font-semibold mb-3 opacity-60 uppercase tracking-wider">Memory Breakdown per GPU</div>
+      <div className="space-y-2">
+        {memories.map((m, i) => {
+          const total = m.p + m.g + m.o + m.a;
+          const isOOM = total > vram;
+          const barScale = Math.max(total, vram);
+          return (
+            <div key={i}>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-2 h-2 rounded-full" style={{ background: GPU_COLORS[i] }} />
+                <span className="mono text-xs opacity-70" style={{ fontSize:'10px' }}>GPU {i}</span>
+                <span className="mono text-xs ml-auto" style={{ fontSize:'10px', color: isOOM ? '#ef4444' : '#64748b' }}>{total.toFixed(1)} / {vram} GB {isOOM ? '(OOM)' : ''}</span>
+              </div>
+              <div className="h-4 rounded-md overflow-hidden flex relative" style={{ background:'#1a2340' }}>
+                {m.p > 0 && <div className="h-full bar-fill" style={{ width:`${(m.p/barScale)*100}%`, background:COLORS.params.bg }} />}
+                {m.g > 0 && <div className="h-full bar-fill" style={{ width:`${(m.g/barScale)*100}%`, background:COLORS.grads.bg }} />}
+                {m.o > 0 && <div className="h-full bar-fill" style={{ width:`${(m.o/barScale)*100}%`, background:COLORS.optimizer.bg }} />}
+                {m.a > 0 && <div className="h-full bar-fill" style={{ width:`${(m.a/barScale)*100}%`, background:COLORS.activations.bg }} />}
+                <div className="absolute top-0 bottom-0 w-px" style={{ left:`${(vram/barScale)*100}%`, background:'#ef4444', boxShadow:'0 0 4px #ef4444' }} />
+              </div>
+              <div className="flex gap-3 mt-0.5">
+                {m.p > 0 && <span className="mono" style={{ fontSize:'8px', color:COLORS.params.bg }}>P:{m.p}GB</span>}
+                {m.g > 0 && <span className="mono" style={{ fontSize:'8px', color:COLORS.grads.bg }}>G:{m.g}GB</span>}
+                {m.o > 0 && <span className="mono" style={{ fontSize:'8px', color:COLORS.optimizer.bg }}>O:{m.o}GB</span>}
+                {m.a > 0 && <span className="mono" style={{ fontSize:'8px', color:COLORS.activations.bg }}>A:{m.a}GB</span>}
+                <span className="mono ml-auto" style={{ fontSize:'8px', color:'#ef4444' }}>{vram}GB limit</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StepNav({ step, maxStep, setStep, playing, setPlaying }) {
+  return (
+    <div className="flex items-center justify-center gap-3 mt-6">
+      <button onClick={() => setStep(Math.max(0, step-1))} disabled={step===0} className="px-4 py-2 rounded-lg mono text-sm font-medium transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background:'rgba(15,23,42,0.6)', border:'1px solid #1e293b' }}>Previous</button>
+      <button onClick={() => setPlaying(!playing)} className="px-4 py-2 rounded-lg mono text-sm font-medium transition-all cursor-pointer" style={{ background: playing ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)', border:`1px solid ${playing ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)'}`, color: playing ? '#ef4444' : '#93c5fd' }}>{playing ? 'Pause' : 'Auto-Play'}</button>
+      <button onClick={() => setStep(Math.min(maxStep, step+1))} disabled={step===maxStep} className="px-4 py-2 rounded-lg mono text-sm font-medium transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed" style={{ background:'rgba(59,130,246,0.1)', border:'1px solid rgba(59,130,246,0.3)', color:'#93c5fd' }}>Next</button>
+    </div>
+  );
+}
+
+// ── Main Step View ───────────────────────────────────────────────────────
+function StepView({ steps, mode }) {
+  const [step, setStep] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  useEffect(() => { setStep(0); setPlaying(false); }, [mode]);
+  useEffect(() => {
+    if (!playing) return;
+    const timer = setInterval(() => { setStep(prev => { if (prev >= steps.length-1) { setPlaying(false); return prev; } return prev+1; }); }, 3500);
+    return () => clearInterval(timer);
+  }, [playing, steps.length]);
+
+  const s = steps[step];
+  const modeColor = MODE_COLORS[mode] || '#3b82f6';
+
+  return (
+    <div className="fade-in">
+      <StepTimeline steps={steps} currentStep={step} setStep={setStep} />
+      <div className="text-center mb-5">
+        <h2 className="text-xl font-bold mb-1" style={{ color: modeColor }}>{s.title}</h2>
+        <p className="text-sm opacity-60">{s.subtitle}</p>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3" key={step}>
+        {[0,1,2,3].map(i => <GPUCard key={i} index={i} contents={s.gpuContents[i]} memory={s.memory[i]} status={s.status[i]} vram={MODEL.gpuVRAM} />)}
+      </div>
+      <CommOverlay type={s.commType} />
+      {s.showAdam && <AdamExplainer />}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4" key={`info-${step}`}>
+        <div className="rounded-xl p-5 fade-in" style={{ background:'#0c1220', border:'1px solid #1e293b' }}>
+          <div className="text-xs font-semibold mb-2 opacity-50 uppercase tracking-wider">What's Happening</div>
+          <div className="text-sm leading-relaxed opacity-80 whitespace-pre-line mb-4">{s.description}</div>
+          <div className="rounded-lg p-3 mb-3" style={{ background:'rgba(139,92,246,0.07)', border:'1px solid rgba(139,92,246,0.2)' }}>
+            <div className="text-xs font-semibold mb-1" style={{ color:'#a78bfa' }}>Key Insight</div>
+            <div className="text-xs opacity-70 leading-relaxed">{s.detail}</div>
+          </div>
+          <div className="rounded-lg p-3" style={{ background:'rgba(6,182,212,0.07)', border:'1px solid rgba(6,182,212,0.2)' }}>
+            <div className="mono text-xs" style={{ color:'#22d3ee', fontSize:'11px' }}>{s.formula}</div>
+          </div>
+        </div>
+        <MemoryDetail memories={s.memory} vram={MODEL.gpuVRAM} />
+      </div>
+      <StepNav step={step} maxStep={steps.length-1} setStep={setStep} playing={playing} setPlaying={setPlaying} />
+    </div>
+  );
+}
+
+// ── Compare View ─────────────────────────────────────────────────────────
+function CompareView() {
+  const approaches = [
+    { label:'DDP', full:'Distributed Data Parallel', p:14, g:14, o:56, total:84, status:'error', note:'5.25× over — impossible on T4', color:'#f59e0b' },
+    { label:'FSDP', full:'Fully Sharded Data Parallel', p:3.5, g:3.5, o:14, total:21, status:'warn', note:'1.3× over — needs CPU offload', color:'#3b82f6' },
+    { label:'FSDP+Offload', full:'FSDP + CPU Offload', p:3.5, g:3.5, o:0, total:7, status:'success', note:'Optimizer on CPU RAM', color:'#06b6d4' },
+    { label:'QLoRA+DDP', full:'bitsandbytes 4-bit + LoRA + DDP', p:3.8, g:0.3, o:1.3, total:7.4, status:'success', note:'4-bit base + train only LoRA adapters', color:'#ec4899' },
+    { label:'QLoRA+FSDP', full:'bitsandbytes 4-bit + LoRA + FSDP', p:0.95, g:0.075, o:0.33, total:3.4, status:'success', note:'Everything sharded + quantized + LoRA', color:'#8b5cf6' },
+  ];
+  const vram = MODEL.gpuVRAM;
+  const maxBar = approaches[0].total;
+
+  return (
+    <div className="fade-in space-y-6">
+      <h2 className="text-lg font-bold text-center mb-4 opacity-80">Memory per GPU — Qwen2.5-7B on T4 (16 GB)</h2>
+
+      {/* Horizontal comparison bars */}
+      <div className="space-y-3">
+        {approaches.map((a, i) => {
+          const isOOM = a.total > vram;
+          return (
+            <div key={i} className="rounded-xl p-4" style={{ background:'#0f1729', border:`1px solid ${a.color}22` }}>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <span className="font-semibold text-sm" style={{ color: a.color }}>{a.label}</span>
+                  <span className="text-xs opacity-40 ml-2">{a.full}</span>
+                </div>
+                <span className="mono text-xs px-2 py-0.5 rounded-full" style={{
+                  background: a.status === 'error' ? 'rgba(239,68,68,0.15)' : a.status === 'success' ? 'rgba(34,197,94,0.15)' : 'rgba(245,158,11,0.15)',
+                  color: a.status === 'error' ? '#ef4444' : a.status === 'success' ? '#22c55e' : '#f59e0b',
+                  border: `1px solid ${a.status === 'error' ? 'rgba(239,68,68,0.3)' : a.status === 'success' ? 'rgba(34,197,94,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                  fontSize:'10px',
+                }}>{a.status === 'error' ? 'OOM' : a.status === 'success' ? 'FITS' : 'TIGHT'}</span>
+              </div>
+              <div className="h-6 rounded-md overflow-hidden relative" style={{ background:'#1a2340' }}>
+                <div className="h-full rounded-md bar-fill flex items-center" style={{ width:`${Math.min((a.total/maxBar)*100,100)}%`, background: isOOM ? 'linear-gradient(90deg, #dc2626, #ef4444)' : `linear-gradient(90deg, ${a.color}88, ${a.color})` }}>
+                  <span className="mono text-xs ml-2 font-semibold text-white" style={{ fontSize:'10px' }}>{a.total} GB</span>
+                </div>
+                <div className="absolute top-0 bottom-0" style={{ left:`${(vram/maxBar)*100}%` }}>
+                  <div className="h-full w-0.5" style={{ background:'#ef4444' }} />
+                </div>
+              </div>
+              <div className="flex justify-between mt-1">
+                <div className="flex gap-3">
+                  <span className="mono" style={{ fontSize:'8px', color:COLORS.params.bg }}>P:{a.p}GB</span>
+                  <span className="mono" style={{ fontSize:'8px', color:COLORS.grads.bg }}>G:{a.g}GB</span>
+                  <span className="mono" style={{ fontSize:'8px', color:COLORS.optimizer.bg }}>O:{a.o > 0 ? a.o+'GB' : 'CPU'}</span>
+                </div>
+                <span className="mono opacity-40" style={{ fontSize:'8px' }}>{a.note}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Reduction stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label:'DDP → FSDP', value:'4×', color:'#f59e0b', detail:'84 → 21 GB' },
+          { label:'DDP → FSDP+Off', value:'12×', color:'#06b6d4', detail:'84 → 7 GB' },
+          { label:'DDP → QLoRA+DDP', value:'11×', color:'#ec4899', detail:'84 → 7.4 GB' },
+          { label:'DDP → QLoRA+FSDP', value:'25×', color:'#8b5cf6', detail:'84 → 3.4 GB' },
+        ].map((item, i) => (
+          <div key={i} className="rounded-xl p-3 text-center" style={{ background:'#0f1729', border:`1px solid ${item.color}22` }}>
+            <div className="text-2xl font-bold" style={{ color:item.color }}>{item.value}</div>
+            <div className="text-xs opacity-50 mt-1">{item.label}</div>
+            <div className="mono opacity-30 mt-0.5" style={{ fontSize:'9px' }}>{item.detail}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Key Differences Table */}
+      <div className="rounded-xl overflow-hidden" style={{ border:'1px solid #1e293b' }}>
+        <div className="px-4 py-3 font-semibold text-sm" style={{ background:'#0f1729' }}>Key Differences</div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs" style={{ minWidth:'700px' }}>
+            <thead>
+              <tr style={{ background:'#0c1220' }}>
+                <th className="text-left px-3 py-2 opacity-50 font-medium">Aspect</th>
+                <th className="text-left px-3 py-2 font-medium" style={{ color:'#f59e0b' }}>DDP</th>
+                <th className="text-left px-3 py-2 font-medium" style={{ color:'#3b82f6' }}>FSDP</th>
+                <th className="text-left px-3 py-2 font-medium" style={{ color:'#ec4899' }}>QLoRA+DDP</th>
+                <th className="text-left px-3 py-2 font-medium" style={{ color:'#8b5cf6' }}>QLoRA+FSDP</th>
+              </tr>
+            </thead>
+            <tbody className="mono" style={{ fontSize:'10px' }}>
+              {[
+                ['Model on GPU', 'Full fp16 (14GB)', '1/W shard fp16 (3.5GB)', 'Full 4-bit (3.5GB)', '1/W shard 4-bit (0.9GB)'],
+                ['Trainable params', 'All 7B', 'All 7B', '160M LoRA (2.3%)', '160M LoRA (2.3%)'],
+                ['Memory per GPU', '84 GB', '21 GB', '7.4 GB', '3.4 GB'],
+                ['Gradient sync', 'AllReduce (14 GB)', 'Reduce-Scatter', 'AllReduce (0.3 GB)', 'Reduce-Scatter (tiny)'],
+                ['Fits on T4?', 'No', 'With offload', 'Yes', 'Yes, with headroom'],
+                ['Best for', 'Small models', 'Full fine-tune large', 'Efficient fine-tune', 'Max efficiency'],
+              ].map(([aspect, ...vals], i) => (
+                <tr key={i} style={{ background: i%2===0 ? '#0c1220' : '#0f1729' }}>
+                  <td className="px-3 py-2 opacity-60 font-sans text-xs">{aspect}</td>
+                  {vals.map((v, j) => <td key={j} className="px-3 py-2 opacity-80">{v}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Formulas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-xl p-5" style={{ background:'rgba(245,158,11,0.05)', border:'1px solid rgba(245,158,11,0.15)' }}>
+          <div className="text-sm font-semibold mb-3" style={{ color:'#f59e0b' }}>DDP Memory Formula</div>
+          <div className="mono text-xs space-y-1 opacity-80" style={{ fontSize:'11px' }}>
+            <div>Per GPU = N×2 <span className="opacity-40">(fp16 params)</span></div>
+            <div>{'       '}+ N×2 <span className="opacity-40">(fp16 grads)</span></div>
+            <div>{'       '}+ N×8 <span className="opacity-40">(fp32 Adam: m + v)</span></div>
+            <div className="pt-1 font-semibold" style={{ color:'#f59e0b' }}>{'       '}= N × 12 bytes = 84 GB</div>
+          </div>
+        </div>
+        <div className="rounded-xl p-5" style={{ background:'rgba(236,72,153,0.05)', border:'1px solid rgba(236,72,153,0.15)' }}>
+          <div className="text-sm font-semibold mb-3" style={{ color:'#ec4899' }}>QLoRA + DDP Memory Formula</div>
+          <div className="mono text-xs space-y-1 opacity-80" style={{ fontSize:'11px' }}>
+            <div>Per GPU = N×0.5 <span className="opacity-40">(4-bit base, frozen)</span></div>
+            <div>{'       '}+ L×2 <span className="opacity-40">(fp16 LoRA, L=160M)</span></div>
+            <div>{'       '}+ L×2 <span className="opacity-40">(LoRA grads only)</span></div>
+            <div>{'       '}+ L×8 <span className="opacity-40">(Adam for LoRA only)</span></div>
+            <div className="pt-1 font-semibold" style={{ color:'#ec4899' }}>{'       '}= 3.5 + 0.3 + 0.3 + 1.3 = 5.4 GB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════════════════════════
+
+function App() {
+  const [mode, setMode] = useState('ddp');
+  const [step, setStep] = useState(0);
+  return (
+    <div className="relative z-10 max-w-6xl mx-auto px-4 py-8">
+      <div className="text-center mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">
+          <span style={{ color:'#f59e0b' }}>Distributed Data Parallel</span>
+          <span className="opacity-30 mx-2">vs</span>
+          <span style={{ color:'#3b82f6' }}>Fully Sharded Data Parallel</span>
+        </h1>
+        <p className="text-sm opacity-50 mb-4">DDP vs FSDP vs QLoRA — Step-by-Step Visual Explainer</p>
+        <ModelSpec />
+        <Legend />
+      </div>
+      <TabBar mode={mode} setMode={setMode} setStep={setStep} />
+      {mode === 'ddp' && <StepView steps={DDP_STEPS} mode="ddp" />}
+      {mode === 'fsdp' && <StepView steps={FSDP_STEPS} mode="fsdp" />}
+      {mode === 'bnb_ddp' && <StepView steps={BNB_DDP_STEPS} mode="bnb_ddp" />}
+      {mode === 'bnb_fsdp' && <StepView steps={BNB_FSDP_STEPS} mode="bnb_fsdp" />}
+      {mode === 'compare' && <CompareView />}
+      <div className="text-center mt-10 pt-6 opacity-30 text-xs" style={{ borderTop:'1px solid #1e293b' }}>
+        <p>DDP = Distributed Data Parallel &nbsp;|&nbsp; FSDP = Fully Sharded Data Parallel &nbsp;|&nbsp; QLoRA = Quantized Low-Rank Adaptation</p>
+        <p className="mt-1">Adam = Adaptive Moment Estimation &nbsp;|&nbsp; NF4 = 4-bit NormalFloat (bitsandbytes)</p>
+        <p className="mt-1">Model: Qwen2.5-7B &nbsp;|&nbsp; GPU: 4× NVIDIA T4 (16 GB) &nbsp;|&nbsp; Optimizer: Adam (FP32)</p>
+        <p className="mt-1 opacity-60">References: PyTorch DDP/FSDP Documentation &nbsp;|&nbsp; Martyn Subonis — Distributed Data Parallel Training</p>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

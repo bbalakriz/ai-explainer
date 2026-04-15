@@ -1,0 +1,1892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDG Pipeline — Technical Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0e1a;
+  --bg-panel: #0f1424;
+  --bg-card: #141a2e;
+  --bg-elevated: #1a2140;
+  --bg-hover: #1e2748;
+  --border: #1e2748;
+  --border-bright: #2a3560;
+  --text-primary: #e8ecf4;
+  --text-secondary: #8892b0;
+  --text-dim: #5a6480;
+  --accent-cyan: #22d3ee;
+  --accent-cyan-dim: rgba(34, 211, 238, 0.15);
+  --accent-cyan-glow: rgba(34, 211, 238, 0.3);
+  --accent-amber: #f59e0b;
+  --accent-amber-dim: rgba(245, 158, 11, 0.15);
+  --accent-green: #34d399;
+  --accent-green-dim: rgba(52, 211, 153, 0.15);
+  --accent-rose: #fb7185;
+  --accent-rose-dim: rgba(251, 113, 133, 0.15);
+  --accent-violet: #a78bfa;
+  --accent-violet-dim: rgba(167, 139, 250, 0.15);
+  --accent-blue: #60a5fa;
+  --accent-blue-dim: rgba(96, 165, 250, 0.15);
+  --accent-orange: #fb923c;
+  --accent-orange-dim: rgba(251, 146, 60, 0.15);
+  --accent-teal: #2dd4bf;
+  --accent-teal-dim: rgba(45, 212, 191, 0.15);
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 16px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-body: 'DM Sans', sans-serif;
+  --font-display: 'Instrument Serif', serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: var(--border-bright) var(--bg-deep); }
+body {
+  font-family: var(--font-body);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::selection { background: var(--accent-cyan-dim); color: var(--accent-cyan); }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+/* ─── AMBIENT BACKGROUND ─── */
+.ambient-bg {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 20%, rgba(34,211,238,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 90% 80%, rgba(167,139,250,0.03) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 50% 50%, rgba(245,158,11,0.02) 0%, transparent 50%);
+}
+
+/* ─── LAYOUT ─── */
+.layout { display: flex; min-height: 100vh; }
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  position: fixed; top: 0; left: 0; width: 260px; height: 100vh;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  padding: 28px 0;
+  overflow-y: auto;
+  z-index: 100;
+  display: flex; flex-direction: column;
+  transition: transform 0.3s ease;
+}
+.sidebar-brand {
+  padding: 0 24px 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.sidebar-brand h1 {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.sidebar-brand p {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+
+.nav-section { padding: 8px 16px; }
+.nav-section-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 0 8px;
+  margin-bottom: 6px;
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.nav-link:hover { background: var(--bg-hover); color: var(--text-primary); }
+.nav-link.active { background: var(--accent-cyan-dim); color: var(--accent-cyan); }
+.nav-link .nav-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; opacity: 0.5; flex-shrink: 0;
+}
+.nav-link.active .nav-dot { opacity: 1; box-shadow: 0 0 8px currentColor; }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+}
+.sidebar-footer p {
+  font-size: 10px; color: var(--text-dim);
+  font-family: var(--font-mono);
+}
+
+/* ─── MOBILE NAV TOGGLE ─── */
+.nav-toggle {
+  display: none;
+  position: fixed; top: 16px; left: 16px; z-index: 200;
+  width: 40px; height: 40px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 20px;
+  cursor: pointer;
+  align-items: center; justify-content: center;
+}
+
+/* ─── MAIN CONTENT ─── */
+.main { margin-left: 260px; flex: 1; min-width: 0; }
+.content { max-width: 960px; margin: 0 auto; padding: 48px 40px 120px; }
+
+/* ─── HERO ─── */
+.hero {
+  position: relative;
+  padding: 80px 0 60px;
+  margin-bottom: 48px;
+}
+.hero::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-bright), transparent);
+}
+.hero-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--accent-cyan);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.hero-eyebrow::before {
+  content: '';
+  width: 24px; height: 1px;
+  background: var(--accent-cyan);
+}
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 5vw, 56px);
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+.hero h1 em {
+  font-style: italic;
+  color: var(--accent-cyan);
+}
+.hero-desc {
+  font-size: 17px;
+  color: var(--text-secondary);
+  max-width: 600px;
+  line-height: 1.8;
+}
+.hero-desc strong { color: var(--text-primary); font-weight: 500; }
+
+/* ─── SECTIONS ─── */
+section {
+  margin-bottom: 64px;
+  animation: fadeUp 0.6s ease both;
+}
+section[id] { scroll-margin-top: 32px; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-label::before {
+  content: '';
+  width: 16px; height: 1px;
+  background: var(--accent-cyan);
+}
+
+h2 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 400;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+h3 {
+  font-family: var(--font-body);
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+p.section-desc {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin-bottom: 28px;
+  max-width: 640px;
+  line-height: 1.8;
+}
+
+/* ─── CARDS ─── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.card:hover {
+  border-color: var(--border-bright);
+  box-shadow: var(--shadow);
+}
+
+/* ─── FILE TREE ─── */
+.file-tree {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 2;
+  overflow-x: auto;
+}
+.ft-dir { color: var(--accent-cyan); font-weight: 600; cursor: pointer; }
+.ft-dir:hover { text-decoration: underline; }
+.ft-file { color: var(--text-secondary); }
+.ft-file.highlight { color: var(--accent-amber); font-weight: 500; }
+.ft-comment { color: var(--text-dim); font-size: 12px; }
+.ft-indent { padding-left: 24px; display: block; }
+.ft-branch { color: var(--text-dim); user-select: none; }
+
+/* ─── PIPELINE FLOW ─── */
+.pipeline-flow { display: flex; flex-direction: column; gap: 0; }
+
+.step-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  position: relative;
+}
+.step-connector::before {
+  content: '';
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--border-bright), var(--accent-cyan), var(--border-bright));
+  animation: flowPulse 2s ease-in-out infinite;
+}
+@keyframes flowPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+.step-connector .dot {
+  position: absolute;
+  width: 8px; height: 8px;
+  background: var(--accent-cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--accent-cyan-glow);
+  animation: dotFlow 2s ease-in-out infinite;
+}
+@keyframes dotFlow {
+  0% { top: 0; opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { top: calc(100% - 8px); opacity: 0; }
+}
+
+.step-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+  cursor: pointer;
+}
+.step-card:hover {
+  border-color: var(--border-bright);
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+.step-card.expanded { border-color: var(--accent-cyan); }
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+}
+.step-number {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+.step-card.expanded .step-number {
+  box-shadow: 0 0 20px currentColor;
+}
+.step-header-text { flex: 1; min-width: 0; }
+.step-title {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+.step-subtitle {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.step-chevron {
+  color: var(--text-dim);
+  font-size: 16px;
+  transition: transform 0.3s;
+  flex-shrink: 0;
+}
+.step-card.expanded .step-chevron { transform: rotate(180deg); }
+
+.step-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.step-card.expanded .step-body { max-height: 2000px; }
+.step-content {
+  padding: 0 24px 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+.step-content p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.8;
+}
+
+/* Step colors */
+.step-1 .step-number { background: var(--accent-cyan-dim); color: var(--accent-cyan); }
+.step-2 .step-number { background: var(--accent-violet-dim); color: var(--accent-violet); }
+.step-3 .step-number { background: var(--accent-amber-dim); color: var(--accent-amber); }
+.step-4 .step-number { background: var(--accent-green-dim); color: var(--accent-green); }
+.step-5 .step-number { background: var(--accent-rose-dim); color: var(--accent-rose); }
+.step-6 .step-number { background: var(--accent-blue-dim); color: var(--accent-blue); }
+.step-7 .step-number { background: var(--accent-orange-dim); color: var(--accent-orange); }
+.step-8 .step-number { background: var(--accent-teal-dim); color: var(--accent-teal); }
+
+.step-1.expanded { border-color: var(--accent-cyan); }
+.step-2.expanded { border-color: var(--accent-violet); }
+.step-3.expanded { border-color: var(--accent-amber); }
+.step-4.expanded { border-color: var(--accent-green); }
+.step-5.expanded { border-color: var(--accent-rose); }
+.step-6.expanded { border-color: var(--accent-blue); }
+.step-7.expanded { border-color: var(--accent-orange); }
+.step-8.expanded { border-color: var(--accent-teal); }
+
+/* ─── CODE BLOCKS ─── */
+.code-block {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 12px 0;
+}
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid var(--border);
+}
+.code-lang {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.code-copy {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  background: none; border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+.code-copy:hover { background: var(--bg-hover); color: var(--text-primary); }
+.code-copy.copied { color: var(--accent-green); }
+pre {
+  padding: 16px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+pre .kw { color: var(--accent-violet); }
+pre .str { color: var(--accent-green); }
+pre .fn { color: var(--accent-cyan); }
+pre .num { color: var(--accent-amber); }
+pre .cm { color: var(--text-dim); font-style: italic; }
+pre .var { color: var(--accent-rose); }
+pre .op { color: var(--text-dim); }
+pre .flag { color: var(--accent-amber); }
+pre .val { color: var(--accent-green); }
+
+code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--bg-elevated);
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: var(--accent-cyan);
+  border: 1px solid var(--border);
+}
+
+/* ─── MODES TABS ─── */
+.mode-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px;
+  margin-bottom: 24px;
+  width: fit-content;
+}
+.mode-tab {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 24px;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.25s;
+}
+.mode-tab:hover { color: var(--text-secondary); }
+.mode-tab.active {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.mode-tab.active[data-mode="standalone"] { color: var(--accent-cyan); }
+.mode-tab.active[data-mode="flow"] { color: var(--accent-violet); }
+
+.mode-panel { display: none; }
+.mode-panel.active { display: block; animation: fadeUp 0.3s ease; }
+
+.mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.mode-stat {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.mode-stat-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.mode-stat-value {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mode-flow-diagram {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 20px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  margin-top: 16px;
+}
+.flow-block {
+  padding: 12px 18px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  border: 1px solid;
+  flex-shrink: 0;
+}
+.flow-arrow {
+  color: var(--text-dim);
+  font-size: 18px;
+  flex-shrink: 0;
+  animation: arrowPulse 1.5s ease-in-out infinite;
+}
+@keyframes arrowPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* ─── COMPARISON TABLE ─── */
+.compare-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin: 24px 0;
+}
+.compare-table th, .compare-table td {
+  padding: 14px 20px;
+  text-align: left;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.compare-table th {
+  background: var(--bg-elevated);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.compare-table th:nth-child(2) { color: var(--accent-cyan); }
+.compare-table th:nth-child(3) { color: var(--accent-violet); }
+.compare-table td { color: var(--text-secondary); }
+.compare-table td:first-child {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 13px;
+}
+.compare-table tr:last-child td { border-bottom: none; }
+.compare-table tr:hover td { background: var(--bg-hover); }
+
+/* ─── INTENT BROWSER ─── */
+.intent-search {
+  width: 100%;
+  padding: 14px 20px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+  margin-bottom: 16px;
+  transition: border-color 0.2s;
+}
+.intent-search:focus { border-color: var(--accent-cyan); }
+.intent-search::placeholder { color: var(--text-dim); }
+
+.intent-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.intent-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.intent-item:hover { border-color: var(--border-bright); background: var(--bg-hover); }
+.intent-item.expanded { border-color: var(--accent-cyan); background: var(--bg-elevated); }
+.intent-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.intent-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.intent-badge.billing { background: var(--accent-amber-dim); color: var(--accent-amber); }
+.intent-badge.network { background: var(--accent-rose-dim); color: var(--accent-rose); }
+.intent-badge.package { background: var(--accent-cyan-dim); color: var(--accent-cyan); }
+.intent-badge.roaming { background: var(--accent-violet-dim); color: var(--accent-violet); }
+.intent-badge.sim { background: var(--accent-green-dim); color: var(--accent-green); }
+.intent-badge.usage { background: var(--accent-blue-dim); color: var(--accent-blue); }
+.intent-badge.vas { background: var(--accent-orange-dim); color: var(--accent-orange); }
+
+.intent-desc {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, margin 0.3s ease;
+}
+.intent-item.expanded .intent-desc {
+  max-height: 200px;
+  margin-top: 12px;
+}
+.intent-desc p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* ─── PROMPT ANATOMY ─── */
+.prompt-anatomy {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.prompt-msg {
+  border-bottom: 1px solid var(--border);
+  padding: 24px;
+}
+.prompt-msg:last-child { border-bottom: none; }
+.prompt-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-bottom: 14px;
+}
+.prompt-role.system { background: var(--accent-violet-dim); color: var(--accent-violet); }
+.prompt-role.user { background: var(--accent-cyan-dim); color: var(--accent-cyan); }
+
+.prompt-rules {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+.prompt-rule {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.6;
+}
+.prompt-rule .rule-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  margin-top: 1px;
+}
+
+.prompt-vars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.prompt-var {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.prompt-var .var-name { color: var(--accent-amber); }
+.prompt-var .var-desc { color: var(--text-dim); font-family: var(--font-body); }
+
+/* ─── CLI REFERENCE ─── */
+.cli-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.cli-row {
+  display: grid;
+  grid-template-columns: 160px 140px 1fr;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  align-items: baseline;
+}
+.cli-row:nth-child(odd) { background: var(--bg-card); }
+.cli-flag {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--accent-amber);
+  font-size: 12px;
+}
+.cli-default {
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.cli-desc { color: var(--text-secondary); }
+.cli-header {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.cli-header-grid {
+  display: grid;
+  grid-template-columns: 160px 140px 1fr;
+  gap: 16px;
+}
+
+/* ─── QUICK START ─── */
+.quickstart-cmds {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.qs-cmd {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.qs-cmd-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
+.qs-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  font-weight: 500;
+  min-width: 80px;
+}
+.qs-code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent-green);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.qs-copy {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.qs-copy:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.qs-copy.copied { border-color: var(--accent-green); color: var(--accent-green); }
+
+/* ─── DATA EXAMPLE ─── */
+.data-example {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin: 12px 0;
+}
+.data-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+.data-field {
+  display: flex;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.data-field:last-child { border-bottom: none; }
+.data-key {
+  font-family: var(--font-mono);
+  color: var(--accent-cyan);
+  font-size: 12px;
+  min-width: 130px;
+  flex-shrink: 0;
+}
+.data-val { color: var(--text-secondary); }
+
+/* ─── VALIDATION CHECKLIST ─── */
+.check-list {
+  display: flex; flex-direction: column; gap: 8px; margin: 12px 0;
+}
+.check-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 13px; color: var(--text-secondary);
+  padding: 8px 12px;
+  background: var(--bg-deep);
+  border-radius: var(--radius-sm);
+}
+.check-icon {
+  flex-shrink: 0;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+  margin-top: 1px;
+}
+
+/* ─── SEED DIVERSITY VIZ ─── */
+.bucket-viz {
+  display: flex; gap: 8px; align-items: flex-end;
+  padding: 20px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 12px 0;
+}
+.bucket {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.bucket-bar {
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.6s ease;
+}
+.bucket-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* ─── HISTORY DISTRIBUTION ─── */
+.dist-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+.dist-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  min-width: 90px;
+}
+.dist-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-deep);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.dist-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.8s ease;
+}
+.dist-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 30px;
+  text-align: right;
+}
+
+/* ─── MODEL BADGES ─── */
+.model-list {
+  display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0;
+}
+.model-badge {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+.model-badge:hover { border-color: var(--border-bright); }
+.model-badge .model-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.model-badge.default { border-color: var(--accent-cyan); }
+.model-badge.default .model-dot { background: var(--accent-cyan); box-shadow: 0 0 8px var(--accent-cyan-glow); }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .nav-toggle { display: flex; }
+  .main { margin-left: 0; }
+  .content { padding: 24px 20px 80px; }
+  .hero { padding: 40px 0 32px; }
+  .mode-grid { grid-template-columns: 1fr; }
+  .prompt-rules { grid-template-columns: 1fr; }
+  .cli-row { grid-template-columns: 1fr; gap: 4px; }
+  .cli-header-grid { display: none; }
+}
+
+/* ─── TOOLTIP ─── */
+.tooltip-host { position: relative; }
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.95);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 50;
+}
+.tooltip-host:hover .tooltip {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+/* ─── TAG ─── */
+.tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.tag.cyan { background: var(--accent-cyan-dim); color: var(--accent-cyan); }
+.tag.violet { background: var(--accent-violet-dim); color: var(--accent-violet); }
+.tag.amber { background: var(--accent-amber-dim); color: var(--accent-amber); }
+.tag.green { background: var(--accent-green-dim); color: var(--accent-green); }
+</style>
+</head>
+<body>
+<div class="ambient-bg"></div>
+
+<!-- Mobile toggle -->
+<button class="nav-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Toggle navigation">&#9776;</button>
+
+<div class="layout">
+<!-- ─── SIDEBAR ─── -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <h1>SDG Pipeline</h1>
+    <p>run.py &mdash; v1.0.0</p>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Overview</div>
+    <a class="nav-link active" href="#hero"><span class="nav-dot"></span> Introduction</a>
+    <a class="nav-link" href="#quickstart"><span class="nav-dot"></span> Quick Start</a>
+    <a class="nav-link" href="#structure"><span class="nav-dot"></span> Project Structure</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Pipeline</div>
+    <a class="nav-link" href="#pipeline"><span class="nav-dot"></span> Step-by-Step Flow</a>
+    <a class="nav-link" href="#prompt"><span class="nav-dot"></span> Prompt Anatomy</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Configuration</div>
+    <a class="nav-link" href="#modes"><span class="nav-dot"></span> Modes Comparison</a>
+    <a class="nav-link" href="#cli"><span class="nav-dot"></span> CLI Reference</a>
+    <a class="nav-link" href="#models"><span class="nav-dot"></span> Compatible Models</a>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-title">Data</div>
+    <a class="nav-link" href="#intents"><span class="nav-dot"></span> Intent Browser</a>
+  </div>
+
+</nav>
+
+<!-- ─── MAIN ─── -->
+<main class="main">
+<div class="content">
+
+<!-- HERO -->
+<header class="hero" id="hero">
+  <div class="hero-eyebrow">Technical Documentation</div>
+  <h1>Synthetic Data <em>Generation</em> Pipeline</h1>
+  <p class="hero-desc">
+    A pipeline that generates <strong>Thai-language training data</strong> for AIS telecom
+    intent classification. Reads seed examples, builds structured LLM prompts,
+    and produces validated multi-turn chat datasets across <strong>16 intent categories</strong>.
+  </p>
+</header>
+
+<!-- QUICK START -->
+<section id="quickstart">
+  <div class="section-label">Getting Started</div>
+  <h2>Quick Start</h2>
+  <p class="section-desc">Copy any command below to start generating. The standalone mode requires only <code>litellm</code> and <code>pyyaml</code>.</p>
+
+  <div class="quickstart-cmds">
+    <div class="qs-cmd">
+      <div class="qs-cmd-left">
+        <span class="qs-label">Default</span>
+        <span class="qs-code">python run.py --model "gemini/gemma-4-31b-it" --api-key $GOOGLE_API_KEY --num-examples 1 --max-seeds 5</span>
+      </div>
+      <button class="qs-copy" onclick="copyCmd(this)" data-cmd="python run.py --model &quot;gemini/gemma-4-31b-it&quot; --api-key $GOOGLE_API_KEY --num-examples 1 --max-seeds 5" title="Copy">&#x2398;</button>
+    </div>
+    <div class="qs-cmd">
+      <div class="qs-cmd-left">
+        <span class="qs-label">Flow mode</span>
+        <span class="qs-code">python run.py --model "gemini/gemma-4-31b-it" --api-key $GOOGLE_API_KEY --num-examples 1 --max-seeds 5 --mode flow</span>
+      </div>
+      <button class="qs-copy" onclick="copyCmd(this)" data-cmd="python run.py --model &quot;gemini/gemma-4-31b-it&quot; --api-key $GOOGLE_API_KEY --num-examples 1 --max-seeds 5 --mode flow" title="Copy">&#x2398;</button>
+    </div>
+    <div class="qs-cmd">
+      <div class="qs-cmd-left">
+        <span class="qs-label">OpenAI</span>
+        <span class="qs-code">python run.py --mode standalone --model openai/gpt-4o --output ../generated</span>
+      </div>
+      <button class="qs-copy" onclick="copyCmd(this)" data-cmd="python run.py --mode standalone --model openai/gpt-4o --output ../generated" title="Copy">&#x2398;</button>
+    </div>
+    <div class="qs-cmd">
+      <div class="qs-cmd-left">
+        <span class="qs-label">Local LLM</span>
+        <span class="qs-code">python run.py --mode standalone --model ollama/gemma2 --api-base http://localhost:11434</span>
+      </div>
+      <button class="qs-copy" onclick="copyCmd(this)" data-cmd="python run.py --mode standalone --model ollama/gemma2 --api-base http://localhost:11434" title="Copy">&#x2398;</button>
+    </div>
+    <div class="qs-cmd">
+      <div class="qs-cmd-left">
+        <span class="qs-label">Single intent</span>
+        <span class="qs-code">python run.py --intents MOBILE_BILLING_CHECK_DUE_DATE --num-examples 10</span>
+      </div>
+      <button class="qs-copy" onclick="copyCmd(this)" data-cmd="python run.py --intents MOBILE_BILLING_CHECK_DUE_DATE --num-examples 10" title="Copy">&#x2398;</button>
+    </div>
+  </div>
+</section>
+
+<!-- PROJECT STRUCTURE -->
+<section id="structure">
+  <div class="section-label">File Layout</div>
+  <h2>Project Structure</h2>
+  <p class="section-desc">All paths are relative to the repository root. The pipeline reads from <code>samples/</code> and writes to <code>generated/</code>.</p>
+
+  <div class="file-tree">
+<span class="ft-dir">sdg/</span>
+<span class="ft-indent"><span class="ft-dir">samples/</span></span>
+<span class="ft-indent"><span class="ft-indent"><span class="ft-branch">&boxur;&HorizontalLine; </span><span class="ft-file highlight">training_dataset.json</span> <span class="ft-comment">&larr; 16 intents, ~400 seed examples</span></span></span>
+<span class="ft-indent"><span class="ft-dir">pipeline/</span></span>
+<span class="ft-indent"><span class="ft-indent"><span class="ft-branch">&boxvr;&HorizontalLine; </span><span class="ft-file highlight">run.py</span> <span class="ft-comment">&larr; Main pipeline script (entrypoint)</span></span></span>
+<span class="ft-indent"><span class="ft-indent"><span class="ft-branch">&boxvr;&HorizontalLine; </span><span class="ft-file">run_sdg_pipeline.ipynb</span> <span class="ft-comment">&larr; Notebook version</span></span></span>
+<span class="ft-indent"><span class="ft-indent"><span class="ft-branch">&boxvr;&HorizontalLine; </span><span class="ft-file highlight">intent_descriptions.json</span> <span class="ft-comment">&larr; 16 intent descriptions (shared)</span></span></span>
+<span class="ft-indent"><span class="ft-indent"><span class="ft-branch">&boxvr;&HorizontalLine; </span><span class="ft-file">flow.yaml</span> <span class="ft-comment">&larr; sdg_hub flow definition (3 blocks)</span></span></span>
+<span class="ft-indent"><span class="ft-indent"><span class="ft-branch">&boxur;&HorizontalLine; </span><span class="ft-dir">prompts/</span></span></span>
+<span class="ft-indent"><span class="ft-indent"><span class="ft-indent"><span class="ft-branch">&boxur;&HorizontalLine; </span><span class="ft-file highlight">generate_telco_chat.yaml</span> <span class="ft-comment">&larr; LLM prompt template</span></span></span></span>
+<span class="ft-indent"><span class="ft-dir">generated/</span> <span class="ft-comment">&larr; Output directory</span></span>
+<span class="ft-indent"><span class="ft-indent"><span class="ft-branch">&boxur;&HorizontalLine; </span><span class="ft-file">{INTENT_NAME}.json</span> <span class="ft-comment">&larr; One file per intent</span></span></span>
+  </div>
+</section>
+
+<!-- PIPELINE STEPS -->
+<section id="pipeline">
+  <div class="section-label">Execution Flow</div>
+  <h2>Step-by-Step Pipeline</h2>
+  <p class="section-desc">Click any step to expand its details. The pipeline flows top-to-bottom, with animated connectors showing the data path.</p>
+
+  <div class="pipeline-flow">
+
+    <!-- Step 1 -->
+    <div class="step-card step-1" onclick="toggleStep(this)">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <div class="step-header-text">
+          <div class="step-title">CLI Argument Parsing</div>
+          <div class="step-subtitle">main() &rarr; argparse.ArgumentParser</div>
+        </div>
+        <span class="step-chevron">&#x25BC;</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>The <code>main()</code> function defines 8 CLI arguments via <code>argparse</code>. The two most important are <code>--mode</code> (which backend to use) and <code>--model</code> (which LLM to call). All arguments have sensible defaults so the pipeline can run with zero configuration.</p>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">Shell</span></div>
+            <pre>python run.py \
+  <span class="flag">--mode</span> <span class="val">standalone</span>  \  <span class="cm"># or "flow"</span>
+  <span class="flag">--model</span> <span class="val">anthropic/claude-sonnet-4-20250514</span> \
+  <span class="flag">--num-examples</span> <span class="num">20</span>  \  <span class="cm"># per intent</span>
+  <span class="flag">--max-seeds</span> <span class="num">5</span>     \  <span class="cm"># few-shot examples in prompt</span>
+  <span class="flag">--intents</span> <span class="val">MOBILE_BILLING_CHECK_DUE_DATE</span>  <span class="cm"># optional filter</span></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="dot"></div></div>
+
+    <!-- Step 2 -->
+    <div class="step-card step-2" onclick="toggleStep(this)">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <div class="step-header-text">
+          <div class="step-title">Load Intent Descriptions</div>
+          <div class="step-subtitle">Module-level &rarr; intent_descriptions.json</div>
+        </div>
+        <span class="step-chevron">&#x25BC;</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>At <strong>module import time</strong> (before <code>main()</code> runs), the script loads <code>intent_descriptions.json</code> into the <code>INTENT_DESCRIPTIONS</code> dictionary. This file is shared with the notebook so both entrypoints always have the same descriptions. Each description is a plain-English sentence explaining what the customer is trying to do.</p>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">Python &mdash; run.py:34-36</span></div>
+            <pre><span class="var">_INTENT_DESC_PATH</span> <span class="op">=</span> <span class="fn">Path</span>(<span class="kw">__file__</span>).<span class="fn">parent</span> / <span class="str">"intent_descriptions.json"</span>
+<span class="kw">with</span> <span class="fn">open</span>(<span class="var">_INTENT_DESC_PATH</span>, encoding=<span class="str">"utf-8"</span>) <span class="kw">as</span> <span class="var">_f</span>:
+    <span class="var">INTENT_DESCRIPTIONS</span>: <span class="fn">dict</span>[<span class="fn">str</span>, <span class="fn">str</span>] = json.<span class="fn">load</span>(<span class="var">_f</span>)</pre>
+          </div>
+          <p>These descriptions are injected into the LLM prompt (step 5) so the model understands the semantic meaning of each intent beyond just its name.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="dot"></div></div>
+
+    <!-- Step 3 -->
+    <div class="step-card step-3" onclick="toggleStep(this)">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <div class="step-header-text">
+          <div class="step-title">Load Seed Data</div>
+          <div class="step-subtitle">load_seed_data() &rarr; training_dataset.json</div>
+        </div>
+        <span class="step-chevron">&#x25BC;</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>Reads <code>samples/training_dataset.json</code> &mdash; a single JSON file containing ~400 human-crafted examples across 16 intents. The function groups them by <code>intent</code> key into a dictionary.</p>
+          <div class="data-example">
+            <div class="data-label">Example Seed Record</div>
+            <div class="data-field"><span class="data-key">user_message</span><span class="data-val">"แล้วสรุปต้องจ่ายวันไหนครับ"</span></div>
+            <div class="data-field"><span class="data-key">intent</span><span class="data-val">"MOBILE_BILLING_CHECK_DUE_DATE"</span></div>
+            <div class="data-field"><span class="data-key">session_history</span><span class="data-val">[ {role: "user", content: "..."}, {role: "assistant", content: "..."} ... ]</span></div>
+          </div>
+          <p>Each seed example has three fields: the user's Thai message, the intent label, and an optional conversation history (up to 5 prior messages).</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="dot"></div></div>
+
+    <!-- Step 4 -->
+    <div class="step-card step-4" onclick="toggleStep(this)">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <div class="step-header-text">
+          <div class="step-title">Select Seed Examples</div>
+          <div class="step-subtitle">select_seed_examples() &rarr; diversity sampling</div>
+        </div>
+        <span class="step-chevron">&#x25BC;</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>For each intent, the pipeline selects up to <code>max_seeds</code> (default 5) examples to include as few-shot demonstrations in the prompt. The selection algorithm ensures <strong>diversity</strong> by grouping examples by their <code>session_history</code> length and round-robin sampling across buckets.</p>
+
+          <h3 style="margin-top:16px">Diversity Bucketing Strategy</h3>
+          <div class="bucket-viz">
+            <div class="bucket">
+              <div class="bucket-bar" style="height:30px;background:var(--accent-green)"></div>
+              <span class="bucket-label">0 msgs</span>
+            </div>
+            <div class="bucket">
+              <div class="bucket-bar" style="height:45px;background:var(--accent-cyan)"></div>
+              <span class="bucket-label">1 msg</span>
+            </div>
+            <div class="bucket">
+              <div class="bucket-bar" style="height:60px;background:var(--accent-blue)"></div>
+              <span class="bucket-label">2 msgs</span>
+            </div>
+            <div class="bucket">
+              <div class="bucket-bar" style="height:70px;background:var(--accent-violet)"></div>
+              <span class="bucket-label">3 msgs</span>
+            </div>
+            <div class="bucket">
+              <div class="bucket-bar" style="height:55px;background:var(--accent-amber)"></div>
+              <span class="bucket-label">4 msgs</span>
+            </div>
+            <div class="bucket">
+              <div class="bucket-bar" style="height:40px;background:var(--accent-rose)"></div>
+              <span class="bucket-label">5 msgs</span>
+            </div>
+          </div>
+          <p>One example is taken from each bucket in round-robin order until 5 are selected. Any history longer than 5 messages is truncated to the <strong>last 5</strong> (sliding window), matching the real system's constraint.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="dot"></div></div>
+
+    <!-- Step 5 -->
+    <div class="step-card step-5" onclick="toggleStep(this)">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <div class="step-header-text">
+          <div class="step-title">Build Prompt</div>
+          <div class="step-subtitle">build_prompt() &rarr; generate_telco_chat.yaml</div>
+        </div>
+        <span class="step-chevron">&#x25BC;</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>Loads the YAML prompt template and performs variable substitution. The result is a 2-message chat array (system + user) sent to the LLM. This is the core of the pipeline &mdash; the prompt quality directly determines output quality.</p>
+
+          <h3>Template Variables</h3>
+          <div class="prompt-vars">
+            <div class="prompt-var"><span class="var-name">{{ intent }}</span> <span class="var-desc">Intent name</span></div>
+            <div class="prompt-var"><span class="var-name">{{ intent_description }}</span> <span class="var-desc">From JSON</span></div>
+            <div class="prompt-var"><span class="var-name">{{ seed_examples }}</span> <span class="var-desc">Few-shot JSON</span></div>
+            <div class="prompt-var"><span class="var-name">{{ num_examples }}</span> <span class="var-desc">Target count</span></div>
+            <div class="prompt-var"><span class="var-name">{{ num_seed }}</span> <span class="var-desc">Seed count</span></div>
+          </div>
+
+          <p style="margin-top:20px">See the full <a href="#prompt" style="color:var(--accent-cyan)">Prompt Anatomy</a> section below for the complete system and user message breakdown.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="dot"></div></div>
+
+    <!-- Step 6 -->
+    <div class="step-card step-6" onclick="toggleStep(this)">
+      <div class="step-header">
+        <div class="step-number">6</div>
+        <div class="step-header-text">
+          <div class="step-title">LLM Generation</div>
+          <div class="step-subtitle">litellm.completion() or sdg_hub.Flow</div>
+        </div>
+        <span class="step-chevron">&#x25BC;</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>The prompt is sent to the chosen LLM. The execution path diverges based on the selected mode:</p>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0">
+            <div style="background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
+              <div style="font-family:var(--font-mono);font-size:11px;color:var(--accent-cyan);margin-bottom:8px;font-weight:600;">STANDALONE MODE</div>
+              <div style="font-size:13px;color:var(--text-secondary);line-height:1.7">
+                Calls <code>litellm.completion()</code> directly for each intent, one at a time. Parameters: <code>max_tokens=16384</code>, <code>temperature=0.8</code>, <code>timeout=1800s</code>.
+              </div>
+            </div>
+            <div style="background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
+              <div style="font-family:var(--font-mono);font-size:11px;color:var(--accent-violet);margin-bottom:8px;font-weight:600;">FLOW MODE</div>
+              <div style="font-size:13px;color:var(--text-secondary);line-height:1.7">
+                Passes all intents through a 3-block <code>sdg_hub.Flow</code> pipeline with up to 5 concurrent LLM calls via <code>async_mode</code>.
+              </div>
+            </div>
+          </div>
+
+          <p>The LLM returns a JSON array of generated training examples. See <a href="#modes" style="color:var(--accent-cyan)">Modes Comparison</a> for a detailed breakdown.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="dot"></div></div>
+
+    <!-- Step 7 -->
+    <div class="step-card step-7" onclick="toggleStep(this)">
+      <div class="step-header">
+        <div class="step-number">7</div>
+        <div class="step-header-text">
+          <div class="step-title">Parse &amp; Validate</div>
+          <div class="step-subtitle">parse_json_output() + validate_examples()</div>
+        </div>
+        <span class="step-chevron">&#x25BC;</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p><strong>Parsing:</strong> Strips markdown code fences if present, locates the first <code>[</code> and last <code>]</code>, and attempts <code>json.loads()</code>. Falls back gracefully on failure.</p>
+
+          <h3 style="margin-top:16px">Validation Checks</h3>
+          <div class="check-list">
+            <div class="check-item"><span class="check-icon">&#x2713;</span>Must be a <code>dict</code> (non-dict entries are dropped)</div>
+            <div class="check-item"><span class="check-icon">&#x2713;</span>Must contain <code>user_message</code> field</div>
+            <div class="check-item"><span class="check-icon">&#x2713;</span>Forces <code>intent</code> to the correct value (overrides LLM output)</div>
+            <div class="check-item"><span class="check-icon">&#x2713;</span>Validates <code>session_history</code> is a list of <code>{role, content}</code></div>
+            <div class="check-item"><span class="check-icon">&#x2713;</span>Only allows <code>role: "user"</code> or <code>"assistant"</code></div>
+            <div class="check-item"><span class="check-icon">&#x2713;</span>Enforces sliding window: max 5 messages in history</div>
+            <div class="check-item"><span class="check-icon">&#x2713;</span>Outputs only 3 fields: <code>user_message</code>, <code>intent</code>, <code>session_history</code></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-connector"><div class="dot"></div></div>
+
+    <!-- Step 8 -->
+    <div class="step-card step-8" onclick="toggleStep(this)">
+      <div class="step-header">
+        <div class="step-number">8</div>
+        <div class="step-header-text">
+          <div class="step-title">Save &amp; Summarize</div>
+          <div class="step-subtitle">json.dump() &rarr; generated/{INTENT}.json</div>
+        </div>
+        <span class="step-chevron">&#x25BC;</span>
+      </div>
+      <div class="step-body">
+        <div class="step-content">
+          <p>Each intent's validated examples are written to their own JSON file in the <code>generated/</code> directory. After all intents are processed, a summary is printed showing per-file counts and the grand total.</p>
+          <div class="code-block">
+            <div class="code-header"><span class="code-lang">Output Example</span></div>
+            <pre><span class="cm">============================================================</span>
+<span class="str">GENERATION COMPLETE</span>
+<span class="cm">============================================================</span>
+  MOBILE_BILLING_CHECK_DUE_DATE.json: <span class="num">20</span> examples
+  MOBILE_BILLING_PAYMENT_STATUS_POSTPAID.json: <span class="num">20</span> examples
+  MOBILE_NETWORK_CHECK_NO_SIGNAL.json: <span class="num">18</span> examples
+  <span class="cm">... (13 more files)</span>
+
+  Total: <span class="num">314</span> examples in generated/</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- PROMPT ANATOMY -->
+<section id="prompt">
+  <div class="section-label">Prompt Engineering</div>
+  <h2>Prompt Anatomy</h2>
+  <p class="section-desc">The LLM prompt is a 2-message chat template loaded from <code>generate_telco_chat.yaml</code>. Each section serves a specific purpose in controlling output quality.</p>
+
+  <div class="prompt-anatomy">
+    <div class="prompt-msg">
+      <div class="prompt-role system">&#x25C6; System Message</div>
+      <p style="font-size:14px;color:var(--text-secondary);margin-bottom:16px;line-height:1.7">
+        Establishes the LLM's role as an expert synthetic data generator for Thai telecom chat data. Contains five critical rule categories:
+      </p>
+      <div class="prompt-rules">
+        <div class="prompt-rule">
+          <span class="rule-icon" style="color:var(--accent-cyan)">&#x25C6;</span>
+          <div><strong style="color:var(--text-primary)">Language &amp; Format</strong><br>Generate Thai with natural English loanwords (roaming, package, data). Mask phone numbers as <code>091234XXXX</code> and OTPs as <code>XXXXXX</code>.</div>
+        </div>
+        <div class="prompt-rule">
+          <span class="rule-icon" style="color:var(--accent-amber)">&#x25C6;</span>
+          <div><strong style="color:var(--text-primary)">Sliding Window</strong><br>session_history must contain at most 5 messages. This matches the real production system's context window.</div>
+        </div>
+        <div class="prompt-rule">
+          <span class="rule-icon" style="color:var(--accent-green)">&#x25C6;</span>
+          <div><strong style="color:var(--text-primary)">Typos &amp; Informal Language</strong><br>8-10 of 20 examples must include realistic Thai typos, misspellings, emoji, slang like "555", "ค้าบ", "ป่าว", doubled vowels.</div>
+        </div>
+        <div class="prompt-rule">
+          <span class="rule-icon" style="color:var(--accent-rose)">&#x25C6;</span>
+          <div><strong style="color:var(--text-primary)">Sentence Diversity</strong><br>Vary verb choice, sentence form (question/statement/imperative/fragment), directness level, and message length. No repeated phrasing.</div>
+        </div>
+        <div class="prompt-rule">
+          <span class="rule-icon" style="color:var(--accent-violet)">&#x25C6;</span>
+          <div><strong style="color:var(--text-primary)">Intent Changes in History</strong><br>5-6 of 20 examples must have session_history about a different topic before the user switches to the target intent. Simulates real topic-switching.</div>
+        </div>
+        <div class="prompt-rule">
+          <span class="rule-icon" style="color:var(--accent-blue)">&#x25C6;</span>
+          <div><strong style="color:var(--text-primary)">Assistant Style</strong><br>Polite Thai customer service tone with ค่ะ/คะ particles. Include [Options: {...}] in some responses for interactive choices.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="prompt-msg">
+      <div class="prompt-role user">&#x25C6; User Message</div>
+      <p style="font-size:14px;color:var(--text-secondary);margin-bottom:16px;line-height:1.7">
+        Requests generation of exactly N examples for a specific intent. Includes the intent description, seed examples as JSON, and 11 detailed requirements:
+      </p>
+
+      <h3>Required History Length Distribution</h3>
+      <div style="background:var(--bg-deep);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:12px 0">
+        <div class="dist-row">
+          <span class="dist-label">0 messages</span>
+          <div class="dist-bar-track"><div class="dist-bar-fill" style="width:10%;background:var(--accent-green)"></div></div>
+          <span class="dist-count">2</span>
+        </div>
+        <div class="dist-row">
+          <span class="dist-label">1 message</span>
+          <div class="dist-bar-track"><div class="dist-bar-fill" style="width:15%;background:var(--accent-cyan)"></div></div>
+          <span class="dist-count">3</span>
+        </div>
+        <div class="dist-row">
+          <span class="dist-label">2 messages</span>
+          <div class="dist-bar-track"><div class="dist-bar-fill" style="width:20%;background:var(--accent-blue)"></div></div>
+          <span class="dist-count">4</span>
+        </div>
+        <div class="dist-row">
+          <span class="dist-label">3 messages</span>
+          <div class="dist-bar-track"><div class="dist-bar-fill" style="width:20%;background:var(--accent-violet)"></div></div>
+          <span class="dist-count">4</span>
+        </div>
+        <div class="dist-row">
+          <span class="dist-label">4 messages</span>
+          <div class="dist-bar-track"><div class="dist-bar-fill" style="width:20%;background:var(--accent-amber)"></div></div>
+          <span class="dist-count">4</span>
+        </div>
+        <div class="dist-row">
+          <span class="dist-label">5 messages</span>
+          <div class="dist-bar-track"><div class="dist-bar-fill" style="width:15%;background:var(--accent-rose)"></div></div>
+          <span class="dist-count">3</span>
+        </div>
+      </div>
+
+      <h3 style="margin-top:16px">Additional Requirements</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        <div class="prompt-rule"><span class="rule-icon" style="color:var(--accent-amber)">&#x25B8;</span>5-6 examples with topic switch in history</div>
+        <div class="prompt-rule"><span class="rule-icon" style="color:var(--accent-amber)">&#x25B8;</span>8-10 examples with Thai typos/slang/emoji</div>
+        <div class="prompt-rule"><span class="rule-icon" style="color:var(--accent-amber)">&#x25B8;</span>Mix formal/informal, male/female particles</div>
+        <div class="prompt-rule"><span class="rule-icon" style="color:var(--accent-amber)">&#x25B8;</span>Some with phone numbers as the message</div>
+        <div class="prompt-rule"><span class="rule-icon" style="color:var(--accent-amber)">&#x25B8;</span>Some confirming assistant-presented options</div>
+        <div class="prompt-rule"><span class="rule-icon" style="color:var(--accent-amber)">&#x25B8;</span>2-3 examples in English (non-native style)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MODES COMPARISON -->
+<section id="modes">
+  <div class="section-label">Execution Backends</div>
+  <h2>Modes Comparison</h2>
+  <p class="section-desc">Choose between lightweight sequential processing or production-grade concurrent execution.</p>
+
+  <div class="mode-tabs">
+    <button class="mode-tab active" data-mode="standalone" onclick="switchMode('standalone')">Standalone</button>
+    <button class="mode-tab" data-mode="flow" onclick="switchMode('flow')">Flow</button>
+  </div>
+
+  <!-- Standalone Panel -->
+  <div class="mode-panel active" id="mode-standalone">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <span class="tag cyan">DEFAULT MODE</span>
+        <span style="font-size:13px;color:var(--text-dim)">Recommended for development &amp; testing</span>
+      </div>
+
+      <div class="mode-grid">
+        <div class="mode-stat">
+          <div class="mode-stat-label">Processing</div>
+          <div class="mode-stat-value">Sequential (1 intent at a time)</div>
+        </div>
+        <div class="mode-stat">
+          <div class="mode-stat-label">Dependencies</div>
+          <div class="mode-stat-value">litellm + pyyaml</div>
+        </div>
+        <div class="mode-stat">
+          <div class="mode-stat-label">Error Handling</div>
+          <div class="mode-stat-value">Per-intent (continues on failure)</div>
+        </div>
+        <div class="mode-stat">
+          <div class="mode-stat-label">Speed (16 intents)</div>
+          <div class="mode-stat-value">~16x single LLM call time</div>
+        </div>
+      </div>
+
+      <h3>Execution Flow</h3>
+      <div class="mode-flow-diagram">
+        <div class="flow-block" style="background:var(--accent-cyan-dim);border-color:var(--accent-cyan);color:var(--accent-cyan)">for intent</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-block" style="background:var(--accent-green-dim);border-color:var(--accent-green);color:var(--accent-green)">select_seeds</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-block" style="background:var(--accent-rose-dim);border-color:var(--accent-rose);color:var(--accent-rose)">build_prompt</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-block" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue)">litellm.completion()</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-block" style="background:var(--accent-amber-dim);border-color:var(--accent-amber);color:var(--accent-amber)">parse &amp; validate</div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-block" style="background:var(--accent-violet-dim);border-color:var(--accent-violet);color:var(--accent-violet)">save .json</div>
+      </div>
+
+      <h3 style="margin-top:20px">Best For</h3>
+      <ul style="list-style:none;padding:0;margin:0;font-size:13px;color:var(--text-secondary)">
+        <li style="padding:6px 0">&#x2022; Development and debugging single intents</li>
+        <li style="padding:6px 0">&#x2022; Testing with local models via Ollama</li>
+        <li style="padding:6px 0">&#x2022; Quick iteration on prompt changes</li>
+        <li style="padding:6px 0">&#x2022; Environments without sdg-hub/pandas installed</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Flow Panel -->
+  <div class="mode-panel" id="mode-flow">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <span class="tag violet">PRODUCTION MODE</span>
+        <span style="font-size:13px;color:var(--text-dim)">Recommended for full dataset generation</span>
+      </div>
+
+      <div class="mode-grid">
+        <div class="mode-stat">
+          <div class="mode-stat-label">Processing</div>
+          <div class="mode-stat-value">Concurrent (up to 5 parallel)</div>
+        </div>
+        <div class="mode-stat">
+          <div class="mode-stat-label">Dependencies</div>
+          <div class="mode-stat-value">sdg-hub + pandas + litellm</div>
+        </div>
+        <div class="mode-stat">
+          <div class="mode-stat-label">Error Handling</div>
+          <div class="mode-stat-value">All-or-nothing (exits on failure)</div>
+        </div>
+        <div class="mode-stat">
+          <div class="mode-stat-label">Speed (16 intents)</div>
+          <div class="mode-stat-value">~4x single LLM call time</div>
+        </div>
+      </div>
+
+      <h3>3-Block Pipeline <span style="font-size:12px;color:var(--text-dim);font-weight:400">(defined in flow.yaml)</span></h3>
+      <div class="mode-flow-diagram">
+        <div class="flow-block" style="background:var(--accent-violet-dim);border-color:var(--accent-violet);color:var(--accent-violet)">DataFrame<br><span style="font-size:10px;opacity:0.7">all intents</span></div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-block" style="background:var(--accent-rose-dim);border-color:var(--accent-rose);color:var(--accent-rose)">PromptBuilder<br><span style="font-size:10px;opacity:0.7">render YAML template</span></div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-block" style="background:var(--accent-blue-dim);border-color:var(--accent-blue);color:var(--accent-blue)">LLMChatBlock<br><span style="font-size:10px;opacity:0.7">async, concurrency=5</span></div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-block" style="background:var(--accent-green-dim);border-color:var(--accent-green);color:var(--accent-green)">ResponseExtractor<br><span style="font-size:10px;opacity:0.7">extract text content</span></div>
+        <span class="flow-arrow">&rarr;</span>
+        <div class="flow-block" style="background:var(--accent-amber-dim);border-color:var(--accent-amber);color:var(--accent-amber)">parse &amp; validate</div>
+      </div>
+
+      <h3 style="margin-top:20px">Best For</h3>
+      <ul style="list-style:none;padding:0;margin:0;font-size:13px;color:var(--text-secondary)">
+        <li style="padding:6px 0">&#x2022; Generating the full 16-intent dataset in one run</li>
+        <li style="padding:6px 0">&#x2022; Production CI/CD pipelines</li>
+        <li style="padding:6px 0">&#x2022; Maximizing throughput with cloud API models</li>
+        <li style="padding:6px 0">&#x2022; When sdg-hub's structured flow is already part of the stack</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="margin-top:32px">Side-by-Side Comparison</h3>
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Criteria</th>
+        <th>Standalone</th>
+        <th>Flow</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Processing</td>
+        <td>Sequential, one intent at a time</td>
+        <td>Concurrent, up to 5 parallel</td>
+      </tr>
+      <tr>
+        <td>Dependencies</td>
+        <td><code>litellm</code>, <code>pyyaml</code></td>
+        <td><code>sdg-hub</code>, <code>pandas</code>, <code>litellm</code></td>
+      </tr>
+      <tr>
+        <td>Error handling</td>
+        <td>Per-intent (skips failures)</td>
+        <td>All-or-nothing (exits on failure)</td>
+      </tr>
+      <tr>
+        <td>Speed (16 intents)</td>
+        <td>~16x single call time</td>
+        <td>~4x single call time (4x faster)</td>
+      </tr>
+      <tr>
+        <td>Prompt building</td>
+        <td>Python string replacement</td>
+        <td>PromptBuilderBlock (sdg_hub)</td>
+      </tr>
+      <tr>
+        <td>LLM parameters</td>
+        <td>max_tokens=16384, temp=0.8</td>
+        <td>Same (via flow.yaml config)</td>
+      </tr>
+      <tr>
+        <td>Best for</td>
+        <td>Dev, testing, local models</td>
+        <td>Production, full dataset runs</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- CLI REFERENCE -->
+<section id="cli">
+  <div class="section-label">Configuration</div>
+  <h2>CLI Reference</h2>
+  <p class="section-desc">All arguments are optional with sensible defaults. The minimum viable command is just <code>python run.py</code>.</p>
+
+  <div class="cli-header">
+    <div class="cli-header-grid">
+      <span>Argument</span>
+      <span>Default</span>
+      <span>Description</span>
+    </div>
+  </div>
+  <div class="cli-grid">
+    <div class="cli-row">
+      <span class="cli-flag">--mode</span>
+      <span class="cli-default">standalone</span>
+      <span class="cli-desc">Execution backend: <code>standalone</code> (litellm) or <code>flow</code> (sdg_hub)</span>
+    </div>
+    <div class="cli-row">
+      <span class="cli-flag">--model</span>
+      <span class="cli-default">anthropic/claude-sonnet-4-20250514</span>
+      <span class="cli-desc">LLM model identifier in litellm format (provider/model-name)</span>
+    </div>
+    <div class="cli-row">
+      <span class="cli-flag">--api-base</span>
+      <span class="cli-default">None</span>
+      <span class="cli-desc">Base URL for self-hosted models (e.g., Ollama at localhost:11434)</span>
+    </div>
+    <div class="cli-row">
+      <span class="cli-flag">--api-key</span>
+      <span class="cli-default">None</span>
+      <span class="cli-desc">API key. Can also use env vars: ANTHROPIC_API_KEY, OPENAI_API_KEY</span>
+    </div>
+    <div class="cli-row">
+      <span class="cli-flag">--output</span>
+      <span class="cli-default">../generated</span>
+      <span class="cli-desc">Output directory for generated JSON files</span>
+    </div>
+    <div class="cli-row">
+      <span class="cli-flag">--num-examples</span>
+      <span class="cli-default">20</span>
+      <span class="cli-desc">Number of synthetic examples to generate per intent</span>
+    </div>
+    <div class="cli-row">
+      <span class="cli-flag">--max-seeds</span>
+      <span class="cli-default">5</span>
+      <span class="cli-desc">Maximum seed examples to include as few-shot demonstrations</span>
+    </div>
+    <div class="cli-row">
+      <span class="cli-flag">--intents</span>
+      <span class="cli-default">all</span>
+      <span class="cli-desc">Space-separated list of specific intents to generate</span>
+    </div>
+  </div>
+</section>
+
+<!-- COMPATIBLE MODELS -->
+<section id="models">
+  <div class="section-label">Model Support</div>
+  <h2>Compatible Models</h2>
+  <p class="section-desc">Any model supported by <code>litellm</code> works. These are the recommended and tested options from <code>flow.yaml</code>.</p>
+
+  <div class="model-list">
+    <div class="model-badge default">
+      <span class="model-dot"></span>
+      anthropic/claude-sonnet-4-20250514
+      <span class="tag green" style="margin-left:4px">default</span>
+    </div>
+    <div class="model-badge">
+      <span class="model-dot" style="background:var(--accent-green)"></span>
+      openai/gpt-4o
+    </div>
+    <div class="model-badge">
+      <span class="model-dot" style="background:var(--accent-violet)"></span>
+      meta-llama/Llama-3.3-70B-Instruct
+    </div>
+    <div class="model-badge">
+      <span class="model-dot" style="background:var(--accent-amber)"></span>
+      ollama/gemma2
+      <span class="tag amber" style="margin-left:4px">local</span>
+    </div>
+  </div>
+
+  <p style="font-size:13px;color:var(--text-dim);margin-top:16px">
+    For local models, use <code>--api-base http://localhost:11434</code>. The 1800s timeout accommodates slower inference on consumer hardware.
+  </p>
+</section>
+
+<!-- INTENT BROWSER -->
+<section id="intents">
+  <div class="section-label">Training Data</div>
+  <h2>Intent Browser</h2>
+  <p class="section-desc">All 16 intent categories covered by the pipeline. Click any intent to see its description. Use the search to filter.</p>
+
+  <input type="text" class="intent-search" placeholder="Search intents... (e.g. billing, roaming, sim)" oninput="filterIntents(this.value)">
+
+  <div class="intent-grid" id="intent-grid"></div>
+</section>
+
+</div>
+</main>
+</div>
+
+<script>
+// ─── STEP TOGGLE ───
+function toggleStep(el) {
+  const wasExpanded = el.classList.contains('expanded');
+  // Optionally close others:
+  // document.querySelectorAll('.step-card.expanded').forEach(c => c.classList.remove('expanded'));
+  el.classList.toggle('expanded', !wasExpanded);
+}
+
+// ─── MODE TABS ───
+function switchMode(mode) {
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+  document.querySelectorAll('.mode-panel').forEach(p => p.classList.toggle('active', p.id === 'mode-' + mode));
+}
+
+// ─── COPY COMMANDS ───
+function copyCmd(btn) {
+  const cmd = btn.dataset.cmd;
+  navigator.clipboard.writeText(cmd).then(() => {
+    btn.classList.add('copied');
+    btn.innerHTML = '&#x2713;';
+    setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = '&#x2398;'; }, 1500);
+  });
+}
+
+// ─── INTENTS DATA ───
+const intents = [
+  { name: "MOBILE_BILLING_CHECK_DUE_DATE", cat: "billing", desc: "Customer wants to check the due date for their mobile bill payment. They may ask about when the current billing cycle ends, when payment is due, or confirm billing dates. This often involves clarifying whether they use postpaid or prepaid service." },
+  { name: "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID", cat: "billing", desc: "Customer wants to check the payment status, outstanding balance, or billing information for their postpaid (monthly subscription) mobile account. This includes checking due amounts, bill history, payment confirmation, and understanding whether a bill has been paid or is still pending." },
+  { name: "MOBILE_BILLING_PAYMENT_STATUS_PREPAID", cat: "billing", desc: "Customer wants to check the payment status for their prepaid (top-up) SIM card. This includes verifying whether a recent top-up or package purchase transaction was successful, checking remaining credit, and confirming payment completion for prepaid services." },
+  { name: "MOBILE_NETWORK_CHECK_NO_SIGNAL", cat: "network", desc: "Customer is experiencing no signal or network connectivity issues on their mobile device. This includes reporting no service, no signal bars, inability to make calls or use data, and troubleshooting network problems in a specific area or location." },
+  { name: "MOBILE_PACKAGE_CHECK_DATA_CURRENT", cat: "package", desc: "Customer wants to check their current active data/internet package. This includes viewing the currently subscribed package name, price, data quota, validity period, and package details for their mobile line." },
+  { name: "MOBILE_PACKAGE_CHECK_DATA_HISTORY", cat: "package", desc: "Customer wants to check their historical data/internet package usage. This includes viewing past package subscriptions, data consumption history, package changes over time, add-on purchases, and usage patterns across previous months." },
+  { name: "MOBILE_ROAMING_CHECK_DATA_CURRENT", cat: "roaming", desc: "Customer wants to check their current roaming data balance while traveling abroad. This includes remaining data quota, package expiry, estimating if data will last, and understanding roaming data behavior like hotspot sharing or auto-renewal." },
+  { name: "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID", cat: "roaming", desc: "Customer wants to check roaming charges on their postpaid bill. This includes viewing roaming costs for the current billing cycle, understanding total roaming charges, and verifying payment status for roaming services." },
+  { name: "MOBILE_SIM_ACTIVATION_POSTPAID", cat: "sim", desc: "Customer wants to activate a new or inactive postpaid (monthly subscription) SIM card. This includes requesting immediate activation of a SIM that has not yet been activated, often with urgency due to needing the number for work or travel." },
+  { name: "MOBILE_SIM_ACTIVATION_PREPAID", cat: "sim", desc: "Customer wants to activate a new or inactive prepaid (top-up) SIM card. This includes requesting immediate activation of a recently purchased SIM that has not been activated yet, often with urgency." },
+  { name: "MOBILE_SIM_REPLACEMENT_POSPAID", cat: "sim", desc: "Customer wants to replace or reissue a SIM card for their postpaid (monthly subscription) line while keeping the same phone number. Common reasons include a damaged, broken, or lost SIM card." },
+  { name: "MOBILE_SIM_REPLACEMENT_PREPAID", cat: "sim", desc: "Customer wants to replace or reissue a SIM card for their prepaid (top-up) line while keeping the same phone number. Common reasons include a damaged, broken, or lost SIM card." },
+  { name: "MOBILE_USAGE_CHECK_DATA_CURRENT", cat: "usage", desc: "Customer wants to check their current data/internet usage and remaining balance. This includes viewing how much data has been consumed, how much remains in their package quota, and whether they are close to their data limit." },
+  { name: "MOBILE_USAGE_COMPARE_DATA_PLAN", cat: "usage", desc: "Customer wants to compare available data/internet packages to find the best option. This includes viewing differences between packages in terms of data quota, price, speed, and value to help them choose or switch to a more suitable plan." },
+  { name: "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY", cat: "vas", desc: "Customer wants to check the subscription history for value-added services (VAS). This includes viewing past subscriptions to services like ringtones, horoscope readings, SMS news alerts, and other add-on services across previous months." },
+  { name: "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH", cat: "vas", desc: "Customer wants to subscribe to a specific value-added service (VAS). This includes signing up for services like ringtones, horoscope readings, SMS news alerts, and other add-on services." },
+];
+
+function renderIntents(filter = '') {
+  const grid = document.getElementById('intent-grid');
+  const lc = filter.toLowerCase();
+  const filtered = intents.filter(i => !lc || i.name.toLowerCase().includes(lc) || i.cat.includes(lc) || i.desc.toLowerCase().includes(lc));
+  grid.innerHTML = filtered.map(i => `
+    <div class="intent-item" onclick="this.classList.toggle('expanded')">
+      <div class="intent-name">
+        <span class="intent-badge ${i.cat}">${i.cat}</span>
+        <span>${i.name}</span>
+      </div>
+      <div class="intent-desc"><p>${i.desc}</p></div>
+    </div>
+  `).join('');
+}
+function filterIntents(v) { renderIntents(v); }
+renderIntents();
+
+// ─── ACTIVE NAV TRACKING ───
+const sections = document.querySelectorAll('section[id], header[id]');
+const navLinks = document.querySelectorAll('.nav-link[href]');
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+      });
+    }
+  });
+}, { rootMargin: '-10% 0px -80% 0px' });
+
+sections.forEach(s => observer.observe(s));
+
+// Close sidebar on mobile nav click
+navLinks.forEach(link => {
+  link.addEventListener('click', () => {
+    if (window.innerWidth <= 900) {
+      document.querySelector('.sidebar').classList.remove('open');
+    }
+  });
+});
+
+// ─── ANIMATE STEPS ON SCROLL ───
+const stepObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.opacity = '1';
+      entry.target.style.transform = 'translateY(0)';
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.step-card').forEach((card, i) => {
+  card.style.opacity = '0';
+  card.style.transform = 'translateY(20px)';
+  card.style.transition = `opacity 0.5s ease ${i * 0.08}s, transform 0.5s ease ${i * 0.08}s, border-color 0.3s, box-shadow 0.3s`;
+  stepObserver.observe(card);
+});
+</script>
+</body>
+</html>
