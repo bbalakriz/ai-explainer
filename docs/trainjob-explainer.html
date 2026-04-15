@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TrainJob & TrainingRuntime — OpenShift AI Training Explainer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Source+Code+Pro:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: #060a14;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'Source Code Pro', monospace; }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0c1220; }
+  ::-webkit-scrollbar-thumb { background: #2a3a5c; border-radius: 4px; }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes pulseGlow { 0%,100% { box-shadow:0 0 8px 2px rgba(59,130,246,0.15); } 50% { box-shadow:0 0 18px 4px rgba(59,130,246,0.35); } }
+  @keyframes cyanPulse { 0%,100% { box-shadow:0 0 8px 2px rgba(6,182,212,0.15); } 50% { box-shadow:0 0 18px 4px rgba(6,182,212,0.35); } }
+  @keyframes amberPulse { 0%,100% { box-shadow:0 0 8px 2px rgba(251,191,36,0.15); } 50% { box-shadow:0 0 18px 4px rgba(251,191,36,0.35); } }
+  @keyframes greenPulse { 0%,100% { box-shadow:0 0 8px 2px rgba(34,197,94,0.15); } 50% { box-shadow:0 0 18px 4px rgba(34,197,94,0.35); } }
+  @keyframes flowDash { to { stroke-dashoffset: -24; } }
+  @keyframes flowDashReverse { to { stroke-dashoffset: 24; } }
+  @keyframes stepReveal { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
+  @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-4px); } }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  .fade-in { animation: fadeIn 0.35s ease-out; }
+  .glow-blue { animation: pulseGlow 2.5s ease-in-out infinite; }
+  .glow-cyan { animation: cyanPulse 2.5s ease-in-out infinite; }
+  .glow-amber { animation: amberPulse 2.5s ease-in-out infinite; }
+  .glow-green { animation: greenPulse 2.5s ease-in-out infinite; }
+  .arrow-flow { stroke-dasharray: 8 5; animation: flowDash 1s linear infinite; }
+  .arrow-flow-rev { stroke-dasharray: 8 5; animation: flowDashReverse 1s linear infinite; }
+  .float-anim { animation: float 3s ease-in-out infinite; }
+
+  .yaml-line { transition: all 0.2s ease; }
+  .yaml-line:hover { background: rgba(59,130,246,0.08); }
+  .yaml-line.highlighted { background: rgba(251,191,36,0.12); border-left: 2px solid #fbbf24; }
+  .yaml-line.highlighted-cyan { background: rgba(6,182,212,0.12); border-left: 2px solid #06b6d4; }
+
+  .callout-box {
+    position: relative;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.3s ease;
+  }
+  .callout-box::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 13px;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--callout-color, #3b82f6) 0%, transparent 60%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .step-card {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+  }
+  .step-card:hover { transform: translateY(-2px); }
+  .step-card.active { transform: scale(1.02); }
+
+  .benefit-card {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .benefit-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, transparent 60%, var(--accent, rgba(59,130,246,0.05)));
+    pointer-events: none;
+  }
+  .benefit-card:hover { transform: translateY(-3px); }
+</style>
+</head>
+<body class="min-h-screen">
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo } = React;
+
+// ═══════════════════════════════════════════════════════════════════
+// DATA: Real YAML from the project
+// ═══════════════════════════════════════════════════════════════════
+
+const TRAINING_RUNTIME_YAML = `apiVersion: trainer.kubeflow.org/v1alpha1
+kind: TrainingRuntime
+metadata:
+  name: qwen-custom-runtime
+  labels:
+    trainer.kubeflow.org/framework: torch
+spec:
+  mlPolicy:
+    numNodes: 1
+    torch:
+      numProcPerNode: 4
+  template:
+    spec:
+      replicatedJobs:
+        - name: node
+          template:
+            spec:
+              template:
+                spec:
+                  restartPolicy: OnFailure
+                  nodeSelector:
+                    nvidia.com/gpu.present: "true"
+                  tolerations:
+                  - effect: NoSchedule
+                    key: nvidia.com/gpu
+                    operator: Exists
+                  initContainers:
+                  - name: data-loader
+                    image: quay.io/balki404/sdg-intent-classifier-data:04mar-1
+                    command:
+                    - sh
+                    - -c
+                    - |
+                      cp /app/training.jsonl /shared-data/training.jsonl
+                    volumeMounts:
+                    - name: shared-data-volume
+                      mountPath: /shared-data
+                  containers:
+                  - name: node
+                    image: registry.redhat.io/rhoai/odh-training-cuda128-torch28-py312-rhel9:v3.0
+                    resources:
+                      limits:
+                        nvidia.com/gpu: "4"
+                        memory: "32Gi"
+                        cpu: "8"
+                      requests:
+                        nvidia.com/gpu: "4"
+                        memory: "16Gi"
+                        cpu: "4"
+                    env:
+                    - name: HF_HUB_CACHE
+                      value: /mnt/hf_cache/hub
+                    - name: PYTORCH_CUDA_ALLOC_CONF
+                      value: "expandable_segments:True"
+                    - name: HF_MODULES_CACHE
+                      value: /tmp/hf_modules
+                    - name: HF_DATASETS_CACHE
+                      value: /tmp/hf_datasets
+                    - name: HF_HOME
+                      value: /tmp/hf_home_base
+                    envFrom:
+                    - configMapRef:
+                        name: intent-nlu-train-args
+                    - secretRef:
+                        name: hf-secret
+                    volumeMounts:
+                    - mountPath: /app/train.py
+                      name: train-script-volume
+                      subPath: train.py
+                    - mountPath: /app/training.jsonl
+                      name: shared-data-volume
+                      subPath: training.jsonl
+                    - mountPath: /mnt/data
+                      name: adapters-volume
+                    - mountPath: /mnt/hf_cache
+                      name: hf-cache-volume
+                  volumes:
+                  - name: train-script-volume
+                    configMap:
+                      name: intent-nlu-train-script
+                  - name: shared-data-volume
+                    emptyDir: {}
+                  - name: adapters-volume
+                    persistentVolumeClaim:
+                      claimName: lora-adapters-pvc
+                  - name: hf-cache-volume
+                    persistentVolumeClaim:
+                      claimName: hf-model-cache-pvc`;
+
+const TRAINJOB_YAML = `apiVersion: trainer.kubeflow.org/v1alpha1
+kind: TrainJob
+metadata:
+  name: intent-nlu-fine-tuning
+spec:
+  runtimeRef:
+    name: qwen-custom-runtime
+    kind: TrainingRuntime
+    apiGroup: trainer.kubeflow.org
+  trainer:
+    numNodes: 1
+    command:
+      - bash
+      - -c
+      - |
+        echo "installing dependencies..."
+        pip install -q scipy==1.17.0 \\
+          "git+https://github.com/red-hat-data-services/mlflow@rhoai-3.3"
+
+        echo "starting training..."
+        torchrun --nproc_per_node=4 /app/train.py \\
+          --model_name "\${MODEL_NAME}" \\
+          --data_path "/app/training.jsonl" \\
+          --output_dir "\${OUTPUT_DIR}" \\
+          --dataset_source "\${DATASET_SOURCE}" \\
+          --run_name "\${MLFLOW_RUN_NAME}"
+    env:
+      - name: DATASET_SOURCE
+        value: "s3://my-enterprise-bucket/intent-data/training.jsonl"
+      - name: MLFLOW_TRACKING_URI
+        value: https://mlflow.redhat-ods-applications.svc.cluster.local:8443
+      - name: MLFLOW_EXPERIMENT_NAME
+        value: qwen_intent_finetuning
+      - name: MLFLOW_RUN_NAME
+        value: qwen-1k-run-v1
+      - name: MLFLOW_TRACKING_TOKEN
+        value: <<token>>
+      - name: MLFLOW_TRACKING_INSECURE_TLS
+        value: "true"
+      - name: MLFLOW_WORKSPACE
+        value: decoder-sft`;
+
+// ═══════════════════════════════════════════════════════════════════
+// RUNTIME DEEP DIVE SECTIONS
+// ═══════════════════════════════════════════════════════════════════
+
+const RUNTIME_SECTIONS = [
+  {
+    id: 'mlpolicy',
+    title: 'ML Policy',
+    subtitle: 'Distributed training configuration',
+    icon: '{ }',
+    color: '#3b82f6',
+    lines: [7, 8, 9, 10],
+    description: 'Defines the distributed training framework and topology. Here we use PyTorch with 4 processes per node (one per GPU), enabling data-parallel training across all 4 GPUs.',
+    details: [
+      { label: 'Framework', value: 'PyTorch (torch)', note: 'Automatically configures torchrun/torch.distributed' },
+      { label: 'Nodes', value: '1', note: 'Single node — scale by increasing numNodes' },
+      { label: 'Procs/Node', value: '4', note: 'Matches the number of GPUs requested' },
+    ]
+  },
+  {
+    id: 'gpu',
+    title: 'GPU Scheduling',
+    subtitle: 'Node selection & tolerations',
+    icon: 'GPU',
+    color: '#22c55e',
+    lines: [17, 18, 19, 20, 21, 22],
+    description: 'Ensures pods land on GPU-equipped nodes. The nodeSelector targets nodes with NVIDIA GPUs, and the toleration allows scheduling onto GPU-tainted nodes that repel non-GPU workloads.',
+    details: [
+      { label: 'nodeSelector', value: 'nvidia.com/gpu.present: "true"', note: 'Only schedule on nodes with GPUs' },
+      { label: 'Toleration', value: 'NoSchedule on nvidia.com/gpu', note: 'Accept GPU node taints' },
+    ]
+  },
+  {
+    id: 'init',
+    title: 'Init Container',
+    subtitle: 'Data loader sidecar pattern',
+    icon: 'INIT',
+    color: '#f59e0b',
+    lines: [23, 24, 25, 26, 27, 28, 29, 30, 31],
+    description: 'An init container that runs BEFORE the training container. It copies training data from a pre-built data image into a shared volume. This pattern decouples data preparation from training execution.',
+    details: [
+      { label: 'Image', value: 'quay.io/balki404/sdg-intent-classifier-data', note: 'Pre-built container with training data baked in' },
+      { label: 'Action', value: 'cp training.jsonl → /shared-data/', note: 'Copies data to emptyDir volume shared with trainer' },
+      { label: 'Pattern', value: 'Init Container → Shared Volume → Main Container', note: 'Data is ready before training starts' },
+    ]
+  },
+  {
+    id: 'container',
+    title: 'Training Container',
+    subtitle: 'Red Hat certified training image',
+    icon: 'TRAIN',
+    color: '#ef4444',
+    lines: [32, 33, 34, 35, 36, 37, 38, 39, 40],
+    description: 'The main training container uses a Red Hat certified image with CUDA 12.8, PyTorch 2.8, and Python 3.12. It requests 4 GPUs with 32Gi memory — matched to the ML Policy\'s numProcPerNode.',
+    details: [
+      { label: 'Image', value: 'registry.redhat.io/rhoai/odh-training-cuda128-torch28-py312-rhel9:v3.0', note: 'Red Hat certified, enterprise-supported' },
+      { label: 'GPUs', value: '4x NVIDIA', note: 'Matches numProcPerNode in mlPolicy' },
+      { label: 'Memory', value: '16-32 Gi', note: 'Requests 16Gi, limited to 32Gi' },
+      { label: 'CPU', value: '4-8 cores', note: 'For data loading, preprocessing' },
+    ]
+  },
+  {
+    id: 'env',
+    title: 'Environment Config',
+    subtitle: 'HuggingFace, CUDA, ConfigMaps & Secrets',
+    icon: 'ENV',
+    color: '#a855f7',
+    lines: [41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53],
+    description: 'Environment variables configure HuggingFace cache paths and CUDA memory allocation. External config is injected via ConfigMaps (training hyperparameters) and Secrets (HF token).',
+    details: [
+      { label: 'HF_HUB_CACHE', value: '/mnt/hf_cache/hub', note: 'Persistent model cache on PVC — avoids re-downloading' },
+      { label: 'PYTORCH_CUDA_ALLOC_CONF', value: 'expandable_segments:True', note: 'Reduces CUDA memory fragmentation' },
+      { label: 'ConfigMap', value: 'intent-nlu-train-args', note: 'Hyperparameters: lr, epochs, batch_size, etc.' },
+      { label: 'Secret', value: 'hf-secret', note: 'HuggingFace API token for gated models' },
+    ]
+  },
+  {
+    id: 'volumes',
+    title: 'Volumes & Storage',
+    subtitle: 'PVCs, ConfigMaps, shared data',
+    icon: 'VOL',
+    color: '#06b6d4',
+    lines: [54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71],
+    description: 'Four volumes wire everything together: the training script from a ConfigMap, shared training data from the init container, persistent storage for LoRA adapters, and a cache for HuggingFace models.',
+    details: [
+      { label: 'train-script-volume', value: 'ConfigMap → /app/train.py', note: 'Training script injected as a ConfigMap mount' },
+      { label: 'shared-data-volume', value: 'emptyDir → /app/training.jsonl', note: 'Init container writes, trainer reads' },
+      { label: 'adapters-volume', value: 'PVC → /mnt/data', note: 'Persistent storage for LoRA adapter outputs' },
+      { label: 'hf-cache-volume', value: 'PVC → /mnt/hf_cache', note: 'Cached model weights survive pod restarts' },
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════════
+// TRAINJOB DEEP DIVE SECTIONS
+// ═══════════════════════════════════════════════════════════════════
+
+const TRAINJOB_SECTIONS = [
+  {
+    id: 'runtimeref',
+    title: 'Runtime Reference',
+    subtitle: 'Pointer to the infrastructure blueprint',
+    icon: 'REF',
+    color: '#06b6d4',
+    lines: [5, 6, 7, 8],
+    description: 'The runtimeRef field is the key link — it tells the TrainJob controller which TrainingRuntime blueprint to use. This is a namespace-scoped reference (vs ClusterTrainingRuntime for cluster-wide).',
+    details: [
+      { label: 'name', value: 'qwen-custom-runtime', note: 'Must match a TrainingRuntime in the same namespace' },
+      { label: 'kind', value: 'TrainingRuntime', note: 'Namespace-scoped. Use ClusterTrainingRuntime for cluster-wide' },
+      { label: 'apiGroup', value: 'trainer.kubeflow.org', note: 'Kubeflow Training Operator v2 API' },
+    ]
+  },
+  {
+    id: 'trainer',
+    title: 'Trainer Command',
+    subtitle: 'The actual training execution',
+    icon: 'RUN',
+    color: '#f59e0b',
+    lines: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+    description: 'The trainer section overrides the command in the runtime\'s container. It installs dependencies and launches distributed training with torchrun. The --nproc_per_node=4 matches the runtime\'s mlPolicy.',
+    details: [
+      { label: 'Dependencies', value: 'scipy, mlflow (RHOAI fork)', note: 'Installed at runtime for flexibility' },
+      { label: 'Launcher', value: 'torchrun --nproc_per_node=4', note: 'PyTorch distributed launcher, 1 process per GPU' },
+      { label: 'Script', value: '/app/train.py', note: 'Mounted from ConfigMap via the TrainingRuntime' },
+      { label: 'Args', value: 'model_name, data_path, output_dir, ...', note: 'Parameterized via env vars — no hardcoding' },
+    ]
+  },
+  {
+    id: 'env',
+    title: 'Experiment Environment',
+    subtitle: 'Per-experiment overrides',
+    icon: 'ENV',
+    color: '#a855f7',
+    lines: [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38],
+    description: 'Environment variables specific to THIS experiment. These override or extend the runtime\'s defaults. Key config: the S3 data source, MLflow tracking server, experiment name, and run name.',
+    details: [
+      { label: 'DATASET_SOURCE', value: 's3://my-enterprise-bucket/...', note: 'Points to versioned training data in object storage' },
+      { label: 'MLFLOW_TRACKING_URI', value: 'https://mlflow...svc.cluster.local:8443', note: 'In-cluster MLflow for experiment tracking' },
+      { label: 'MLFLOW_EXPERIMENT_NAME', value: 'qwen_intent_finetuning', note: 'Groups related runs together' },
+      { label: 'MLFLOW_RUN_NAME', value: 'qwen-1k-run-v1', note: 'Unique identifier for this specific run' },
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════════
+// FLOW STEPS
+// ═══════════════════════════════════════════════════════════════════
+
+const FLOW_STEPS = [
+  {
+    num: 1,
+    title: 'Submit TrainJob',
+    detail: 'Data scientist runs oc apply -f trainjob.yaml',
+    icon: 'CLI',
+    color: '#f59e0b',
+    longDesc: 'The data scientist submits a lightweight TrainJob manifest. It contains only experiment-specific configuration: the training command, environment variables for this run, and a reference to which runtime blueprint to use. No infrastructure details needed.',
+  },
+  {
+    num: 2,
+    title: 'Controller Reads TrainJob',
+    detail: 'Training operator validates and processes the spec',
+    icon: 'CTRL',
+    color: '#3b82f6',
+    longDesc: 'The Kubeflow Training Operator (running as a controller in the cluster) watches for new TrainJob resources. It validates the spec, checks that the referenced TrainingRuntime exists, and begins the reconciliation loop.',
+  },
+  {
+    num: 3,
+    title: 'Resolve RuntimeRef',
+    detail: 'Looks up the TrainingRuntime blueprint',
+    icon: 'FIND',
+    color: '#06b6d4',
+    longDesc: 'The controller follows the runtimeRef pointer to find the TrainingRuntime named "qwen-custom-runtime" in the same namespace. This runtime contains the full infrastructure blueprint: GPU resources, container images, volumes, init containers, and distributed training topology.',
+  },
+  {
+    num: 4,
+    title: 'Merge Specs',
+    detail: 'TrainJob overrides are applied to the runtime template',
+    icon: 'MRG',
+    color: '#a855f7',
+    longDesc: 'The controller merges TrainJob fields into the runtime template. The trainer command replaces the container\'s default command. Environment variables from the TrainJob are added to (or override) the runtime\'s env. The result is a complete, fully-specified pod template.',
+  },
+  {
+    num: 5,
+    title: 'Create JobSet',
+    detail: 'Materialized as a Kubernetes JobSet with the merged spec',
+    icon: 'JOB',
+    color: '#22c55e',
+    longDesc: 'The controller creates a Kubernetes JobSet (or PyTorchJob) resource from the merged spec. This JobSet manages the lifecycle of training pods, handles restarts (restartPolicy: OnFailure), and coordinates multi-node training if numNodes > 1.',
+  },
+  {
+    num: 6,
+    title: 'Schedule on GPU Node',
+    detail: 'Kubernetes scheduler places pods on GPU-equipped nodes',
+    icon: 'NODE',
+    color: '#ef4444',
+    longDesc: 'The Kubernetes scheduler uses the nodeSelector (nvidia.com/gpu.present) and resource requests (4x nvidia.com/gpu) to find a suitable GPU node. The toleration allows landing on nodes tainted for GPU-only workloads.',
+  },
+  {
+    num: 7,
+    title: 'Init Container Loads Data',
+    detail: 'Training data copied to shared volume',
+    icon: 'DATA',
+    color: '#f59e0b',
+    longDesc: 'Before the training container starts, the init container runs. It copies training.jsonl from the pre-built data image into the shared emptyDir volume. This ensures training data is ready and available when the main container starts.',
+  },
+  {
+    num: 8,
+    title: 'Training Begins',
+    detail: 'torchrun launches distributed fine-tuning across 4 GPUs',
+    icon: 'FIRE',
+    color: '#22c55e',
+    longDesc: 'The training container starts. torchrun launches 4 processes (one per GPU), each running train.py. The script loads the model, reads training data from /app/training.jsonl, performs QLoRA fine-tuning, logs metrics to MLflow, and saves LoRA adapters to the persistent volume at /mnt/data.',
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════════
+// SHARED COMPONENTS
+// ═══════════════════════════════════════════════════════════════════
+
+function YamlViewer({ yaml, highlightedLines, highlightColor }) {
+  const lines = yaml.split('\n');
+  const hlColor = highlightColor || 'highlighted';
+  return (
+    <div className="rounded-xl border border-slate-700/60 bg-[#0b1121] overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/40 border-b border-slate-700/40">
+        <div className="w-2.5 h-2.5 rounded-full bg-red-500/60"></div>
+        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60"></div>
+        <div className="w-2.5 h-2.5 rounded-full bg-green-500/60"></div>
+        <span className="mono text-[10px] text-slate-500 ml-2">YAML</span>
+      </div>
+      <div className="overflow-x-auto p-0" style={{ maxHeight: '520px', overflowY: 'auto' }}>
+        {lines.map((line, i) => {
+          const lineNum = i + 1;
+          const isHL = highlightedLines && highlightedLines.includes(lineNum);
+          return (
+            <div key={i} className={`yaml-line flex px-2 py-[1px] ${isHL ? hlColor : ''}`}>
+              <span className="mono text-[10px] text-slate-600 w-8 text-right mr-3 select-none flex-shrink-0">{lineNum}</span>
+              <span className="mono text-[11px] whitespace-pre" style={{ color: colorizeYaml(line) }}>{line}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function colorizeYaml(line) {
+  if (line.trim().startsWith('#')) return '#6b7280';
+  if (line.trim().startsWith('- ')) return '#a5b4fc';
+  if (/^\s*(apiVersion|kind|metadata|spec|name|labels|template|containers|initContainers|volumes|env|envFrom|resources|volumeMounts):/.test(line)) return '#93c5fd';
+  if (/:\s*"[^"]*"/.test(line) || /:\s*'[^']*'/.test(line)) return '#fde68a';
+  if (/:\s*\d+/.test(line)) return '#86efac';
+  return '#cbd5e1';
+}
+
+function DetailCard({ detail, color }) {
+  return (
+    <div className="flex gap-3 items-start py-2 px-3 rounded-lg bg-slate-800/30 border border-slate-700/30">
+      <div className="w-1 h-full rounded-full flex-shrink-0 self-stretch" style={{ background: color, minHeight: '24px' }}></div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="mono text-[11px] font-semibold text-slate-200">{detail.label}</span>
+          <span className="mono text-[10px] text-slate-400 break-all">{detail.value}</span>
+        </div>
+        <div className="text-[10px] text-slate-500 mt-0.5">{detail.note}</div>
+      </div>
+    </div>
+  );
+}
+
+function SectionBadge({ icon, color, size }) {
+  const sz = size || 36;
+  return (
+    <div className="flex items-center justify-center rounded-lg mono text-[10px] font-bold flex-shrink-0"
+      style={{ width: sz, height: sz, background: `${color}20`, color: color, border: `1px solid ${color}40` }}>
+      {icon}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB 1: OVERVIEW
+// ═══════════════════════════════════════════════════════════════════
+
+function OverviewTab() {
+  return (
+    <div className="fade-in space-y-8">
+      {/* Hero concept */}
+      <div className="text-center mb-2">
+        <h2 className="text-xl font-bold text-white mb-2">The Two-Resource Pattern</h2>
+        <p className="text-sm text-slate-400 max-w-2xl mx-auto">
+          OpenShift AI uses two Kubernetes custom resources to manage training jobs.
+          The <span className="text-cyan-300 font-semibold">TrainingRuntime</span> is the reusable infrastructure blueprint.
+          The <span className="text-amber-300 font-semibold">TrainJob</span> is the lightweight, per-experiment job submission.
+        </p>
+      </div>
+
+      {/* Architecture diagram */}
+      <div className="relative rounded-2xl border border-slate-700/50 bg-slate-900/30 p-6 overflow-hidden">
+        <svg width="100%" height="420" viewBox="0 0 960 420" className="mx-auto block" style={{ maxWidth: '960px' }}>
+          {/* Background grid */}
+          <defs>
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(59,130,246,0.06)" strokeWidth="0.5"/>
+            </pattern>
+            <marker id="arrowAmber" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#fbbf24"/>
+            </marker>
+            <marker id="arrowCyan" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#06b6d4"/>
+            </marker>
+            <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#22c55e"/>
+            </marker>
+            <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#3b82f6"/>
+            </marker>
+          </defs>
+          <rect width="960" height="420" fill="url(#grid)"/>
+
+          {/* Data Scientist side */}
+          <rect x="20" y="20" width="220" height="180" rx="16" fill="#0d1424" stroke="#fbbf2440" strokeWidth="1.5"/>
+          <text x="130" y="48" textAnchor="middle" className="text-[13px] font-bold" fill="#fbbf24">Data Scientist</text>
+          <text x="130" y="68" textAnchor="middle" className="text-[10px]" fill="#94a3b8">Creates per experiment</text>
+
+          {/* TrainJob box */}
+          <rect x="45" y="85" width="170" height="100" rx="12" fill="#1a1408" stroke="#fbbf2460" strokeWidth="2" strokeDasharray="0"/>
+          <text x="130" y="110" textAnchor="middle" className="mono text-[11px] font-bold" fill="#fbbf24">TrainJob</text>
+          <text x="130" y="128" textAnchor="middle" className="mono text-[9px]" fill="#d4a94a">intent-nlu-fine-tuning</text>
+          <line x1="55" y1="136" x2="205" y2="136" stroke="#fbbf2420" strokeWidth="1"/>
+          <text x="65" y="152" className="mono text-[9px]" fill="#94a3b8">runtimeRef:</text>
+          <text x="75" y="166" className="mono text-[9px]" fill="#fde68a">qwen-custom-runtime</text>
+          <text x="65" y="180" className="mono text-[9px]" fill="#94a3b8">trainer: command, env</text>
+
+          {/* Platform Engineer side */}
+          <rect x="340" y="20" width="280" height="180" rx="16" fill="#0a1620" stroke="#06b6d440" strokeWidth="1.5"/>
+          <text x="480" y="48" textAnchor="middle" className="text-[13px] font-bold" fill="#06b6d4">Platform / ML Engineer</text>
+          <text x="480" y="68" textAnchor="middle" className="text-[10px]" fill="#94a3b8">Defines once, reused by many</text>
+
+          {/* TrainingRuntime box */}
+          <rect x="365" y="85" width="230" height="100" rx="12" fill="#081418" stroke="#06b6d460" strokeWidth="2"/>
+          <text x="480" y="110" textAnchor="middle" className="mono text-[11px] font-bold" fill="#06b6d4">TrainingRuntime</text>
+          <text x="480" y="128" textAnchor="middle" className="mono text-[9px]" fill="#67d4e0">qwen-custom-runtime</text>
+          <line x1="375" y1="136" x2="585" y2="136" stroke="#06b6d420" strokeWidth="1"/>
+          <text x="385" y="152" className="mono text-[9px]" fill="#94a3b8">mlPolicy, GPU config</text>
+          <text x="385" y="166" className="mono text-[9px]" fill="#94a3b8">containers, volumes</text>
+          <text x="385" y="180" className="mono text-[9px]" fill="#94a3b8">init containers, env</text>
+
+          {/* Arrow: TrainJob → references → TrainingRuntime */}
+          <line x1="215" y1="135" x2="360" y2="135" stroke="#fbbf24" strokeWidth="2" markerEnd="url(#arrowAmber)" className="arrow-flow"/>
+          <rect x="248" y="122" width="72" height="18" rx="9" fill="#1a1408" stroke="#fbbf2440" strokeWidth="1"/>
+          <text x="284" y="134" textAnchor="middle" className="mono text-[9px] font-semibold" fill="#fbbf24">runtimeRef</text>
+
+          {/* Controller */}
+          <rect x="680" y="60" width="140" height="70" rx="12" fill="#0d0f24" stroke="#3b82f640" strokeWidth="1.5"/>
+          <text x="750" y="88" textAnchor="middle" className="mono text-[10px] font-bold" fill="#60a5fa">Training Operator</text>
+          <text x="750" y="104" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Controller</text>
+
+          {/* Arrow from runtime to controller */}
+          <line x1="595" y1="115" x2="675" y2="95" stroke="#3b82f6" strokeWidth="1.5" markerEnd="url(#arrowBlue)" className="arrow-flow"/>
+
+          {/* Merge callout */}
+          <rect x="660" y="160" width="180" height="56" rx="10" fill="#0f0d24" stroke="#a855f740" strokeWidth="1.5"/>
+          <text x="750" y="183" textAnchor="middle" className="mono text-[10px] font-bold" fill="#c084fc">Merge & Reconcile</text>
+          <text x="750" y="200" textAnchor="middle" className="text-[9px]" fill="#94a3b8">TrainJob + Runtime = Final Spec</text>
+          <line x1="750" y1="130" x2="750" y2="155" stroke="#a855f7" strokeWidth="1.5" markerEnd="url(#arrowBlue)" strokeDasharray="4 4"/>
+
+          {/* Arrow down to JobSet */}
+          <line x1="750" y1="216" x2="750" y2="256" stroke="#22c55e" strokeWidth="2" markerEnd="url(#arrowGreen)" className="arrow-flow"/>
+
+          {/* Kubernetes Cluster */}
+          <rect x="60" y="250" width="840" height="150" rx="16" fill="#0a0f14" stroke="#334155" strokeWidth="1.5" strokeDasharray="6 3"/>
+          <text x="100" y="278" className="text-[11px] font-semibold" fill="#64748b">OpenShift Cluster</text>
+
+          {/* JobSet */}
+          <rect x="640" y="268" width="220" height="48" rx="10" fill="#081a10" stroke="#22c55e40" strokeWidth="1.5"/>
+          <text x="750" y="290" textAnchor="middle" className="mono text-[10px] font-bold" fill="#22c55e">JobSet / PyTorchJob</text>
+          <text x="750" y="304" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Created by controller</text>
+
+          {/* Arrow down to pods */}
+          <line x1="750" y1="316" x2="750" y2="338" stroke="#22c55e" strokeWidth="1.5" markerEnd="url(#arrowGreen)"/>
+
+          {/* GPU Node */}
+          <rect x="100" y="330" width="780" height="55" rx="10" fill="#0f1218" stroke="#475569" strokeWidth="1"/>
+          <text x="130" y="355" className="text-[10px] font-semibold" fill="#94a3b8">GPU Node</text>
+          <text x="130" y="370" className="text-[9px]" fill="#64748b">nvidia.com/gpu.present: "true"</text>
+
+          {/* Init container */}
+          <rect x="280" y="340" width="100" height="36" rx="8" fill="#1a1408" stroke="#f59e0b40" strokeWidth="1"/>
+          <text x="330" y="358" textAnchor="middle" className="mono text-[9px]" fill="#f59e0b">init: data</text>
+          <text x="330" y="370" textAnchor="middle" className="text-[8px]" fill="#94a3b8">loader</text>
+
+          {/* Arrow from init to training pod */}
+          <line x1="380" y1="358" x2="420" y2="358" stroke="#f59e0b" strokeWidth="1.5" markerEnd="url(#arrowAmber)"/>
+
+          {/* Training pods */}
+          {[0,1,2,3].map(i => (
+            <g key={i}>
+              <rect x={430 + i * 80} y={338} width={65} height={40} rx="8" fill="#0d1424" stroke="#3b82f640" strokeWidth="1.5"/>
+              <text x={462 + i * 80} y={356} textAnchor="middle" className="mono text-[9px] font-bold" fill="#60a5fa">GPU {i}</text>
+              <text x={462 + i * 80} y={370} textAnchor="middle" className="text-[8px]" fill="#94a3b8">torchrun</text>
+            </g>
+          ))}
+
+          {/* PVCs */}
+          <rect x="770" y="340" width="90" height="36" rx="8" fill="#081418" stroke="#06b6d430" strokeWidth="1"/>
+          <text x="815" y="356" textAnchor="middle" className="mono text-[8px]" fill="#06b6d4">PVCs</text>
+          <text x="815" y="368" textAnchor="middle" className="text-[8px]" fill="#64748b">adapters, cache</text>
+        </svg>
+      </div>
+
+      {/* Separation of concerns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-xl border border-amber-500/20 bg-amber-950/5 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <SectionBadge icon="TJ" color="#fbbf24" size={40}/>
+            <div>
+              <h3 className="text-sm font-bold text-amber-300">TrainJob</h3>
+              <p className="text-[10px] text-slate-400">What the Data Scientist writes</p>
+            </div>
+          </div>
+          <ul className="space-y-2 text-[11px] text-slate-300">
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-amber-200">Lightweight</strong> — just ~40 lines of YAML</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-amber-200">Experiment-specific</strong> — training command, dataset path, MLflow run name</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-amber-200">No infrastructure details</strong> — no GPU config, no container images, no volumes</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-amber-200">One per experiment</strong> — create a new TrainJob for each training run</span>
+            </li>
+          </ul>
+        </div>
+
+        <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/5 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <SectionBadge icon="TR" color="#06b6d4" size={40}/>
+            <div>
+              <h3 className="text-sm font-bold text-cyan-300">TrainingRuntime</h3>
+              <p className="text-[10px] text-slate-400">What the Platform Engineer defines</p>
+            </div>
+          </div>
+          <ul className="space-y-2 text-[11px] text-slate-300">
+            <li className="flex items-start gap-2">
+              <span className="text-cyan-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-cyan-200">Comprehensive</strong> — ~100 lines covering full infrastructure</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-cyan-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-cyan-200">Reusable</strong> — one runtime, many TrainJobs reference it</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-cyan-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-cyan-200">Infrastructure details</strong> — GPU scheduling, container images, PVCs, secrets</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-cyan-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-cyan-200">Standardized</strong> — enforces certified images, consistent config, best practices</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Analogy */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-5">
+        <h3 className="text-sm font-semibold text-slate-200 mb-2">Think of it like this...</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px]">
+          <div className="text-center p-3 rounded-lg bg-slate-800/30">
+            <div className="text-2xl mb-2">&#x1F3ED;</div>
+            <div className="text-cyan-300 font-semibold mb-1">TrainingRuntime = Factory</div>
+            <div className="text-slate-400">The factory floor with machines, power, raw materials. Set up once by specialists.</div>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-slate-800/30">
+            <div className="text-2xl mb-2">&#x1F4CB;</div>
+            <div className="text-amber-300 font-semibold mb-1">TrainJob = Work Order</div>
+            <div className="text-slate-400">A specific order: "Build this product, with these specs, by this date." Created per job.</div>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-slate-800/30">
+            <div className="text-2xl mb-2">&#x1F3C3;</div>
+            <div className="text-green-300 font-semibold mb-1">Running Pod = Production Run</div>
+            <div className="text-slate-400">The factory executing the work order — machines running, product being built.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB 2: TRAINING RUNTIME DEEP DIVE
+// ═══════════════════════════════════════════════════════════════════
+
+function RuntimeTab() {
+  const [activeSection, setActiveSection] = useState('mlpolicy');
+  const section = RUNTIME_SECTIONS.find(s => s.id === activeSection);
+
+  return (
+    <div className="fade-in">
+      <div className="text-center mb-5">
+        <h2 className="text-xl font-bold text-white mb-1">TrainingRuntime Deep Dive</h2>
+        <p className="text-sm text-slate-400">The reusable infrastructure blueprint — click each section to explore</p>
+      </div>
+
+      {/* Section selector */}
+      <div className="flex gap-2 mb-5 flex-wrap justify-center">
+        {RUNTIME_SECTIONS.map(s => (
+          <button key={s.id} onClick={() => setActiveSection(s.id)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium transition-all border ${
+              s.id === activeSection
+                ? 'shadow-lg'
+                : 'bg-slate-800/40 border-slate-700/40 text-slate-400 hover:bg-slate-700/40'
+            }`}
+            style={s.id === activeSection ? {
+              background: `${s.color}15`,
+              borderColor: `${s.color}50`,
+              color: s.color,
+              boxShadow: `0 0 12px 2px ${s.color}20`
+            } : {}}>
+            <SectionBadge icon={s.icon} color={s.color} size={24}/>
+            {s.title}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* YAML with highlights */}
+        <div>
+          <YamlViewer yaml={TRAINING_RUNTIME_YAML} highlightedLines={section.lines} highlightColor="highlighted-cyan"/>
+        </div>
+
+        {/* Section detail */}
+        <div className="fade-in" key={activeSection}>
+          <div className="callout-box bg-slate-800/30 border border-slate-700/40" style={{ '--callout-color': section.color }}>
+            <div className="flex items-center gap-3 mb-3">
+              <SectionBadge icon={section.icon} color={section.color}/>
+              <div>
+                <h3 className="text-base font-bold" style={{ color: section.color }}>{section.title}</h3>
+                <p className="text-[10px] text-slate-400">{section.subtitle}</p>
+              </div>
+            </div>
+
+            <p className="text-[12px] text-slate-300 leading-relaxed mb-4">{section.description}</p>
+
+            <div className="space-y-2">
+              {section.details.map((d, i) => (
+                <DetailCard key={i} detail={d} color={section.color}/>
+              ))}
+            </div>
+          </div>
+
+          {/* Visual for certain sections */}
+          {activeSection === 'init' && (
+            <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+              <div className="text-[10px] font-semibold text-slate-300 mb-3">Init Container Pattern Flow</div>
+              <svg width="100%" height="80" viewBox="0 0 500 80">
+                <rect x="10" y="15" width="120" height="50" rx="10" fill="#1a1408" stroke="#f59e0b40" strokeWidth="1.5"/>
+                <text x="70" y="38" textAnchor="middle" className="mono text-[10px]" fill="#f59e0b">data-loader</text>
+                <text x="70" y="52" textAnchor="middle" className="text-[9px]" fill="#94a3b8">init container</text>
+
+                <line x1="130" y1="40" x2="190" y2="40" stroke="#f59e0b" strokeWidth="2" markerEnd="url(#arrowAmber)" className="arrow-flow"/>
+                <text x="160" y="32" textAnchor="middle" className="text-[8px]" fill="#f59e0b">cp</text>
+
+                <rect x="190" y="15" width="120" height="50" rx="10" fill="#0a1620" stroke="#06b6d440" strokeWidth="1.5"/>
+                <text x="250" y="38" textAnchor="middle" className="mono text-[10px]" fill="#06b6d4">shared-data</text>
+                <text x="250" y="52" textAnchor="middle" className="text-[9px]" fill="#94a3b8">emptyDir volume</text>
+
+                <line x1="310" y1="40" x2="370" y2="40" stroke="#22c55e" strokeWidth="2" markerEnd="url(#arrowGreen)" className="arrow-flow"/>
+                <text x="340" y="32" textAnchor="middle" className="text-[8px]" fill="#22c55e">mount</text>
+
+                <rect x="370" y="15" width="120" height="50" rx="10" fill="#081a10" stroke="#22c55e40" strokeWidth="1.5"/>
+                <text x="430" y="38" textAnchor="middle" className="mono text-[10px]" fill="#22c55e">node</text>
+                <text x="430" y="52" textAnchor="middle" className="text-[9px]" fill="#94a3b8">training container</text>
+              </svg>
+            </div>
+          )}
+
+          {activeSection === 'volumes' && (
+            <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+              <div className="text-[10px] font-semibold text-slate-300 mb-3">Volume Architecture</div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { name: 'train-script', type: 'ConfigMap', mount: '/app/train.py', color: '#a855f7' },
+                  { name: 'shared-data', type: 'emptyDir', mount: '/app/training.jsonl', color: '#f59e0b' },
+                  { name: 'adapters', type: 'PVC', mount: '/mnt/data', color: '#22c55e' },
+                  { name: 'hf-cache', type: 'PVC', mount: '/mnt/hf_cache', color: '#06b6d4' },
+                ].map((v, i) => (
+                  <div key={i} className="rounded-lg border border-slate-700/30 bg-slate-900/30 p-2.5">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-2 h-2 rounded-full" style={{ background: v.color }}></div>
+                      <span className="mono text-[10px] font-semibold" style={{ color: v.color }}>{v.name}</span>
+                    </div>
+                    <div className="text-[9px] text-slate-400">Type: <span className="text-slate-300">{v.type}</span></div>
+                    <div className="mono text-[9px] text-slate-500">{v.mount}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'container' && (
+            <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+              <div className="text-[10px] font-semibold text-slate-300 mb-3">Resource Allocation</div>
+              <div className="space-y-2">
+                {[
+                  { label: 'GPU', req: 4, lim: 4, unit: 'nvidia.com/gpu', pct: 100, color: '#22c55e' },
+                  { label: 'Memory', req: 16, lim: 32, unit: 'Gi', pct: 100, color: '#3b82f6' },
+                  { label: 'CPU', req: 4, lim: 8, unit: 'cores', pct: 50, color: '#a855f7' },
+                ].map((r, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className="text-[10px] text-slate-400 w-16">{r.label}</span>
+                    <div className="flex-1 h-6 bg-slate-900/60 rounded-full overflow-hidden relative">
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${r.pct}%`, background: `${r.color}40` }}></div>
+                      <span className="absolute inset-0 flex items-center justify-center mono text-[9px] text-slate-300">
+                        {r.req}{r.unit !== 'nvidia.com/gpu' ? r.unit : ''} / {r.lim}{r.unit !== 'nvidia.com/gpu' ? r.unit : ''}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB 3: TRAINJOB DEEP DIVE
+// ═══════════════════════════════════════════════════════════════════
+
+function TrainJobTab() {
+  const [activeSection, setActiveSection] = useState('runtimeref');
+  const section = TRAINJOB_SECTIONS.find(s => s.id === activeSection);
+
+  return (
+    <div className="fade-in">
+      <div className="text-center mb-5">
+        <h2 className="text-xl font-bold text-white mb-1">TrainJob Deep Dive</h2>
+        <p className="text-sm text-slate-400">The lightweight per-experiment submission — click each section to explore</p>
+      </div>
+
+      {/* Section selector */}
+      <div className="flex gap-2 mb-5 flex-wrap justify-center">
+        {TRAINJOB_SECTIONS.map(s => (
+          <button key={s.id} onClick={() => setActiveSection(s.id)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium transition-all border ${
+              s.id === activeSection
+                ? 'shadow-lg'
+                : 'bg-slate-800/40 border-slate-700/40 text-slate-400 hover:bg-slate-700/40'
+            }`}
+            style={s.id === activeSection ? {
+              background: `${s.color}15`,
+              borderColor: `${s.color}50`,
+              color: s.color,
+              boxShadow: `0 0 12px 2px ${s.color}20`
+            } : {}}>
+            <SectionBadge icon={s.icon} color={s.color} size={24}/>
+            {s.title}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* YAML with highlights */}
+        <div>
+          <YamlViewer yaml={TRAINJOB_YAML} highlightedLines={section.lines} highlightColor="highlighted"/>
+        </div>
+
+        {/* Section detail */}
+        <div className="fade-in" key={activeSection}>
+          <div className="callout-box bg-slate-800/30 border border-slate-700/40" style={{ '--callout-color': section.color }}>
+            <div className="flex items-center gap-3 mb-3">
+              <SectionBadge icon={section.icon} color={section.color}/>
+              <div>
+                <h3 className="text-base font-bold" style={{ color: section.color }}>{section.title}</h3>
+                <p className="text-[10px] text-slate-400">{section.subtitle}</p>
+              </div>
+            </div>
+
+            <p className="text-[12px] text-slate-300 leading-relaxed mb-4">{section.description}</p>
+
+            <div className="space-y-2">
+              {section.details.map((d, i) => (
+                <DetailCard key={i} detail={d} color={section.color}/>
+              ))}
+            </div>
+          </div>
+
+          {/* RuntimeRef connection visual */}
+          {activeSection === 'runtimeref' && (
+            <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+              <div className="text-[10px] font-semibold text-slate-300 mb-3">The Connection</div>
+              <svg width="100%" height="110" viewBox="0 0 480 110">
+                <defs>
+                  <marker id="arrowAmber2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#fbbf24"/>
+                  </marker>
+                </defs>
+                <rect x="10" y="10" width="160" height="90" rx="12" fill="#1a1408" stroke="#fbbf2450" strokeWidth="2"/>
+                <text x="90" y="40" textAnchor="middle" className="mono text-[11px] font-bold" fill="#fbbf24">TrainJob</text>
+                <text x="90" y="58" textAnchor="middle" className="mono text-[9px]" fill="#d4a94a">intent-nlu-fine-tuning</text>
+                <text x="90" y="82" textAnchor="middle" className="text-[9px]" fill="#94a3b8">runtimeRef.name:</text>
+                <text x="90" y="94" textAnchor="middle" className="mono text-[9px]" fill="#fde68a">qwen-custom-runtime</text>
+
+                <line x1="170" y1="55" x2="300" y2="55" stroke="#fbbf24" strokeWidth="2.5" markerEnd="url(#arrowAmber2)" className="arrow-flow"/>
+                <text x="235" y="48" textAnchor="middle" className="mono text-[9px] font-semibold" fill="#fbbf24">references</text>
+
+                <rect x="300" y="10" width="170" height="90" rx="12" fill="#081418" stroke="#06b6d450" strokeWidth="2"/>
+                <text x="385" y="40" textAnchor="middle" className="mono text-[11px] font-bold" fill="#06b6d4">TrainingRuntime</text>
+                <text x="385" y="58" textAnchor="middle" className="mono text-[9px]" fill="#67d4e0">qwen-custom-runtime</text>
+                <text x="385" y="80" textAnchor="middle" className="text-[9px]" fill="#94a3b8">GPU, images, volumes,</text>
+                <text x="385" y="92" textAnchor="middle" className="text-[9px]" fill="#94a3b8">init containers, env</text>
+              </svg>
+              <div className="text-[10px] text-slate-500 mt-2">
+                The <span className="text-amber-300 mono">runtimeRef.name</span> must match the <span className="text-cyan-300 mono">metadata.name</span> of a TrainingRuntime in the same namespace.
+              </div>
+            </div>
+          )}
+
+          {/* Trainer command visual */}
+          {activeSection === 'trainer' && (
+            <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+              <div className="text-[10px] font-semibold text-slate-300 mb-3">torchrun Execution Model</div>
+              <svg width="100%" height="100" viewBox="0 0 480 100">
+                <rect x="10" y="10" width="100" height="80" rx="10" fill="#1a1408" stroke="#f59e0b40" strokeWidth="1.5"/>
+                <text x="60" y="38" textAnchor="middle" className="mono text-[10px] font-bold" fill="#f59e0b">torchrun</text>
+                <text x="60" y="55" textAnchor="middle" className="text-[9px]" fill="#94a3b8">launcher</text>
+                <text x="60" y="72" textAnchor="middle" className="text-[8px]" fill="#64748b">nproc=4</text>
+
+                {[0,1,2,3].map(i => (
+                  <g key={i}>
+                    <line x1="110" y1={25 + i*18} x2={160} y2={25 + i*18} stroke="#f59e0b80" strokeWidth="1" className="arrow-flow"/>
+                    <rect x="160" y={15 + i*18} width="80" height="18" rx="4" fill="#081a10" stroke="#22c55e30" strokeWidth="1"/>
+                    <text x="200" y={28 + i*18} textAnchor="middle" className="mono text-[8px]" fill="#22c55e">train.py:{i}</text>
+
+                    <line x1="240" y1={25 + i*18} x2={280} y2={25 + i*18} stroke="#22c55e60" strokeWidth="1"/>
+                    <rect x="280" y={15 + i*18} width="60" height="18" rx="4" fill="#0d1424" stroke="#3b82f630" strokeWidth="1"/>
+                    <text x="310" y={28 + i*18} textAnchor="middle" className="mono text-[8px]" fill="#60a5fa">GPU {i}</text>
+                  </g>
+                ))}
+
+                <rect x="380" y="20" width="90" height="60" rx="10" fill="#0d0520" stroke="#a855f730" strokeWidth="1.5"/>
+                <text x="425" y="45" textAnchor="middle" className="mono text-[9px] font-bold" fill="#c084fc">MLflow</text>
+                <text x="425" y="60" textAnchor="middle" className="text-[8px]" fill="#94a3b8">metrics, logs</text>
+
+                {[0,1,2,3].map(i => (
+                  <line key={`ml${i}`} x1="340" y1={25 + i*18} x2="380" y2={50} stroke="#a855f720" strokeWidth="1" strokeDasharray="3 3"/>
+                ))}
+              </svg>
+            </div>
+          )}
+
+          {/* Env visual */}
+          {activeSection === 'env' && (
+            <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+              <div className="text-[10px] font-semibold text-slate-300 mb-3">Environment Variable Categories</div>
+              <div className="space-y-2">
+                <div className="rounded-lg border border-amber-500/20 bg-amber-950/10 p-2.5">
+                  <div className="text-[10px] font-semibold text-amber-300 mb-1">Data Source</div>
+                  <div className="mono text-[9px] text-slate-400">DATASET_SOURCE → S3 bucket with versioned training data</div>
+                </div>
+                <div className="rounded-lg border border-purple-500/20 bg-purple-950/10 p-2.5">
+                  <div className="text-[10px] font-semibold text-purple-300 mb-1">Experiment Tracking (MLflow)</div>
+                  <div className="mono text-[9px] text-slate-400 space-y-0.5">
+                    <div>MLFLOW_TRACKING_URI → In-cluster MLflow server</div>
+                    <div>MLFLOW_EXPERIMENT_NAME → Group: qwen_intent_finetuning</div>
+                    <div>MLFLOW_RUN_NAME → This run: qwen-1k-run-v1</div>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-red-500/20 bg-red-950/10 p-2.5">
+                  <div className="text-[10px] font-semibold text-red-300 mb-1">Auth & Security</div>
+                  <div className="mono text-[9px] text-slate-400">MLFLOW_TRACKING_TOKEN → Auth token for MLflow API</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB 4: HOW IT WORKS TOGETHER
+// ═══════════════════════════════════════════════════════════════════
+
+function FlowTab() {
+  const [activeStep, setActiveStep] = useState(0);
+  const step = FLOW_STEPS[activeStep];
+
+  return (
+    <div className="fade-in">
+      <div className="text-center mb-5">
+        <h2 className="text-xl font-bold text-white mb-1">How It Works Together</h2>
+        <p className="text-sm text-slate-400">
+          What happens when you run <span className="mono text-amber-300">oc apply -f trainjob.yaml</span>
+        </p>
+      </div>
+
+      {/* Step timeline */}
+      <div className="relative mb-6">
+        {/* Connection line */}
+        <div className="absolute top-6 left-0 right-0 h-0.5 bg-slate-800 z-0"></div>
+        <div className="absolute top-6 left-0 h-0.5 bg-gradient-to-r from-amber-500/60 to-green-500/60 z-0 transition-all duration-500"
+          style={{ width: `${(activeStep / (FLOW_STEPS.length - 1)) * 100}%` }}></div>
+
+        <div className="relative z-10 flex justify-between">
+          {FLOW_STEPS.map((s, i) => (
+            <button key={i} onClick={() => setActiveStep(i)}
+              className={`flex flex-col items-center transition-all ${i <= activeStep ? '' : 'opacity-40'}`}
+              style={{ width: `${100 / FLOW_STEPS.length}%` }}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mono text-[10px] font-bold border-2 transition-all ${
+                i === activeStep
+                  ? 'scale-110'
+                  : i < activeStep
+                  ? 'scale-100'
+                  : 'scale-90'
+              }`}
+                style={{
+                  background: i <= activeStep ? `${s.color}20` : '#0f172a',
+                  borderColor: i <= activeStep ? `${s.color}80` : '#334155',
+                  color: i <= activeStep ? s.color : '#64748b',
+                  boxShadow: i === activeStep ? `0 0 16px 4px ${s.color}30` : 'none'
+                }}>
+                {s.icon}
+              </div>
+              <span className={`text-[9px] mt-1.5 text-center leading-tight max-w-[80px] ${
+                i === activeStep ? 'font-semibold' : ''
+              }`}
+                style={{ color: i <= activeStep ? s.color : '#64748b' }}>
+                {s.title}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Step detail */}
+      <div className="rounded-2xl border border-slate-700/40 bg-slate-800/20 p-6 fade-in" key={activeStep}>
+        <div className="flex items-start gap-4 mb-4">
+          <div className="w-14 h-14 rounded-xl flex items-center justify-center mono text-sm font-bold flex-shrink-0"
+            style={{ background: `${step.color}15`, border: `2px solid ${step.color}50`, color: step.color }}>
+            {step.num}
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white mb-1">{step.title}</h3>
+            <p className="text-[12px] text-slate-400">{step.detail}</p>
+          </div>
+        </div>
+
+        <p className="text-[13px] text-slate-300 leading-relaxed mb-5">{step.longDesc}</p>
+
+        {/* Visual for specific steps */}
+        {activeStep === 0 && (
+          <div className="rounded-xl bg-[#0b1121] border border-slate-700/40 p-4">
+            <div className="mono text-[11px] text-slate-400 mb-2">$ <span className="text-amber-300">oc apply -f trainjob.yaml</span></div>
+            <div className="mono text-[11px] text-green-400">trainjob.trainer.kubeflow.org/intent-nlu-fine-tuning created</div>
+          </div>
+        )}
+
+        {activeStep === 3 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="rounded-xl border border-amber-500/20 bg-amber-950/5 p-3">
+              <div className="text-[10px] font-semibold text-amber-300 mb-2">From TrainJob</div>
+              <div className="mono text-[9px] text-slate-400 space-y-1">
+                <div>command: torchrun ...</div>
+                <div>env: DATASET_SOURCE</div>
+                <div>env: MLFLOW_*</div>
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-600/30 bg-slate-900/30 p-3 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-2xl mb-1" style={{ color: '#a855f7' }}>+</div>
+                <div className="text-[10px] font-bold text-purple-300">Merge</div>
+              </div>
+            </div>
+            <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/5 p-3">
+              <div className="text-[10px] font-semibold text-cyan-300 mb-2">From Runtime</div>
+              <div className="mono text-[9px] text-slate-400 space-y-1">
+                <div>image: rhoai/odh-training...</div>
+                <div>resources: 4x GPU, 32Gi</div>
+                <div>volumes: PVCs, ConfigMap</div>
+                <div>initContainers: data-loader</div>
+                <div>nodeSelector: GPU nodes</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeStep === 7 && (
+          <div className="rounded-xl border border-green-500/20 bg-green-950/5 p-4">
+            <div className="text-[10px] font-semibold text-green-300 mb-3">Training Pod Activity</div>
+            <div className="space-y-2 mono text-[10px]">
+              {[
+                { t: '00:00', msg: 'Pod scheduled on GPU node', color: '#22c55e' },
+                { t: '00:01', msg: 'Init container: copying training.jsonl to shared volume', color: '#f59e0b' },
+                { t: '00:03', msg: 'Training container started', color: '#3b82f6' },
+                { t: '00:05', msg: 'pip install scipy, mlflow...', color: '#94a3b8' },
+                { t: '00:30', msg: 'torchrun launching 4 processes on 4 GPUs', color: '#a855f7' },
+                { t: '00:35', msg: 'Loading Qwen model from HF cache...', color: '#06b6d4' },
+                { t: '01:00', msg: 'QLoRA fine-tuning started, logging to MLflow', color: '#22c55e' },
+                { t: '~hrs', msg: 'Training complete, adapters saved to /mnt/data', color: '#fbbf24' },
+              ].map((e, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="text-slate-600 w-12 text-right">{e.t}</span>
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: e.color }}></div>
+                  <span style={{ color: e.color }}>{e.msg}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Navigation */}
+      <div className="flex justify-between mt-4">
+        <button onClick={() => setActiveStep(Math.max(0, activeStep - 1))}
+          disabled={activeStep === 0}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeStep === 0 ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+          }`}>
+          &#8592; Previous
+        </button>
+        <span className="mono text-[10px] text-slate-500 self-center">Step {activeStep + 1} / {FLOW_STEPS.length}</span>
+        <button onClick={() => setActiveStep(Math.min(FLOW_STEPS.length - 1, activeStep + 1))}
+          disabled={activeStep === FLOW_STEPS.length - 1}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeStep === FLOW_STEPS.length - 1 ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/20'
+          }`}>
+          Next &#8594;
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB 5: WHY THIS PATTERN
+// ═══════════════════════════════════════════════════════════════════
+
+function WhyTab() {
+  const benefits = [
+    {
+      title: 'Reusability',
+      icon: '&#x21BB;',
+      color: '#06b6d4',
+      accent: 'rgba(6,182,212,0.1)',
+      description: 'Define the infrastructure once, run many experiments against it. Change the runtime in one place and all future TrainJobs benefit.',
+      example: 'One TrainingRuntime "qwen-custom-runtime" can serve dozens of fine-tuning experiments — different datasets, different hyperparameters, same infrastructure.',
+      metrics: [
+        { label: 'Runtime definitions needed', value: '1', highlight: true },
+        { label: 'TrainJobs using it', value: 'unlimited' },
+        { label: 'Lines of YAML per experiment', value: '~40' },
+      ]
+    },
+    {
+      title: 'Separation of Concerns',
+      icon: '&#x2702;',
+      color: '#f59e0b',
+      accent: 'rgba(245,158,11,0.1)',
+      description: 'Platform engineers own infrastructure (GPUs, images, storage). Data scientists own experiments (commands, data, tracking). Neither needs to understand the other\'s domain deeply.',
+      example: 'Data scientist writes: "run this training command with this data." Platform engineer ensures: "GPU nodes are available, images are certified, storage is provisioned."',
+      metrics: [
+        { label: 'Platform engineer manages', value: 'TrainingRuntime' },
+        { label: 'Data scientist manages', value: 'TrainJob' },
+        { label: 'Overlap / conflict', value: 'Minimal' },
+      ]
+    },
+    {
+      title: 'Standardization',
+      icon: '&#x2713;',
+      color: '#22c55e',
+      accent: 'rgba(34,197,94,0.1)',
+      description: 'The TrainingRuntime enforces organizational standards — certified container images, approved GPU configurations, consistent security (secrets, RBAC).',
+      example: 'All training jobs use registry.redhat.io/rhoai/odh-training-cuda128-torch28-py312-rhel9:v3.0 — a Red Hat certified, enterprise-supported image. No one accidentally uses an untested community image.',
+      metrics: [
+        { label: 'Container image', value: 'Red Hat certified' },
+        { label: 'GPU config', value: 'Consistent across jobs' },
+        { label: 'Secrets management', value: 'Centralized in Runtime' },
+      ]
+    },
+    {
+      title: 'GitOps Friendly',
+      icon: '&#x2B21;',
+      color: '#a855f7',
+      accent: 'rgba(168,85,247,0.1)',
+      description: 'Both resources are declarative YAML — perfect for version control, code review, and automated deployment pipelines. Infrastructure and experiments are fully auditable.',
+      example: 'Store training-runtime.yaml in an infra repo (reviewed by platform team). Store trainjob.yaml in the ML repo (reviewed by data scientists). Both tracked in Git, deployed via ArgoCD.',
+      metrics: [
+        { label: 'Version controlled', value: 'Both resources' },
+        { label: 'Audit trail', value: 'Full Git history' },
+        { label: 'Deployment', value: 'ArgoCD / oc apply' },
+      ]
+    },
+  ];
+
+  return (
+    <div className="fade-in">
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-bold text-white mb-1">Why This Pattern?</h2>
+        <p className="text-sm text-slate-400">The TrainJob + TrainingRuntime pattern solves real organizational challenges</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {benefits.map((b, i) => (
+          <div key={i} className="benefit-card rounded-2xl border border-slate-700/40 bg-slate-800/15 p-5 hover:border-opacity-60 transition-all"
+            style={{ '--accent': b.accent, borderColor: `${b.color}25` }}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+                style={{ background: `${b.color}15`, color: b.color, border: `1px solid ${b.color}30` }}
+                dangerouslySetInnerHTML={{ __html: b.icon }}>
+              </div>
+              <h3 className="text-base font-bold" style={{ color: b.color }}>{b.title}</h3>
+            </div>
+
+            <p className="text-[12px] text-slate-300 leading-relaxed mb-3">{b.description}</p>
+
+            <div className="rounded-lg bg-slate-900/40 border border-slate-700/20 p-3 mb-3">
+              <div className="text-[10px] text-slate-500 font-semibold mb-1">EXAMPLE</div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">{b.example}</p>
+            </div>
+
+            <div className="space-y-1.5">
+              {b.metrics.map((m, j) => (
+                <div key={j} className="flex items-center justify-between text-[10px]">
+                  <span className="text-slate-500">{m.label}</span>
+                  <span className={`mono font-semibold ${m.highlight ? '' : 'text-slate-300'}`}
+                    style={m.highlight ? { color: b.color } : {}}>{m.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Comparison: Without vs With */}
+      <div className="mt-6 rounded-2xl border border-slate-700/40 bg-slate-800/15 p-5">
+        <h3 className="text-sm font-bold text-white mb-4 text-center">Without vs. With This Pattern</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-xl border border-red-500/20 bg-red-950/5 p-4">
+            <div className="text-[11px] font-bold text-red-400 mb-3">Without (Monolithic PyTorchJob)</div>
+            <div className="space-y-2 text-[11px] text-slate-400">
+              <div className="flex items-start gap-2"><span className="text-red-400 flex-shrink-0">&#x2717;</span> Every job repeats all infrastructure config (~150 lines)</div>
+              <div className="flex items-start gap-2"><span className="text-red-400 flex-shrink-0">&#x2717;</span> Data scientists must understand GPU scheduling, PVCs, images</div>
+              <div className="flex items-start gap-2"><span className="text-red-400 flex-shrink-0">&#x2717;</span> No standardization — each job may use different images/configs</div>
+              <div className="flex items-start gap-2"><span className="text-red-400 flex-shrink-0">&#x2717;</span> Updating GPU config means editing every job YAML</div>
+              <div className="flex items-start gap-2"><span className="text-red-400 flex-shrink-0">&#x2717;</span> Easy to misconfigure — copy-paste errors across jobs</div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-green-500/20 bg-green-950/5 p-4">
+            <div className="text-[11px] font-bold text-green-400 mb-3">With (TrainJob + TrainingRuntime)</div>
+            <div className="space-y-2 text-[11px] text-slate-400">
+              <div className="flex items-start gap-2"><span className="text-green-400 flex-shrink-0">&#x2713;</span> Infrastructure defined once, experiments are ~40 lines</div>
+              <div className="flex items-start gap-2"><span className="text-green-400 flex-shrink-0">&#x2713;</span> Data scientists only write training command + env vars</div>
+              <div className="flex items-start gap-2"><span className="text-green-400 flex-shrink-0">&#x2713;</span> Platform team enforces certified images, consistent config</div>
+              <div className="flex items-start gap-2"><span className="text-green-400 flex-shrink-0">&#x2713;</span> Update runtime once — all new jobs get the change</div>
+              <div className="flex items-start gap-2"><span className="text-green-400 flex-shrink-0">&#x2713;</span> Clear ownership boundaries reduce errors</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════════════════
+
+const TABS = [
+  { id: 'overview', label: 'Overview', icon: 'MAP' },
+  { id: 'runtime', label: 'TrainingRuntime', icon: 'TR' },
+  { id: 'trainjob', label: 'TrainJob', icon: 'TJ' },
+  { id: 'flow', label: 'How It Works', icon: 'FLOW' },
+  { id: 'why', label: 'Why This Pattern', icon: 'WHY' },
+];
+
+function App() {
+  const [activeTab, setActiveTab] = useState('overview');
+
+  return (
+    <div className="relative z-10 max-w-6xl mx-auto px-4 py-6">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <div className="h-px flex-1 max-w-[80px] bg-gradient-to-r from-transparent to-cyan-500/40"></div>
+          <span className="mono text-[10px] text-cyan-400/60 tracking-[0.2em] uppercase">OpenShift AI Training</span>
+          <div className="h-px flex-1 max-w-[80px] bg-gradient-to-l from-transparent to-cyan-500/40"></div>
+        </div>
+        <h1 className="text-3xl font-extrabold text-white mb-2" style={{ letterSpacing: '-0.02em' }}>
+          <span className="text-amber-300">TrainJob</span> & <span className="text-cyan-300">TrainingRuntime</span>
+        </h1>
+        <p className="text-sm text-slate-400 max-w-xl mx-auto">
+          Understanding the two-resource pattern for managing distributed fine-tuning jobs on OpenShift AI with the Kubeflow Training Operator v2
+        </p>
+      </div>
+
+      {/* Tab navigation */}
+      <div className="flex gap-1.5 mb-6 justify-center flex-wrap">
+        {TABS.map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-medium transition-all border ${
+              tab.id === activeTab
+                ? 'bg-blue-600/20 border-blue-500/40 text-blue-300 shadow-lg shadow-blue-500/10'
+                : 'bg-slate-800/30 border-slate-700/30 text-slate-400 hover:bg-slate-700/30 hover:text-slate-300'
+            }`}>
+            <span className={`mono text-[10px] font-bold px-1.5 py-0.5 rounded ${
+              tab.id === activeTab ? 'bg-blue-500/20 text-blue-300' : 'bg-slate-700/30 text-slate-500'
+            }`}>{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="min-h-[500px]">
+        {activeTab === 'overview' && <OverviewTab />}
+        {activeTab === 'runtime' && <RuntimeTab />}
+        {activeTab === 'trainjob' && <TrainJobTab />}
+        {activeTab === 'flow' && <FlowTab />}
+        {activeTab === 'why' && <WhyTab />}
+      </div>
+
+      {/* Footer */}
+      <div className="mt-8 pt-4 border-t border-slate-800/60 text-center">
+        <p className="text-[10px] text-slate-600">
+          Based on real training configuration from the Intent NLU Fine-Tuning project
+          <span className="mx-2 text-slate-700">|</span>
+          Kubeflow Training Operator v2 (trainer.kubeflow.org/v1alpha1)
+          <span className="mx-2 text-slate-700">|</span>
+          OpenShift AI (RHOAI)
+        </p>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
