@@ -76,6 +76,10 @@ body::before{
 .card:nth-child(4){animation-delay:.26s}
 .card:nth-child(5){animation-delay:.33s}
 .card:nth-child(6){animation-delay:.40s}
+.card:nth-child(7){animation-delay:.47s}
+.card:nth-child(8){animation-delay:.54s}
+.card:nth-child(9){animation-delay:.61s}
+.card:nth-child(10){animation-delay:.68s}
 @keyframes cardIn{to{opacity:1;transform:translateY(0)}}
 
 .card:hover{
@@ -130,6 +134,8 @@ body::before{
 .card.c-green{--card-accent:var(--green)}
 .card.c-cyan{--card-accent:var(--cyan)}
 .card.c-pink{--card-accent:var(--pink)}
+.card.c-yellow{--card-accent:var(--yellow)}
+.card.c-red{--card-accent:var(--red)}
 
 /* footer */
 footer{
@@ -217,8 +223,52 @@ footer{
       <div class="card c-green">
         <a href="sdg-visualization.html">
           <span class="badge">visualization</span>
-          <h2>SDG Pipeline</h2>
+          <h2>SDG Pipeline Visualization</h2>
           <p class="desc">Visual walkthrough of the AIS telco chat synthetic data generation pipeline. Covers the 10 intents, training example format, design decisions and a built in quiz.</p>
+          <span class="go">Explore
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"/></svg>
+          </span>
+        </a>
+      </div>
+
+      <div class="card c-yellow">
+        <a href="ddp-fsdp-explainer.html">
+          <span class="badge">interactive</span>
+          <h2>DDP vs FSDP Training</h2>
+          <p class="desc">Interactive explainer comparing Distributed Data Parallel and Fully Sharded Data Parallel strategies. Understand how each approach distributes model weights, gradients and optimizer states across GPUs.</p>
+          <span class="go">Explore
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"/></svg>
+          </span>
+        </a>
+      </div>
+
+      <div class="card c-red">
+        <a href="rhoai-distributed-training.html">
+          <span class="badge">interactive</span>
+          <h2>RHOAI Distributed Training</h2>
+          <p class="desc">Red Hat OpenShift AI distributed training with DDP and FSDP using Kubeflow Trainer v2. Covers cluster setup, pod orchestration and scaling training jobs on Kubernetes.</p>
+          <span class="go">Explore
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"/></svg>
+          </span>
+        </a>
+      </div>
+
+      <div class="card c-cyan">
+        <a href="sdg-pipeline-guide.html">
+          <span class="badge">guide</span>
+          <h2>SDG Pipeline Technical Guide</h2>
+          <p class="desc">In depth technical guide to the synthetic data generation pipeline. Covers architecture decisions, data flow, prompt engineering and quality validation for production SDG systems.</p>
+          <span class="go">Read guide
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"/></svg>
+          </span>
+        </a>
+      </div>
+
+      <div class="card c-purple">
+        <a href="kfp-pipeline-guide.html">
+          <span class="badge">interactive</span>
+          <h2>KFP Pipeline Builder</h2>
+          <p class="desc">Interactive guide to building Kubeflow Pipelines. Covers SFT training, evaluation, model merging and retraining stages with visual pipeline composition and code examples.</p>
           <span class="go">Explore
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3"/></svg>
           </span>
