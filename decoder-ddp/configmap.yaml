@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: decoder-ddp-train-args
+data:
+  MODEL_NAME: "Qwen/Qwen2.5-7B-Instruct"
+  OUTPUT_DIR: "/mnt/data/adapters"
+  DATASET_SOURCE: "s3://training-data/training_dataset.json"
