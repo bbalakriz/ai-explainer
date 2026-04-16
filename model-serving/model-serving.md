@@ -177,7 +177,10 @@ curl -k -X POST "$ENDPOINT/v1/chat/completions" \
       }
     ],
     "temperature": 0.0,
-    "max_tokens": 50
+    "max_tokens": 50,
+    "response_format": {
+      "type": "json_object"
+    }      
   }'
 ```
 
