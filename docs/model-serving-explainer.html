@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Model Serving on OpenShift AI — vLLM Deployment Explainer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Source+Code+Pro:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: #060a14;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'Source Code Pro', monospace; }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0c1220; }
+  ::-webkit-scrollbar-thumb { background: #2a3a5c; border-radius: 4px; }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes pulseGlow { 0%,100% { box-shadow:0 0 8px 2px rgba(59,130,246,0.15); } 50% { box-shadow:0 0 18px 4px rgba(59,130,246,0.35); } }
+  @keyframes cyanPulse { 0%,100% { box-shadow:0 0 8px 2px rgba(6,182,212,0.15); } 50% { box-shadow:0 0 18px 4px rgba(6,182,212,0.35); } }
+  @keyframes amberPulse { 0%,100% { box-shadow:0 0 8px 2px rgba(251,191,36,0.15); } 50% { box-shadow:0 0 18px 4px rgba(251,191,36,0.35); } }
+  @keyframes greenPulse { 0%,100% { box-shadow:0 0 8px 2px rgba(34,197,94,0.15); } 50% { box-shadow:0 0 18px 4px rgba(34,197,94,0.35); } }
+  @keyframes flowDash { to { stroke-dashoffset: -24; } }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-4px); } }
+
+  .fade-in { animation: fadeIn 0.35s ease-out; }
+  .glow-blue { animation: pulseGlow 2.5s ease-in-out infinite; }
+  .glow-cyan { animation: cyanPulse 2.5s ease-in-out infinite; }
+  .glow-amber { animation: amberPulse 2.5s ease-in-out infinite; }
+  .glow-green { animation: greenPulse 2.5s ease-in-out infinite; }
+  .arrow-flow { stroke-dasharray: 8 5; animation: flowDash 1s linear infinite; }
+
+  .yaml-line { transition: all 0.2s ease; }
+  .yaml-line:hover { background: rgba(59,130,246,0.08); }
+  .yaml-line.highlighted { background: rgba(251,191,36,0.12); border-left: 2px solid #fbbf24; }
+  .yaml-line.highlighted-cyan { background: rgba(6,182,212,0.12); border-left: 2px solid #06b6d4; }
+  .yaml-line.highlighted-green { background: rgba(34,197,94,0.12); border-left: 2px solid #22c55e; }
+  .yaml-line.highlighted-purple { background: rgba(168,85,247,0.12); border-left: 2px solid #a855f7; }
+  .yaml-line.highlighted-rose { background: rgba(244,63,94,0.12); border-left: 2px solid #f43f5e; }
+
+  .callout-box {
+    position: relative;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.3s ease;
+  }
+  .callout-box::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 13px;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--callout-color, #3b82f6) 0%, transparent 60%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .benefit-card {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .benefit-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, transparent 60%, var(--accent, rgba(59,130,246,0.05)));
+    pointer-events: none;
+  }
+  .benefit-card:hover { transform: translateY(-3px); }
+</style>
+</head>
+<body class="min-h-screen">
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ======================================================================
+// DATA: Real YAML from the project
+// ======================================================================
+
+const SERVING_RUNTIME_YAML = `apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  annotations:
+    opendatahub.io/apiProtocol: REST
+    opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+    opendatahub.io/runtime-version: v0.13.0
+    opendatahub.io/serving-runtime-scope: global
+    opendatahub.io/template-display-name: vLLM NVIDIA GPU ServingRuntime for KServe
+    opendatahub.io/template-name: vllm-cuda-runtime-template
+    openshift.io/display-name: vLLM NVIDIA GPU ServingRuntime for KServe
+  labels:
+    opendatahub.io/dashboard: "true"
+  name: qwen25-32b-finetuned
+spec:
+  annotations:
+    opendatahub.io/kserve-runtime: vllm
+    prometheus.io/path: /metrics
+    prometheus.io/port: "8080"
+  containers:
+  - args:
+    - --port=8080
+    - --model=/mnt/models
+    - --served-model-name={{.Name}}
+    command:
+    - python
+    - -m
+    - vllm.entrypoints.openai.api_server
+    env:
+    - name: HF_HOME
+      value: /tmp/hf_home
+    image: registry.redhat.io/rhaiis/vllm-cuda-rhel9@sha256:ec799bb5...
+    name: kserve-container
+    ports:
+    - containerPort: 8080
+      protocol: TCP
+  multiModel: false
+  supportedModelFormats:
+  - autoSelect: true
+    name: vLLM`;
+
+const ISVC_ENCODER_YAML = `apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  annotations:
+    opendatahub.io/connections: secret-cal48f
+    opendatahub.io/hardware-profile-name: default-profile
+    opendatahub.io/hardware-profile-namespace: redhat-ods-applications
+    opendatahub.io/model-type: generative
+    openshift.io/display-name: phayathaibert
+    security.opendatahub.io/enable-auth: "false"
+    serving.kserve.io/deploymentMode: RawDeployment
+  labels:
+    networking.kserve.io/visibility: exposed
+    opendatahub.io/dashboard: "true"
+  name: phayathaibert
+spec:
+  predictor:
+    automountServiceAccountToken: false
+    deploymentStrategy:
+      type: Recreate
+    maxReplicas: 1
+    minReplicas: 1
+    model:
+      args:
+      - --runner=pooling
+      - --convert=classify
+      - --trust-remote-code
+      - --hf-overrides={"architectures":["RobertaForSequenceClassification"]}
+      modelFormat:
+        name: vLLM
+      name: ""
+      resources:
+        limits:
+          cpu: "2"
+          memory: 4Gi
+        requests:
+          cpu: "2"
+          memory: 4Gi
+      runtime: phayathaibert
+      storageUri: hf://3scale/phayathaibert-tuned-5apr`;
+
+const ISVC_DECODER_YAML = `apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  annotations:
+    opendatahub.io/connections: secret-hxxorj
+    opendatahub.io/genai-use-case: chat
+    opendatahub.io/hardware-profile-name: nvidia-gpu
+    opendatahub.io/hardware-profile-namespace: redhat-ods-applications
+    opendatahub.io/model-type: generative
+    openshift.io/display-name: qwen2.5-fine-tuned-nuance
+    security.opendatahub.io/enable-auth: "false"
+    serving.kserve.io/deploymentMode: RawDeployment
+  labels:
+    modelregistry.opendatahub.io/inference-service-id: "4"
+    modelregistry.opendatahub.io/model-version-id: "2"
+    modelregistry.opendatahub.io/name: fine-tuned-models
+    modelregistry.opendatahub.io/registered-model-id: "1"
+    networking.kserve.io/visibility: exposed
+    opendatahub.io/dashboard: "true"
+    opendatahub.io/genai-asset: "true"
+  name: qwen25-32b-finetuned
+spec:
+  predictor:
+    automountServiceAccountToken: false
+    deploymentStrategy:
+      type: Recreate
+    maxReplicas: 1
+    minReplicas: 1
+    model:
+      args:
+      - --max-model-len=2048
+      - --dtype=float16
+      - --gpu-memory-utilization=0.9
+      - --enforce-eager
+      - --tensor-parallel-size=4
+      modelFormat:
+        name: vLLM
+      name: ""
+      resources:
+        limits:
+          cpu: "4"
+          memory: 16Gi
+          nvidia.com/gpu: "4"
+        requests:
+          cpu: "2"
+          memory: 4Gi
+          nvidia.com/gpu: "4"
+      runtime: qwen25-32b-finetuned
+      storageUri: pvc://lora-adapters-pvc/models/qwen25-32b-finetuned
+    nodeSelector:
+      nvidia.com/gpu.present: "true"
+    tolerations:
+    - effect: NoSchedule
+      key: nvidia.com/gpu
+      operator: Exists`;
+
+// ======================================================================
+// SECTION DATA
+// ======================================================================
+
+const RUNTIME_SECTIONS = [
+  {
+    id: 'metadata',
+    title: 'Metadata & Annotations',
+    subtitle: 'Identity and OpenShift AI dashboard integration',
+    icon: 'META',
+    color: '#3b82f6',
+    lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    description: 'Annotations tell the OpenShift AI dashboard how to display and categorize this runtime. The template-name links it to the vLLM CUDA template so the UI knows what kind of runtime this is.',
+    details: [
+      { label: 'apiProtocol', value: 'REST', note: 'The model exposes a REST API (OpenAI-compatible)' },
+      { label: 'recommended-accelerators', value: 'nvidia.com/gpu', note: 'UI hint: this runtime needs NVIDIA GPUs' },
+      { label: 'runtime-version', value: 'v0.13.0', note: 'vLLM version baked into the container image' },
+      { label: 'serving-runtime-scope', value: 'global', note: 'Available across all projects in the namespace' },
+    ]
+  },
+  {
+    id: 'container',
+    title: 'Container & vLLM Entrypoint',
+    subtitle: 'The inference engine configuration',
+    icon: 'vLLM',
+    color: '#22c55e',
+    lines: [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
+    description: 'The container section defines the vLLM inference server. It launches the OpenAI-compatible API server, mounts models at /mnt/models, and exposes port 8080. The served-model-name template variable is auto-populated by KServe.',
+    details: [
+      { label: 'Entrypoint', value: 'vllm.entrypoints.openai.api_server', note: 'OpenAI-compatible REST API (chat/completions, completions)' },
+      { label: '--model', value: '/mnt/models', note: 'KServe mounts model weights here from the storageUri' },
+      { label: '--served-model-name', value: '{{.Name}}', note: 'Template variable auto-populated from InferenceService name' },
+      { label: 'Image', value: 'registry.redhat.io/rhaiis/vllm-cuda-rhel9', note: 'Red Hat certified vLLM image with CUDA support' },
+    ]
+  },
+  {
+    id: 'model-format',
+    title: 'Model Format & Multi-Model',
+    subtitle: 'What types of models this runtime can serve',
+    icon: 'FMT',
+    color: '#a855f7',
+    lines: [36, 37, 38, 39, 40],
+    description: 'Defines which model formats this runtime supports. multiModel: false means one model per runtime pod (single-model serving). The vLLM format with autoSelect: true means any InferenceService requesting vLLM format will automatically match this runtime.',
+    details: [
+      { label: 'multiModel', value: 'false', note: 'Single-model serving: one model per pod for isolation' },
+      { label: 'supportedModelFormats', value: 'vLLM (autoSelect: true)', note: 'Automatically selected when ISVC requests vLLM format' },
+    ]
+  },
+  {
+    id: 'prometheus',
+    title: 'Observability',
+    subtitle: 'Prometheus metrics endpoint',
+    icon: 'MON',
+    color: '#f59e0b',
+    lines: [17, 18, 19],
+    description: 'Spec-level annotations configure Prometheus scraping. vLLM exposes metrics at /metrics on port 8080, including request latency, token throughput, GPU memory utilization, and KV-cache usage.',
+    details: [
+      { label: 'prometheus.io/path', value: '/metrics', note: 'vLLM exposes GPU util, latency, throughput, cache stats' },
+      { label: 'prometheus.io/port', value: '8080', note: 'Same port as the inference API' },
+      { label: 'kserve-runtime', value: 'vllm', note: 'Identifies this as a vLLM runtime for dashboard filtering' },
+    ]
+  },
+];
+
+const ENCODER_SECTIONS = [
+  {
+    id: 'annotations',
+    title: 'Metadata & Deployment Mode',
+    subtitle: 'OpenShift AI dashboard and deployment configuration',
+    icon: 'META',
+    color: '#3b82f6',
+    lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+    description: 'The metadata configures how the OpenShift AI dashboard displays the model and how KServe deploys it. RawDeployment mode deploys directly as a Kubernetes Deployment (vs Knative/serverless), which is simpler and avoids cold-start latency.',
+    details: [
+      { label: 'deploymentMode', value: 'RawDeployment', note: 'Kubernetes Deployment (not serverless Knative) -- always running' },
+      { label: 'enable-auth', value: 'false', note: 'No authentication required for inference requests' },
+      { label: 'visibility', value: 'exposed', note: 'Creates an OpenShift Route for external access' },
+    ]
+  },
+  {
+    id: 'encoder-args',
+    title: 'Encoder Arguments',
+    subtitle: 'Forcing vLLM to run as a classifier',
+    icon: 'ARGS',
+    color: '#f43f5e',
+    lines: [22, 23, 24, 25, 26],
+    description: 'These are the critical arguments. vLLM is primarily designed for generative text, so we must pass specific flags to force it to run an encoder model as a sequence classifier. Without these, vLLM would try to use the text-generation engine and fail.',
+    details: [
+      { label: '--runner=pooling', value: 'Use pooling engine', note: 'Tells vLLM to use its pooling engine (for embeddings/classification) instead of text-generation' },
+      { label: '--convert=classify', value: 'Classification mode', note: 'Interprets pooled outputs as classification logits, not raw embeddings' },
+      { label: '--trust-remote-code', value: 'Allow custom code', note: 'HuggingFace models often include custom Python scripts -- this permits vLLM to execute them' },
+      { label: '--hf-overrides', value: 'RobertaForSequenceClassification', note: 'Forces vLLM to treat the architecture as a RoBERTa classifier, mapping weights to the classification head' },
+    ]
+  },
+  {
+    id: 'resources',
+    title: 'Resources & Storage',
+    subtitle: 'Lightweight CPU-only deployment',
+    icon: 'RES',
+    color: '#06b6d4',
+    lines: [27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
+    description: 'Encoder models are much smaller than decoders. Phayathaibert runs comfortably on CPU with just 4Gi memory -- no GPUs needed. The model is pulled directly from HuggingFace Hub.',
+    details: [
+      { label: 'CPU', value: '2 cores', note: 'No GPU required -- encoder is small enough for CPU inference' },
+      { label: 'Memory', value: '4Gi', note: 'Fraction of what the decoder needs' },
+      { label: 'storageUri', value: 'hf://3scale/phayathaibert-tuned-5apr', note: 'Pulled directly from HuggingFace Hub (hf:// protocol)' },
+      { label: 'runtime', value: 'phayathaibert', note: 'Links to its own ServingRuntime instance' },
+    ]
+  },
+];
+
+const DECODER_SECTIONS = [
+  {
+    id: 'annotations',
+    title: 'Metadata & Model Registry',
+    subtitle: 'Dashboard, GenAI classification, and model registry links',
+    icon: 'META',
+    color: '#3b82f6',
+    lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+    description: 'The decoder InferenceService has richer metadata. It is tagged as a GenAI chat model, linked to the OpenShift AI Model Registry (for versioning and lineage tracking), and uses the nvidia-gpu hardware profile for GPU scheduling.',
+    details: [
+      { label: 'genai-use-case', value: 'chat', note: 'Tells OpenShift AI this is a chat/conversational model' },
+      { label: 'model-type', value: 'generative', note: 'Classification for the dashboard -- generative text model' },
+      { label: 'Model Registry', value: 'fine-tuned-models (ID: 1, Version: 2)', note: 'Linked to OpenShift AI Model Registry for versioning and lineage' },
+      { label: 'hardware-profile', value: 'nvidia-gpu', note: 'Uses the nvidia-gpu HardwareProfile for GPU scheduling' },
+    ]
+  },
+  {
+    id: 'decoder-args',
+    title: 'Decoder Arguments',
+    subtitle: 'Memory management and distributed inference',
+    icon: 'ARGS',
+    color: '#f59e0b',
+    lines: [26, 27, 28, 29, 30, 31],
+    description: 'These arguments configure vLLM for large generative model inference. They control the context window, precision, GPU memory allocation, execution mode, and multi-GPU tensor parallelism.',
+    details: [
+      { label: '--max-model-len=2048', value: 'Context window cap', note: 'Hard-caps prompt + response to 2048 tokens -- prevents OOM by limiting KV-cache VRAM' },
+      { label: '--dtype=half', value: 'FP16 precision', note: 'Loads weights in half precision -- cuts memory in half vs FP32' },
+      { label: '--gpu-memory-utilization=0.9', value: '90% GPU memory', note: 'Dedicates 90% of VRAM to model + KV-cache, leaves 10% for PyTorch/CUDA overhead' },
+      { label: '--enforce-eager', value: 'Eager mode', note: 'Disables CUDA graphs -- safer and more stable for dynamic, variable-length requests' },
+      { label: '--tensor-parallel-size=4', value: '4-way GPU sharding', note: 'Slices the model vertically across 4 GPUs for distributed inference' },
+    ]
+  },
+  {
+    id: 'gpu-resources',
+    title: 'GPU Resources & Scheduling',
+    subtitle: '4x NVIDIA GPU distributed deployment',
+    icon: 'GPU',
+    color: '#22c55e',
+    lines: [32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46],
+    description: 'The decoder requires 4 NVIDIA GPUs (matching tensor-parallel-size=4). nodeSelector ensures scheduling on GPU-equipped nodes, and tolerations allow placement on GPU-tainted nodes.',
+    details: [
+      { label: 'GPU', value: '4x nvidia.com/gpu', note: 'Must match tensor-parallel-size -- each GPU shard handles 1/4 of the model' },
+      { label: 'Memory', value: '4Gi request / 16Gi limit', note: 'CPU memory for data preprocessing and API handling' },
+      { label: 'nodeSelector', value: 'nvidia.com/gpu.present: "true"', note: 'Only schedule on nodes with NVIDIA GPUs' },
+      { label: 'Toleration', value: 'NoSchedule on nvidia.com/gpu', note: 'Accept GPU node taints that repel non-GPU workloads' },
+    ]
+  },
+  {
+    id: 'storage',
+    title: 'Model Storage',
+    subtitle: 'PVC-backed model weights from training pipeline',
+    icon: 'PVC',
+    color: '#a855f7',
+    lines: [42],
+    description: 'The decoder model weights are stored on a PersistentVolumeClaim (PVC) -- the same PVC where the KFP training pipeline saved the merged LoRA weights. The pvc:// protocol tells KServe to mount the PVC directly.',
+    details: [
+      { label: 'Protocol', value: 'pvc://', note: 'Mount a PersistentVolumeClaim directly (vs s3:// or hf://)' },
+      { label: 'PVC', value: 'lora-adapters-pvc', note: 'Same PVC used by the training pipeline for adapter output' },
+      { label: 'Path', value: 'models/qwen25-32b-finetuned', note: 'Subdirectory on the PVC containing the merged model weights' },
+      { label: 'deploymentStrategy', value: 'Recreate', note: 'Kill old pod before creating new one -- needed because PVC can only mount to one pod' },
+    ]
+  },
+];
+
+// ======================================================================
+// SHARED COMPONENTS
+// ======================================================================
+
+function YamlViewer({ yaml, highlightedLines, highlightColor }) {
+  const lines = yaml.split('\n');
+  const hlColor = highlightColor || 'highlighted';
+  return (
+    <div className="rounded-xl border border-slate-700/60 bg-[#0b1121] overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/40 border-b border-slate-700/40">
+        <div className="w-2.5 h-2.5 rounded-full bg-red-500/60"></div>
+        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60"></div>
+        <div className="w-2.5 h-2.5 rounded-full bg-green-500/60"></div>
+        <span className="mono text-[10px] text-slate-500 ml-2">YAML</span>
+      </div>
+      <div className="overflow-x-auto p-0" style={{ maxHeight: '520px', overflowY: 'auto' }}>
+        {lines.map((line, i) => {
+          const lineNum = i + 1;
+          const isHL = highlightedLines && highlightedLines.includes(lineNum);
+          return (
+            <div key={i} className={`yaml-line flex px-2 py-[1px] ${isHL ? hlColor : ''}`}>
+              <span className="mono text-[10px] text-slate-600 w-8 text-right mr-3 select-none flex-shrink-0">{lineNum}</span>
+              <span className="mono text-[11px] whitespace-pre" style={{ color: colorizeYaml(line) }}>{line}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function colorizeYaml(line) {
+  if (line.trim().startsWith('#')) return '#6b7280';
+  if (line.trim().startsWith('- ')) return '#a5b4fc';
+  if (/^\s*(apiVersion|kind|metadata|spec|name|labels|template|containers|annotations|predictor|model|resources|args|env|ports|tolerations|nodeSelector|limits|requests):/.test(line)) return '#93c5fd';
+  if (/:\s*"[^"]*"/.test(line) || /:\s*'[^']*'/.test(line)) return '#fde68a';
+  if (/:\s*\d+/.test(line)) return '#86efac';
+  return '#cbd5e1';
+}
+
+function DetailCard({ detail, color }) {
+  return (
+    <div className="flex gap-3 items-start py-2 px-3 rounded-lg bg-slate-800/30 border border-slate-700/30">
+      <div className="w-1 h-full rounded-full flex-shrink-0 self-stretch" style={{ background: color, minHeight: '24px' }}></div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="mono text-[11px] font-semibold text-slate-200">{detail.label}</span>
+          <span className="mono text-[10px] text-slate-400 break-all">{detail.value}</span>
+        </div>
+        <div className="text-[10px] text-slate-500 mt-0.5">{detail.note}</div>
+      </div>
+    </div>
+  );
+}
+
+function SectionBadge({ icon, color, size }) {
+  const sz = size || 36;
+  return (
+    <div className="flex items-center justify-center rounded-lg mono text-[10px] font-bold flex-shrink-0"
+      style={{ width: sz, height: sz, background: `${color}20`, color: color, border: `1px solid ${color}40` }}>
+      {icon}
+    </div>
+  );
+}
+
+function SectionSelector({ sections, activeSection, setActiveSection }) {
+  return (
+    <div className="flex gap-2 mb-5 flex-wrap justify-center">
+      {sections.map(s => (
+        <button key={s.id} onClick={() => setActiveSection(s.id)}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium transition-all border ${
+            s.id === activeSection
+              ? 'shadow-lg'
+              : 'bg-slate-800/40 border-slate-700/40 text-slate-400 hover:bg-slate-700/40'
+          }`}
+          style={s.id === activeSection ? {
+            background: `${s.color}15`,
+            borderColor: `${s.color}50`,
+            color: s.color,
+            boxShadow: `0 0 12px 2px ${s.color}20`
+          } : {}}>
+          <SectionBadge icon={s.icon} color={s.color} size={24}/>
+          {s.title}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function DeepDiveLayout({ sections, activeSection, setActiveSection, yaml, highlightColor, children }) {
+  const section = sections.find(s => s.id === activeSection);
+  return (
+    <div className="fade-in">
+      <SectionSelector sections={sections} activeSection={activeSection} setActiveSection={setActiveSection}/>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div>
+          <YamlViewer yaml={yaml} highlightedLines={section.lines} highlightColor={highlightColor}/>
+        </div>
+        <div className="fade-in" key={activeSection}>
+          <div className="callout-box bg-slate-800/30 border border-slate-700/40" style={{ '--callout-color': section.color }}>
+            <div className="flex items-center gap-3 mb-3">
+              <SectionBadge icon={section.icon} color={section.color}/>
+              <div>
+                <h3 className="text-base font-bold" style={{ color: section.color }}>{section.title}</h3>
+                <p className="text-[10px] text-slate-400">{section.subtitle}</p>
+              </div>
+            </div>
+            <p className="text-[12px] text-slate-300 leading-relaxed mb-4">{section.description}</p>
+            <div className="space-y-2">
+              {section.details.map((d, i) => (
+                <DetailCard key={i} detail={d} color={section.color}/>
+              ))}
+            </div>
+          </div>
+          {children && children(activeSection)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB 1: OVERVIEW
+// ======================================================================
+
+function OverviewTab() {
+  return (
+    <div className="fade-in space-y-8">
+      <div className="text-center mb-2">
+        <h2 className="text-xl font-bold text-white mb-2">Model Serving Architecture on OpenShift AI</h2>
+        <p className="text-sm text-slate-400 max-w-2xl mx-auto">
+          Deploying a model means taking static weight files and loading them into a live, scalable API endpoint.
+          In OpenShift AI, this is handled by <span className="text-cyan-300 font-semibold">KServe</span>, which orchestrates
+          <span className="text-green-300 font-semibold"> ServingRuntimes</span> and
+          <span className="text-amber-300 font-semibold"> InferenceServices</span> on OpenShift.
+        </p>
+      </div>
+
+      {/* Architecture Diagram */}
+      <div className="relative rounded-2xl border border-slate-700/50 bg-slate-900/30 p-6 overflow-hidden">
+        <svg width="100%" height="480" viewBox="0 0 960 480" className="mx-auto block" style={{ maxWidth: '960px' }}>
+          <defs>
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(59,130,246,0.06)" strokeWidth="0.5"/>
+            </pattern>
+            <marker id="arrowAmber" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#fbbf24"/>
+            </marker>
+            <marker id="arrowCyan" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#06b6d4"/>
+            </marker>
+            <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#22c55e"/>
+            </marker>
+            <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#3b82f6"/>
+            </marker>
+            <marker id="arrowRose" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#f43f5e"/>
+            </marker>
+            <marker id="arrowPurple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#a855f7"/>
+            </marker>
+          </defs>
+          <rect width="960" height="480" fill="url(#grid)"/>
+
+          {/* Title */}
+          <text x="480" y="28" textAnchor="middle" className="text-[11px] font-bold" fill="#64748b">OpenShift AI Model Serving Architecture</text>
+
+          {/* Model Weights Sources */}
+          <rect x="20" y="50" width="180" height="100" rx="14" fill="#0d1424" stroke="#a855f740" strokeWidth="1.5"/>
+          <text x="110" y="76" textAnchor="middle" className="text-[12px] font-bold" fill="#c084fc">Model Weights</text>
+          <text x="110" y="94" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Stored after training</text>
+          <rect x="35" y="105" width="150" height="18" rx="4" fill="#a855f710" stroke="#a855f730" strokeWidth="1"/>
+          <text x="110" y="118" textAnchor="middle" className="mono text-[9px]" fill="#c084fc">pvc:// | hf:// | s3://</text>
+          <rect x="35" y="127" width="150" height="14" rx="3" fill="#0a0f14"/>
+          <text x="110" y="137" textAnchor="middle" className="mono text-[8px]" fill="#64748b">lora-adapters-pvc, HF Hub</text>
+
+          {/* Arrow: Weights -> ISVC */}
+          <line x1="200" y1="100" x2="280" y2="100" stroke="#a855f7" strokeWidth="2" markerEnd="url(#arrowPurple)" className="arrow-flow"/>
+
+          {/* InferenceService */}
+          <rect x="285" y="50" width="220" height="100" rx="14" fill="#1a1408" stroke="#fbbf2460" strokeWidth="2"/>
+          <text x="395" y="76" textAnchor="middle" className="mono text-[11px] font-bold" fill="#fbbf24">InferenceService</text>
+          <text x="395" y="94" textAnchor="middle" className="text-[10px]" fill="#d4a94a">The Payload & Configuration</text>
+          <line x1="300" y1="102" x2="490" y2="102" stroke="#fbbf2420" strokeWidth="1"/>
+          <text x="300" y="118" className="mono text-[9px]" fill="#94a3b8">storageUri, args, resources</text>
+          <text x="300" y="132" className="mono text-[9px]" fill="#94a3b8">GPU count, model-specific flags</text>
+          <text x="300" y="146" className="mono text-[9px]" fill="#fde68a">per-model deployment</text>
+
+          {/* Arrow: ISVC -> references -> ServingRuntime */}
+          <line x1="395" y1="150" x2="395" y2="190" stroke="#fbbf24" strokeWidth="2" markerEnd="url(#arrowAmber)" className="arrow-flow"/>
+          <rect x="360" y="163" width="72" height="18" rx="9" fill="#1a1408" stroke="#fbbf2440" strokeWidth="1"/>
+          <text x="396" y="175" textAnchor="middle" className="mono text-[8px] font-semibold" fill="#fbbf24">runtime:</text>
+
+          {/* ServingRuntime */}
+          <rect x="285" y="195" width="220" height="100" rx="14" fill="#081a10" stroke="#22c55e60" strokeWidth="2"/>
+          <text x="395" y="221" textAnchor="middle" className="mono text-[11px] font-bold" fill="#22c55e">ServingRuntime</text>
+          <text x="395" y="239" textAnchor="middle" className="text-[10px]" fill="#6ee7b7">The Engine</text>
+          <line x1="300" y1="247" x2="490" y2="247" stroke="#22c55e20" strokeWidth="1"/>
+          <text x="300" y="263" className="mono text-[9px]" fill="#94a3b8">container image (vLLM)</text>
+          <text x="300" y="277" className="mono text-[9px]" fill="#94a3b8">entrypoint, ports, model format</text>
+          <text x="300" y="291" className="mono text-[9px]" fill="#86efac">reusable across models</text>
+
+          {/* KServe Controller */}
+          <rect x="600" y="50" width="160" height="80" rx="12" fill="#0d0f24" stroke="#3b82f640" strokeWidth="1.5"/>
+          <text x="680" y="78" textAnchor="middle" className="mono text-[10px] font-bold" fill="#60a5fa">KServe Controller</text>
+          <text x="680" y="96" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Watches ISVC resources</text>
+          <text x="680" y="110" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Reconciles desired state</text>
+
+          {/* Arrow: ISVC -> KServe */}
+          <line x1="505" y1="85" x2="595" y2="85" stroke="#3b82f6" strokeWidth="1.5" markerEnd="url(#arrowBlue)" className="arrow-flow"/>
+
+          {/* Arrow: KServe -> Creates Deployment */}
+          <line x1="680" y1="130" x2="680" y2="165" stroke="#06b6d4" strokeWidth="2" markerEnd="url(#arrowCyan)" className="arrow-flow"/>
+
+          {/* Merge & Create */}
+          <rect x="610" y="170" width="140" height="50" rx="10" fill="#081418" stroke="#06b6d440" strokeWidth="1.5"/>
+          <text x="680" y="193" textAnchor="middle" className="mono text-[10px] font-bold" fill="#06b6d4">Merge & Deploy</text>
+          <text x="680" y="210" textAnchor="middle" className="text-[9px]" fill="#94a3b8">ISVC + Runtime = Pod</text>
+
+          {/* Arrow: ServingRuntime -> Merge */}
+          <line x1="505" y1="245" x2="605" y2="195" stroke="#22c55e" strokeWidth="1.5" markerEnd="url(#arrowGreen)" strokeDasharray="4 4"/>
+
+          {/* Arrow: Merge -> Pod */}
+          <line x1="680" y1="220" x2="680" y2="260" stroke="#06b6d4" strokeWidth="2" markerEnd="url(#arrowCyan)" className="arrow-flow"/>
+
+          {/* OpenShift Cluster */}
+          <rect x="40" y="270" width="880" height="190" rx="16" fill="#0a0f14" stroke="#334155" strokeWidth="1.5" strokeDasharray="6 3"/>
+          <text x="80" y="296" className="text-[11px] font-semibold" fill="#64748b">OpenShift Cluster</text>
+
+          {/* Model Serving Pod */}
+          <rect x="540" y="290" width="240" height="60" rx="12" fill="#0d1424" stroke="#3b82f650" strokeWidth="1.5"/>
+          <text x="660" y="316" textAnchor="middle" className="mono text-[10px] font-bold" fill="#60a5fa">Model Serving Pod</text>
+          <text x="660" y="332" textAnchor="middle" className="text-[9px]" fill="#94a3b8">vLLM server + model weights loaded</text>
+          <text x="660" y="344" textAnchor="middle" className="mono text-[8px]" fill="#64748b">port 8080 | /v1/chat/completions</text>
+
+          {/* GPU Node */}
+          <rect x="80" y="310" width="400" height="130" rx="12" fill="#0f1218" stroke="#475569" strokeWidth="1"/>
+          <text x="110" y="336" className="text-[10px] font-semibold" fill="#94a3b8">GPU Node (nvidia.com/gpu.present: "true")</text>
+
+          {/* Encoder pod */}
+          <rect x="100" y="350" width="160" height="44" rx="8" fill="#0d0a18" stroke="#f43f5e30" strokeWidth="1.5"/>
+          <text x="180" y="370" textAnchor="middle" className="mono text-[9px] font-bold" fill="#f43f5e">Encoder Pod</text>
+          <text x="180" y="384" textAnchor="middle" className="text-[8px]" fill="#94a3b8">phayathaibert (CPU)</text>
+
+          {/* Decoder pod with GPUs */}
+          <rect x="280" y="350" width="180" height="44" rx="8" fill="#1a1408" stroke="#fbbf2430" strokeWidth="1.5"/>
+          <text x="370" y="370" textAnchor="middle" className="mono text-[9px] font-bold" fill="#fbbf24">Decoder Pod</text>
+          <text x="370" y="384" textAnchor="middle" className="text-[8px]" fill="#94a3b8">qwen2.5 (4x GPU)</text>
+
+          {/* Small GPU boxes */}
+          {[0,1,2,3].map(i => (
+            <g key={i}>
+              <rect x={285 + i * 42} y={398} width={36} height={20} rx="4" fill="#081a10" stroke="#22c55e25" strokeWidth="1"/>
+              <text x={303 + i * 42} y={412} textAnchor="middle" className="mono text-[7px]" fill="#22c55e">GPU{i}</text>
+            </g>
+          ))}
+
+          {/* OpenShift Route */}
+          <rect x="550" y="370" width="220" height="70" rx="10" fill="#0a1620" stroke="#06b6d430" strokeWidth="1.5"/>
+          <text x="660" y="393" textAnchor="middle" className="mono text-[10px] font-bold" fill="#06b6d4">OpenShift Route</text>
+          <text x="660" y="410" textAnchor="middle" className="text-[9px]" fill="#94a3b8">HTTPS endpoint exposed</text>
+          <text x="660" y="425" textAnchor="middle" className="mono text-[8px]" fill="#67d4e0">https://model-name.apps.cluster.com</text>
+
+          {/* Arrow: Pod -> Route */}
+          <line x1="660" y1="350" x2="660" y2="365" stroke="#06b6d4" strokeWidth="1.5" markerEnd="url(#arrowCyan)"/>
+
+          {/* External client */}
+          <rect x="820" y="290" width="90" height="50" rx="10" fill="#0d1424" stroke="#f43f5e30" strokeWidth="1.5"/>
+          <text x="865" y="313" textAnchor="middle" className="text-[10px] font-bold" fill="#f43f5e">Client</text>
+          <text x="865" y="328" textAnchor="middle" className="mono text-[8px]" fill="#94a3b8">curl / app</text>
+
+          {/* Arrow: Client -> Route */}
+          <line x1="820" y1="330" x2="775" y2="395" stroke="#f43f5e" strokeWidth="1.5" markerEnd="url(#arrowRose)" className="arrow-flow"/>
+          <text x="810" y="365" className="mono text-[8px]" fill="#f43f5e">REST</text>
+        </svg>
+      </div>
+
+      {/* Two resource pattern */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-xl border border-green-500/20 bg-green-950/5 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <SectionBadge icon="SR" color="#22c55e" size={40}/>
+            <div>
+              <h3 className="text-sm font-bold text-green-300">ServingRuntime = The Engine</h3>
+              <p className="text-[10px] text-slate-400">Defined once, shared by many models</p>
+            </div>
+          </div>
+          <ul className="space-y-2 text-[11px] text-slate-300">
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-green-200">Container image</strong> -- the vLLM software + CUDA drivers</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-green-200">Entrypoint</strong> -- vllm.entrypoints.openai.api_server</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-green-200">Ports & protocol</strong> -- 8080/TCP, REST API</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-green-200">Model format</strong> -- vLLM (autoSelect: true)</span>
+            </li>
+          </ul>
+        </div>
+
+        <div className="rounded-xl border border-amber-500/20 bg-amber-950/5 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <SectionBadge icon="IS" color="#fbbf24" size={40}/>
+            <div>
+              <h3 className="text-sm font-bold text-amber-300">InferenceService = The Payload</h3>
+              <p className="text-[10px] text-slate-400">Created per model deployment</p>
+            </div>
+          </div>
+          <ul className="space-y-2 text-[11px] text-slate-300">
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-amber-200">Model location</strong> -- storageUri (pvc://, hf://, s3://)</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-amber-200">Model-specific args</strong> -- tensor parallelism, context len, dtype</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-amber-200">Resource requests</strong> -- GPU count, memory, CPU</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-amber-200">Runtime reference</strong> -- links to a ServingRuntime</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Flow summary */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-5">
+        <h3 className="text-sm font-semibold text-slate-200 mb-3">How Model Serving Works -- Step by Step</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-[11px]">
+          {[
+            { icon: '1', label: 'Train & Save', desc: 'KFP pipeline fine-tunes model and saves merged weights to PVC or uploads to HuggingFace Hub', color: '#a855f7' },
+            { icon: '2', label: 'Define Runtime', desc: 'ServingRuntime is created with the vLLM container image, entrypoint, and supported formats', color: '#22c55e' },
+            { icon: '3', label: 'Deploy ISVC', desc: 'InferenceService is created pointing to model weights and referencing the runtime', color: '#fbbf24' },
+            { icon: '4', label: 'Serve & Query', desc: 'KServe merges specs, creates a pod, loads the model, and exposes an OpenAI-compatible endpoint', color: '#06b6d4' },
+          ].map((step, i) => (
+            <div key={i} className="text-center p-3 rounded-lg bg-slate-800/30 border border-slate-700/20">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2 mono text-sm font-bold"
+                style={{ background: `${step.color}20`, color: step.color, border: `1px solid ${step.color}40` }}>
+                {step.icon}
+              </div>
+              <div className="font-semibold mb-1" style={{ color: step.color }}>{step.label}</div>
+              <div className="text-slate-400">{step.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Analogy */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-5">
+        <h3 className="text-sm font-semibold text-slate-200 mb-2">Think of it like this...</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px]">
+          <div className="text-center p-3 rounded-lg bg-slate-800/30">
+            <div className="text-2xl mb-2">&#x1F3AD;</div>
+            <div className="text-green-300 font-semibold mb-1">ServingRuntime = Theater Stage</div>
+            <div className="text-slate-400">The stage with lighting, sound system, and curtains. Built once, hosts many different shows.</div>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-slate-800/30">
+            <div className="text-2xl mb-2">&#x1F3AC;</div>
+            <div className="text-amber-300 font-semibold mb-1">InferenceService = The Show</div>
+            <div className="text-slate-400">A specific performance with its own script, cast, and props. Different show each night, same stage.</div>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-slate-800/30">
+            <div className="text-2xl mb-2">&#x1F39F;</div>
+            <div className="text-cyan-300 font-semibold mb-1">API Endpoint = Box Office</div>
+            <div className="text-slate-400">Where the audience (clients) shows up to interact with the running show via REST API calls.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB 2: CORE CONCEPTS
+// ======================================================================
+
+function ConceptsTab() {
+  return (
+    <div className="fade-in space-y-6">
+      <div className="text-center mb-2">
+        <h2 className="text-xl font-bold text-white mb-2">Core Concepts</h2>
+        <p className="text-sm text-slate-400 max-w-2xl mx-auto">
+          Before deploying, understand the two Kubernetes Custom Resources that KServe uses under the hood and what you need in place.
+        </p>
+      </div>
+
+      {/* What is a ServingRuntime */}
+      <div className="rounded-2xl border border-green-500/20 bg-green-950/5 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <SectionBadge icon="SR" color="#22c55e" size={40}/>
+          <div>
+            <h3 className="text-base font-bold text-green-300">What is a ServingRuntime?</h3>
+            <p className="text-[11px] text-slate-400">Think of it as <strong className="text-green-200">the Engine</strong></p>
+          </div>
+        </div>
+        <p className="text-[12px] text-slate-300 leading-relaxed mb-4">
+          A ServingRuntime is a Kubernetes Custom Resource that defines the <strong className="text-slate-200">software environment</strong> used to run models.
+          It specifies the container image (in our case, vLLM), the default ports, the entrypoint command, and the model formats it supports.
+          You only need to define a ServingRuntime <strong className="text-slate-200">once per engine type</strong>. Multiple models can share the same runtime.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {[
+            { label: 'Container Image', value: 'vLLM + CUDA (Red Hat certified)', color: '#22c55e' },
+            { label: 'Entrypoint', value: 'vllm.entrypoints.openai.api_server', color: '#22c55e' },
+            { label: 'Port', value: '8080 (REST)', color: '#22c55e' },
+            { label: 'Scope', value: 'Reused by many models', color: '#22c55e' },
+          ].map((item, i) => (
+            <div key={i} className="rounded-lg bg-slate-900/40 border border-slate-700/20 p-2.5">
+              <div className="text-[9px] text-slate-500 mb-0.5">{item.label}</div>
+              <div className="mono text-[10px]" style={{ color: item.color }}>{item.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* What is an InferenceService */}
+      <div className="rounded-2xl border border-amber-500/20 bg-amber-950/5 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <SectionBadge icon="IS" color="#fbbf24" size={40}/>
+          <div>
+            <h3 className="text-base font-bold text-amber-300">What is an InferenceService?</h3>
+            <p className="text-[11px] text-slate-400">Think of it as <strong className="text-amber-200">the Payload & Configuration</strong></p>
+          </div>
+        </div>
+        <p className="text-[12px] text-slate-300 leading-relaxed mb-4">
+          An InferenceService is the <strong className="text-slate-200">actual deployment</strong> of your specific model.
+          When you deploy a model in the OpenShift AI UI, you are creating an InferenceService. It points to your exact model weights (via storageUri),
+          links to a ServingRuntime to know how to serve them, and defines model-specific configuration like how many GPUs to use and command-line arguments.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {[
+            { label: 'Model Location', value: 'storageUri (pvc://, hf://, s3://)', color: '#fbbf24' },
+            { label: 'Runtime Link', value: 'runtime: <name>', color: '#fbbf24' },
+            { label: 'Model Args', value: 'dtype, tensor-parallel, context len', color: '#fbbf24' },
+            { label: 'Resources', value: 'GPU count, memory, CPU', color: '#fbbf24' },
+          ].map((item, i) => (
+            <div key={i} className="rounded-lg bg-slate-900/40 border border-slate-700/20 p-2.5">
+              <div className="text-[9px] text-slate-500 mb-0.5">{item.label}</div>
+              <div className="mono text-[10px]" style={{ color: item.color }}>{item.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* How they connect */}
+      <div className="rounded-2xl border border-slate-700/40 bg-slate-800/15 p-5">
+        <h3 className="text-sm font-semibold text-slate-200 mb-3 text-center">How They Connect</h3>
+        <svg width="100%" height="100" viewBox="0 0 600 100" className="mx-auto block" style={{ maxWidth: '600px' }}>
+          <defs>
+            <marker id="arrowA3" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#fbbf24"/>
+            </marker>
+            <marker id="arrowC3" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#06b6d4"/>
+            </marker>
+          </defs>
+          <rect x="10" y="20" width="160" height="60" rx="12" fill="#1a1408" stroke="#fbbf2450" strokeWidth="2"/>
+          <text x="90" y="46" textAnchor="middle" className="mono text-[11px] font-bold" fill="#fbbf24">InferenceService</text>
+          <text x="90" y="64" textAnchor="middle" className="text-[9px]" fill="#d4a94a">your model + config</text>
+
+          <line x1="170" y1="50" x2="250" y2="50" stroke="#fbbf24" strokeWidth="2.5" markerEnd="url(#arrowA3)" className="arrow-flow"/>
+          <text x="210" y="42" textAnchor="middle" className="mono text-[8px] font-semibold" fill="#fbbf24">runtime:</text>
+
+          <rect x="250" y="20" width="160" height="60" rx="12" fill="#081a10" stroke="#22c55e50" strokeWidth="2"/>
+          <text x="330" y="46" textAnchor="middle" className="mono text-[11px] font-bold" fill="#22c55e">ServingRuntime</text>
+          <text x="330" y="64" textAnchor="middle" className="text-[9px]" fill="#6ee7b7">vLLM engine</text>
+
+          <line x1="410" y1="50" x2="460" y2="50" stroke="#06b6d4" strokeWidth="2" markerEnd="url(#arrowC3)" className="arrow-flow"/>
+          <text x="435" y="42" textAnchor="middle" className="text-[8px]" fill="#06b6d4">KServe</text>
+
+          <rect x="460" y="20" width="130" height="60" rx="12" fill="#0d1424" stroke="#06b6d440" strokeWidth="1.5"/>
+          <text x="525" y="46" textAnchor="middle" className="mono text-[10px] font-bold" fill="#06b6d4">Running Pod</text>
+          <text x="525" y="64" textAnchor="middle" className="text-[9px]" fill="#94a3b8">model serving traffic</text>
+        </svg>
+        <p className="text-[11px] text-slate-500 text-center mt-2">
+          The InferenceService references a ServingRuntime by name. KServe merges the two specs and creates a pod that serves your model.
+        </p>
+      </div>
+
+      {/* Prerequisites */}
+      <div className="rounded-2xl border border-slate-700/40 bg-slate-800/15 p-6">
+        <h3 className="text-base font-bold text-white mb-1">Prerequisites</h3>
+        <p className="text-[11px] text-slate-400 mb-4">Before deploying, ensure you have these in place:</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            { icon: 'S3', title: 'Data Connection', desc: 'A configured data connection in your OpenShift AI Project containing AWS credentials for the S3 bucket where your KFP pipeline saved the merged models.', color: '#06b6d4' },
+            { icon: 'RT', title: 'vLLM Serving Runtime', desc: 'A vLLM runtime must be available in your project. If your cluster does not have a default vLLM runtime, your administrator needs to add the vLLM container image to the cluster ServingRuntimes.', color: '#22c55e' },
+            { icon: 'GPU', title: 'GPU Nodes Available', desc: 'For the decoder model, GPU nodes with nvidia.com/gpu.present label and sufficient GPU capacity (4x NVIDIA GPUs for tensor parallel).', color: '#f59e0b' },
+            { icon: 'PVC', title: 'Model Weights Accessible', desc: 'Merged model weights saved to a PVC (from training pipeline) or uploaded to HuggingFace Hub for the encoder model.', color: '#a855f7' },
+          ].map((prereq, i) => (
+            <div key={i} className="rounded-xl border border-slate-700/30 bg-slate-900/20 p-4 flex gap-3">
+              <SectionBadge icon={prereq.icon} color={prereq.color} size={36}/>
+              <div>
+                <div className="text-[12px] font-semibold text-slate-200 mb-1">{prereq.title}</div>
+                <div className="text-[10px] text-slate-400 leading-relaxed">{prereq.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB 3: SERVING RUNTIME DEEP DIVE
+// ======================================================================
+
+function RuntimeTab() {
+  const [activeSection, setActiveSection] = useState('container');
+
+  return (
+    <div className="fade-in">
+      <div className="text-center mb-5">
+        <h2 className="text-xl font-bold text-white mb-1">ServingRuntime Deep Dive</h2>
+        <p className="text-sm text-slate-400">The reusable engine blueprint -- click each section to explore</p>
+      </div>
+      <DeepDiveLayout
+        sections={RUNTIME_SECTIONS}
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+        yaml={SERVING_RUNTIME_YAML}
+        highlightColor="highlighted-green"
+      >
+        {(active) => (
+          <>
+            {active === 'container' && (
+              <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+                <div className="text-[10px] font-semibold text-slate-300 mb-3">vLLM Server Architecture</div>
+                <svg width="100%" height="100" viewBox="0 0 480 100">
+                  <defs>
+                    <marker id="arrowG2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                      <polygon points="0 0, 8 3, 0 6" fill="#22c55e"/>
+                    </marker>
+                  </defs>
+                  <rect x="10" y="15" width="120" height="70" rx="10" fill="#081a10" stroke="#22c55e40" strokeWidth="1.5"/>
+                  <text x="70" y="40" textAnchor="middle" className="mono text-[10px] font-bold" fill="#22c55e">vLLM Server</text>
+                  <text x="70" y="55" textAnchor="middle" className="text-[9px]" fill="#94a3b8">OpenAI API</text>
+                  <text x="70" y="70" textAnchor="middle" className="mono text-[8px]" fill="#64748b">:8080</text>
+
+                  <line x1="130" y1="50" x2="180" y2="50" stroke="#22c55e" strokeWidth="1.5" markerEnd="url(#arrowG2)" className="arrow-flow"/>
+
+                  <rect x="180" y="15" width="120" height="70" rx="10" fill="#0d1424" stroke="#3b82f640" strokeWidth="1.5"/>
+                  <text x="240" y="40" textAnchor="middle" className="mono text-[10px] font-bold" fill="#60a5fa">/mnt/models</text>
+                  <text x="240" y="55" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Model weights</text>
+                  <text x="240" y="70" textAnchor="middle" className="text-[8px]" fill="#64748b">mounted by KServe</text>
+
+                  <line x1="300" y1="50" x2="350" y2="50" stroke="#3b82f6" strokeWidth="1.5" markerEnd="url(#arrowBlue)" className="arrow-flow"/>
+
+                  <rect x="350" y="15" width="120" height="70" rx="10" fill="#0a1620" stroke="#06b6d430" strokeWidth="1.5"/>
+                  <text x="410" y="35" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Endpoints</text>
+                  <text x="410" y="52" textAnchor="middle" className="mono text-[8px]" fill="#06b6d4">/v1/chat/completions</text>
+                  <text x="410" y="65" textAnchor="middle" className="mono text-[8px]" fill="#06b6d4">/v1/completions</text>
+                  <text x="410" y="78" textAnchor="middle" className="mono text-[8px]" fill="#06b6d4">/metrics</text>
+                </svg>
+              </div>
+            )}
+            {active === 'model-format' && (
+              <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+                <div className="text-[10px] font-semibold text-slate-300 mb-3">Single-Model vs Multi-Model Serving</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-green-500/20 bg-green-950/10 p-3">
+                    <div className="text-[10px] font-bold text-green-300 mb-1">Single-Model (Our Setup)</div>
+                    <div className="text-[9px] text-slate-400 space-y-1">
+                      <div>&#x2713; One model per pod</div>
+                      <div>&#x2713; Full GPU isolation</div>
+                      <div>&#x2713; Independent scaling</div>
+                      <div>&#x2713; Simpler debugging</div>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-slate-700/30 bg-slate-900/30 p-3">
+                    <div className="text-[10px] font-bold text-slate-400 mb-1">Multi-Model</div>
+                    <div className="text-[9px] text-slate-500 space-y-1">
+                      <div>&#9675; Multiple models per pod</div>
+                      <div>&#9675; Shared resources</div>
+                      <div>&#9675; More efficient for small models</div>
+                      <div>&#9675; More complex</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </DeepDiveLayout>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB 4: ENCODER DEPLOYMENT
+// ======================================================================
+
+function EncoderTab() {
+  const [activeSection, setActiveSection] = useState('encoder-args');
+  const [showSteps, setShowSteps] = useState(false);
+
+  return (
+    <div className="fade-in">
+      <div className="text-center mb-5">
+        <h2 className="text-xl font-bold text-white mb-1">Encoder Model: <span style={{ color: '#f43f5e' }}>Phayathaibert</span></h2>
+        <p className="text-sm text-slate-400">Deploying an encoder as a classifier using vLLM's pooling engine</p>
+      </div>
+
+      {/* Why special args callout */}
+      <div className="mb-5 rounded-xl border border-rose-500/20 bg-rose-950/5 p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm flex-shrink-0">!</div>
+          <div>
+            <div className="text-[12px] font-semibold text-rose-300 mb-1">Why does this need special arguments?</div>
+            <div className="text-[11px] text-slate-400 leading-relaxed">
+              vLLM is primarily designed for <strong className="text-slate-300">generative text</strong> (causal language modeling). Encoder models like Phayathaibert are used for
+              <strong className="text-slate-300"> sequence classification</strong>, not text generation. We must pass very specific arguments to force vLLM to run the pooling engine
+              and interpret outputs as classification logits instead of trying to generate tokens.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <DeepDiveLayout
+        sections={ENCODER_SECTIONS}
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+        yaml={ISVC_ENCODER_YAML}
+        highlightColor="highlighted-rose"
+      >
+        {(active) => (
+          <>
+            {active === 'encoder-args' && (
+              <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+                <div className="text-[10px] font-semibold text-slate-300 mb-3">How Encoder Args Transform vLLM</div>
+                <svg width="100%" height="130" viewBox="0 0 480 130">
+                  <defs>
+                    <marker id="arrowR" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                      <polygon points="0 0, 8 3, 0 6" fill="#f43f5e"/>
+                    </marker>
+                  </defs>
+                  {/* Default vLLM */}
+                  <rect x="10" y="10" width="130" height="50" rx="10" fill="#1a1408" stroke="#fbbf2440" strokeWidth="1.5"/>
+                  <text x="75" y="32" textAnchor="middle" className="mono text-[9px] font-bold" fill="#fbbf24">Default vLLM</text>
+                  <text x="75" y="48" textAnchor="middle" className="text-[8px]" fill="#94a3b8">Text Generation</text>
+
+                  {/* Arrow with args */}
+                  <line x1="140" y1="35" x2="200" y2="35" stroke="#f43f5e" strokeWidth="2" markerEnd="url(#arrowR)" className="arrow-flow"/>
+                  <text x="170" y="25" textAnchor="middle" className="mono text-[7px]" fill="#f43f5e">+args</text>
+
+                  {/* Transformed vLLM */}
+                  <rect x="200" y="10" width="130" height="50" rx="10" fill="#0d0a18" stroke="#f43f5e40" strokeWidth="1.5"/>
+                  <text x="265" y="32" textAnchor="middle" className="mono text-[9px] font-bold" fill="#f43f5e">Pooling Engine</text>
+                  <text x="265" y="48" textAnchor="middle" className="text-[8px]" fill="#94a3b8">Classification</text>
+
+                  {/* Arrow to output */}
+                  <line x1="330" y1="35" x2="370" y2="35" stroke="#22c55e" strokeWidth="1.5" markerEnd="url(#arrowG2)"/>
+
+                  {/* Output */}
+                  <rect x="370" y="10" width="100" height="50" rx="10" fill="#081a10" stroke="#22c55e30" strokeWidth="1.5"/>
+                  <text x="420" y="32" textAnchor="middle" className="mono text-[9px] font-bold" fill="#22c55e">Logits</text>
+                  <text x="420" y="48" textAnchor="middle" className="text-[8px]" fill="#94a3b8">[0.9, 0.05, 0.05]</text>
+
+                  {/* Arg labels */}
+                  {[
+                    { label: '--runner=pooling', y: 75, desc: 'Switch engine' },
+                    { label: '--convert=classify', y: 93, desc: 'Output as logits' },
+                    { label: '--trust-remote-code', y: 111, desc: 'Allow custom code' },
+                  ].map((arg, i) => (
+                    <g key={i}>
+                      <rect x="10" y={arg.y - 3} width="200" height="16" rx="3" fill="#f43f5e08" stroke="#f43f5e20" strokeWidth="1"/>
+                      <text x="20" y={arg.y + 9} className="mono text-[8px]" fill="#f43f5e">{arg.label}</text>
+                      <text x="220" y={arg.y + 9} className="text-[8px]" fill="#64748b">{arg.desc}</text>
+                    </g>
+                  ))}
+                </svg>
+              </div>
+            )}
+            {active === 'resources' && (
+              <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+                <div className="text-[10px] font-semibold text-slate-300 mb-3">Storage Protocol: hf://</div>
+                <div className="rounded-lg bg-slate-900/40 p-3 border border-slate-700/20">
+                  <div className="mono text-[10px] text-cyan-300 mb-2">hf://3scale/phayathaibert-tuned-5apr</div>
+                  <div className="text-[9px] text-slate-400 space-y-1">
+                    <div><span className="text-slate-300 font-medium">Protocol:</span> hf:// -- pulls directly from HuggingFace Hub</div>
+                    <div><span className="text-slate-300 font-medium">Org:</span> 3scale -- the HuggingFace organization</div>
+                    <div><span className="text-slate-300 font-medium">Model:</span> phayathaibert-tuned-5apr -- the fine-tuned model repo</div>
+                    <div className="pt-1 text-slate-500">KServe downloads model weights at pod startup and mounts at /mnt/models</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </DeepDiveLayout>
+
+      {/* Deployment Steps */}
+      <div className="mt-6">
+        <button onClick={() => setShowSteps(!showSteps)}
+          className="w-full flex items-center justify-between px-5 py-3 rounded-xl border border-rose-500/20 bg-rose-950/5 hover:bg-rose-950/10 transition-all">
+          <div className="flex items-center gap-3">
+            <SectionBadge icon="UI" color="#f43f5e" size={32}/>
+            <div className="text-left">
+              <div className="text-[12px] font-semibold text-rose-300">Step-by-Step Deployment via OpenShift AI UI</div>
+              <div className="text-[10px] text-slate-400">Click to {showSteps ? 'collapse' : 'expand'} the deployment instructions</div>
+            </div>
+          </div>
+          <span className="text-rose-400 text-lg">{showSteps ? '&#9660;' : '&#9654;'}</span>
+        </button>
+
+        {showSteps && (
+          <div className="mt-3 rounded-xl border border-slate-700/30 bg-slate-900/20 p-5 space-y-4 fade-in">
+            {[
+              { step: 1, title: 'Deploy via OpenShift AI UI', items: [
+                'Navigate to your Data Science Project in the OpenShift AI dashboard',
+                'Scroll to the Models section and click Deploy model (under Single-model serving)',
+                'Set Model Name: phayathaibert',
+                'Select Serving runtime: vLLM',
+                'Set Model location: select your Data Connection and enter the HuggingFace path',
+                'Click Deploy',
+              ]},
+              { step: 2, title: 'Inject the Encoder Arguments', items: [
+                'Once deployed, click the three dots next to your model and select Edit YAML',
+                'Locate the model block under the predictor section',
+                'Add the args array: --runner=pooling, --convert=classify, --trust-remote-code, --hf-overrides',
+                'Click Save -- the pod will restart and apply your configuration',
+              ]},
+            ].map((s, i) => (
+              <div key={i} className="flex gap-4">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-rose-500/10 border border-rose-500/30 text-rose-400 mono text-sm font-bold flex-shrink-0">
+                  {s.step}
+                </div>
+                <div>
+                  <div className="text-[12px] font-semibold text-slate-200 mb-2">{s.title}</div>
+                  <ul className="space-y-1.5">
+                    {s.items.map((item, j) => (
+                      <li key={j} className="flex items-start gap-2 text-[11px] text-slate-400">
+                        <span className="text-rose-400/60 mt-0.5 flex-shrink-0">&#9656;</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB 5: DECODER DEPLOYMENT
+// ======================================================================
+
+function DecoderTab() {
+  const [activeSection, setActiveSection] = useState('decoder-args');
+  const [showSteps, setShowSteps] = useState(false);
+
+  return (
+    <div className="fade-in">
+      <div className="text-center mb-5">
+        <h2 className="text-xl font-bold text-white mb-1">Decoder Model: <span style={{ color: '#fbbf24' }}>Qwen 2.5-32B-Instruct</span></h2>
+        <p className="text-sm text-slate-400">Distributed generative inference across 4 GPUs with tensor parallelism</p>
+      </div>
+
+      {/* GPU callout */}
+      <div className="mb-5 rounded-xl border border-amber-500/20 bg-amber-950/5 p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm flex-shrink-0">!</div>
+          <div>
+            <div className="text-[12px] font-semibold text-amber-300 mb-1">Why 4 GPUs?</div>
+            <div className="text-[11px] text-slate-400 leading-relaxed">
+              Decoder models like Qwen 2.5-32B-Instruct are massive causal language models. They require careful memory management and distributed computing.
+              With <strong className="text-slate-300">--tensor-parallel-size=4</strong>, the model is sliced vertically and distributed across 4 GPUs -- each GPU handles 1/4 of the computation.
+              Combined with <strong className="text-slate-300">--dtype=half</strong> (FP16), this cuts the VRAM footprint enough to fit efficiently.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <DeepDiveLayout
+        sections={DECODER_SECTIONS}
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+        yaml={ISVC_DECODER_YAML}
+        highlightColor="highlighted"
+      >
+        {(active) => (
+          <>
+            {active === 'decoder-args' && (
+              <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+                <div className="text-[10px] font-semibold text-slate-300 mb-3">GPU Memory Layout</div>
+                <div className="space-y-2">
+                  <div className="rounded-lg bg-slate-900/40 p-3">
+                    <div className="flex justify-between text-[10px] mb-1">
+                      <span className="text-slate-400">GPU VRAM Allocation (per GPU)</span>
+                      <span className="mono text-amber-300">90% utilized</span>
+                    </div>
+                    <div className="h-6 bg-slate-800 rounded-full overflow-hidden flex">
+                      <div className="h-full bg-amber-500/30 flex items-center justify-center" style={{ width: '45%' }}>
+                        <span className="mono text-[8px] text-amber-300">Model Weights (FP16)</span>
+                      </div>
+                      <div className="h-full bg-green-500/30 flex items-center justify-center" style={{ width: '45%' }}>
+                        <span className="mono text-[8px] text-green-300">KV-Cache (2048 ctx)</span>
+                      </div>
+                      <div className="h-full bg-slate-600/40 flex items-center justify-center" style={{ width: '10%' }}>
+                        <span className="mono text-[7px] text-slate-400">10%</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between text-[8px] text-slate-600 mt-1">
+                      <span>--dtype=half</span>
+                      <span>--max-model-len=2048</span>
+                      <span>CUDA buffer</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 text-[10px] font-semibold text-slate-300 mb-2">Tensor Parallelism (4-way)</div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[0,1,2,3].map(i => (
+                    <div key={i} className="rounded-lg bg-slate-900/40 border border-amber-500/15 p-2 text-center">
+                      <div className="mono text-[9px] font-bold text-amber-300">GPU {i}</div>
+                      <div className="text-[8px] text-slate-500">1/4 model shard</div>
+                      <div className="mt-1 h-2 bg-amber-500/20 rounded-full"></div>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-[9px] text-slate-500 mt-2 text-center">
+                  --tensor-parallel-size=4 slices the neural network vertically across all 4 GPUs
+                </div>
+              </div>
+            )}
+            {active === 'gpu-resources' && (
+              <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+                <div className="text-[10px] font-semibold text-slate-300 mb-3">Resource Allocation</div>
+                <div className="space-y-2">
+                  {[
+                    { label: 'GPU', req: 4, lim: 4, unit: 'nvidia.com/gpu', pct: 100, color: '#22c55e' },
+                    { label: 'Memory', req: 4, lim: 16, unit: 'Gi', pct: 100, color: '#3b82f6' },
+                    { label: 'CPU', req: 2, lim: 4, unit: 'cores', pct: 50, color: '#a855f7' },
+                  ].map((r, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className="text-[10px] text-slate-400 w-16">{r.label}</span>
+                      <div className="flex-1 h-6 bg-slate-900/60 rounded-full overflow-hidden relative">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${r.pct}%`, background: `${r.color}40` }}></div>
+                        <span className="absolute inset-0 flex items-center justify-center mono text-[9px] text-slate-300">
+                          {r.req} / {r.lim} {r.unit !== 'nvidia.com/gpu' ? r.unit : ''}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {active === 'storage' && (
+              <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+                <div className="text-[10px] font-semibold text-slate-300 mb-3">Storage Protocol: pvc://</div>
+                <svg width="100%" height="90" viewBox="0 0 480 90">
+                  <defs>
+                    <marker id="arrowP2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                      <polygon points="0 0, 8 3, 0 6" fill="#a855f7"/>
+                    </marker>
+                  </defs>
+                  <rect x="10" y="15" width="140" height="60" rx="10" fill="#0d0520" stroke="#a855f730" strokeWidth="1.5"/>
+                  <text x="80" y="38" textAnchor="middle" className="mono text-[9px] font-bold" fill="#c084fc">lora-adapters-pvc</text>
+                  <text x="80" y="55" textAnchor="middle" className="text-[8px]" fill="#94a3b8">PersistentVolumeClaim</text>
+                  <text x="80" y="68" textAnchor="middle" className="text-[8px]" fill="#64748b">from training pipeline</text>
+
+                  <line x1="150" y1="45" x2="200" y2="45" stroke="#a855f7" strokeWidth="2" markerEnd="url(#arrowP2)" className="arrow-flow"/>
+                  <text x="175" y="38" textAnchor="middle" className="mono text-[7px]" fill="#a855f7">mount</text>
+
+                  <rect x="200" y="15" width="140" height="60" rx="10" fill="#0d1424" stroke="#3b82f630" strokeWidth="1.5"/>
+                  <text x="270" y="38" textAnchor="middle" className="mono text-[9px] font-bold" fill="#60a5fa">/mnt/models</text>
+                  <text x="270" y="55" textAnchor="middle" className="text-[8px]" fill="#94a3b8">in serving pod</text>
+                  <text x="270" y="68" textAnchor="middle" className="mono text-[7px]" fill="#64748b">models/qwen2.5-7b-...</text>
+
+                  <line x1="340" y1="45" x2="380" y2="45" stroke="#22c55e" strokeWidth="1.5" markerEnd="url(#arrowG2)"/>
+
+                  <rect x="380" y="15" width="90" height="60" rx="10" fill="#081a10" stroke="#22c55e30" strokeWidth="1.5"/>
+                  <text x="425" y="38" textAnchor="middle" className="mono text-[9px] font-bold" fill="#22c55e">vLLM</text>
+                  <text x="425" y="55" textAnchor="middle" className="text-[8px]" fill="#94a3b8">loads model</text>
+                  <text x="425" y="68" textAnchor="middle" className="text-[8px]" fill="#64748b">into GPU memory</text>
+                </svg>
+              </div>
+            )}
+          </>
+        )}
+      </DeepDiveLayout>
+
+      {/* Deployment Steps */}
+      <div className="mt-6">
+        <button onClick={() => setShowSteps(!showSteps)}
+          className="w-full flex items-center justify-between px-5 py-3 rounded-xl border border-amber-500/20 bg-amber-950/5 hover:bg-amber-950/10 transition-all">
+          <div className="flex items-center gap-3">
+            <SectionBadge icon="UI" color="#fbbf24" size={32}/>
+            <div className="text-left">
+              <div className="text-[12px] font-semibold text-amber-300">Step-by-Step Deployment via OpenShift AI UI</div>
+              <div className="text-[10px] text-slate-400">Click to {showSteps ? 'collapse' : 'expand'} the deployment instructions</div>
+            </div>
+          </div>
+          <span className="text-amber-400 text-lg">{showSteps ? '&#9660;' : '&#9654;'}</span>
+        </button>
+
+        {showSteps && (
+          <div className="mt-3 rounded-xl border border-slate-700/30 bg-slate-900/20 p-5 space-y-4 fade-in">
+            {[
+              { step: 1, title: 'Deploy via OpenShift AI UI', items: [
+                'Navigate to your Data Science Project in the OpenShift AI dashboard',
+                'Scroll to the Models section and click Deploy model (under Single-model serving)',
+                'Set Model Name: qwen-3.5-generative (or qwen25-32b-finetuned)',
+                'Select Serving runtime: vLLM',
+                'Set Model location: select your Data Connection and enter the PVC path to the merged Qwen model',
+                'Click Deploy',
+              ]},
+              { step: 2, title: 'Inject the Decoder Arguments', items: [
+                'Click the three dots next to your Qwen model and select Edit YAML',
+                'Add the args array: --max-model-len=2048, --dtype=half, --gpu-memory-utilization=0.9, --enforce-eager, --tensor-parallel-size=4',
+                'Ensure GPU resource requests match tensor-parallel-size (4x nvidia.com/gpu)',
+                'Add nodeSelector: nvidia.com/gpu.present: "true"',
+                'Add toleration for nvidia.com/gpu NoSchedule',
+                'Click Save -- the pod will restart with the new configuration',
+              ]},
+              { step: 3, title: 'Verify GPU Allocation', items: [
+                'Watch the Status column in the OpenShift AI Models UI',
+                'Check that the pod was scheduled on a GPU node (oc describe pod)',
+                'Verify all 4 GPUs are allocated (nvidia-smi inside the pod)',
+                'Wait for status to change from Pending to Loaded (green checkmark)',
+              ]},
+            ].map((s, i) => (
+              <div key={i} className="flex gap-4">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-amber-500/10 border border-amber-500/30 text-amber-400 mono text-sm font-bold flex-shrink-0">
+                  {s.step}
+                </div>
+                <div>
+                  <div className="text-[12px] font-semibold text-slate-200 mb-2">{s.title}</div>
+                  <ul className="space-y-1.5">
+                    {s.items.map((item, j) => (
+                      <li key={j} className="flex items-start gap-2 text-[11px] text-slate-400">
+                        <span className="text-amber-400/60 mt-0.5 flex-shrink-0">&#9656;</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB 6: INFERENCESERVICE (ENCODER) vs INFERENCESERVICE (DECODER) SUMMARY
+// ======================================================================
+
+function CompareTab() {
+  return (
+    <div className="fade-in space-y-6">
+      <div className="text-center mb-2">
+        <h2 className="text-xl font-bold text-white mb-2">InferenceService (Encoder vs Decoder) Summary</h2>
+        <p className="text-sm text-slate-400 max-w-2xl mx-auto">
+          A side-by-side comparison of the two model deployments and how their InferenceService configurations differ.
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-slate-700/40 bg-slate-800/15 p-6">
+        <div className="overflow-x-auto">
+          <table className="w-full text-[11px] border-collapse">
+            <thead>
+              <tr className="border-b border-slate-700/50">
+                <th className="py-3 px-4 text-left text-slate-500 font-medium w-1/4">Aspect</th>
+                <th className="py-3 px-4 text-left font-medium" style={{ color: '#f43f5e' }}>
+                  <div className="flex items-center gap-2"><SectionBadge icon="ENC" color="#f43f5e" size={22}/> Encoder (Phayathaibert)</div>
+                </th>
+                <th className="py-3 px-4 text-left font-medium" style={{ color: '#fbbf24' }}>
+                  <div className="flex items-center gap-2"><SectionBadge icon="DEC" color="#fbbf24" size={22}/> Decoder (Qwen 2.5)</div>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="text-slate-300">
+              {[
+                ['Task', 'Sequence classification (intent detection)', 'Generative text (intent detection with JSON generation)'],
+                ['Architecture', 'RoBERTa (encoder-only)', 'Qwen 2.5 (causal decoder)'],
+                ['GPU', 'None -- runs on CPU', '4x NVIDIA GPUs (tensor parallel)'],
+                ['Memory', '4Gi', '16Gi'],
+                ['CPU', '2 cores', '4 cores'],
+                ['vLLM Engine', 'Pooling engine (--runner=pooling)', 'Default text-generation engine'],
+                ['Key Args', '--convert=classify, --hf-overrides', '--dtype=half, --tensor-parallel-size=4, --max-model-len=2048'],
+                ['Storage', 'hf://ais/phayathaibert-finetuned', 'pvc://lora-adapters-pvc/models/qwen2.5-32b-finetuned'],
+                ['Deployment Mode', 'RawDeployment (always running)', 'RawDeployment (always running)'],
+                ['Node Scheduling', 'Default (no GPU selector)', 'nodeSelector + GPU toleration'],
+              ].map(([aspect, enc, dec], i) => (
+                <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors">
+                  <td className="py-2.5 px-4 text-slate-400 font-medium">{aspect}</td>
+                  <td className="py-2.5 px-4">{enc}</td>
+                  <td className="py-2.5 px-4">{dec}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Key takeaway */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-5">
+        <h3 className="text-sm font-semibold text-slate-200 mb-3">Key Takeaway</h3>
+        <p className="text-[12px] text-slate-400 leading-relaxed">
+          Both models use the <strong className="text-slate-200">same vLLM ServingRuntime</strong> and the <strong className="text-slate-200">same InferenceService kind</strong>,
+          but the configuration is radically different. The encoder is a lightweight CPU-only classifier that needs special args to force vLLM into pooling mode.
+          The decoder is a large generative model that needs multi-GPU tensor parallelism, memory management flags, and GPU node scheduling.
+          The <span className="mono text-green-300">args</span> array in the InferenceService YAML is where all the model-specific tuning happens.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB 7: VERIFY & TEST
+// ======================================================================
+
+function VerifyTab() {
+  const [activeStep, setActiveStep] = useState(0);
+
+  const steps = [
+    {
+      num: 1,
+      title: 'Check OpenShift AI Dashboard Status',
+      icon: 'UI',
+      color: '#3b82f6',
+      desc: 'Watch the Status column in the OpenShift AI Models UI. Wait for it to change from Pending to a green checkmark (Loaded). Each model will show its own status independently.',
+      command: null,
+    },
+    {
+      num: 2,
+      title: 'Verify Pod Status',
+      icon: 'POD',
+      color: '#22c55e',
+      desc: 'Use oc/kubectl to check that the serving pods are running and all containers are ready.',
+      command: `# Check decoder pod
+oc get pods -n decoder-sft -l serving.kserve.io/inferenceservice=qwen25-32b-finetuned
+
+# Check encoder pod
+oc get pods -n encoder-sft -l serving.kserve.io/inferenceservice=phayathaibert
+
+# Detailed status
+oc describe pod <pod-name> -n decoder-sft`,
+    },
+    {
+      num: 3,
+      title: 'Get the Endpoint URL',
+      icon: 'URL',
+      color: '#06b6d4',
+      desc: 'Once the model is loaded, OpenShift AI provides an endpoint URL. You can get it from the dashboard UI or via the CLI.',
+      command: `# Get the endpoint URL for the decoder
+export MODEL_NAME=qwen25-32b-finetuned
+export ENDPOINT=$(oc get isvc qwen25-32b-finetuned \\
+  -n decoder-sft -o jsonpath='{.status.url}')
+
+echo $ENDPOINT
+# https://qwen25-32b-finetuned-decoder-sft.apps.cluster.com`,
+    },
+    {
+      num: 4,
+      title: 'Test with curl (Decoder)',
+      icon: 'DEC',
+      color: '#fbbf24',
+      desc: 'Query the decoder model using the OpenAI-compatible chat completions API. The model is served as a generative intent classifier.',
+      command: `curl -k -X POST "$ENDPOINT/v1/chat/completions" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "qwen25-32b-finetuned",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are an AI intent classifier. Analyze the conversation and output a JSON object with the predicted intent."
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ติดต่อเรื่องเปิดใช้งานซิมรายเดือนใช่ไหมคะ"
+      },
+      {
+        "role": "user",
+        "content": "ใช่ครับ เพิ่งได้รับซิมใหม่มา ยังใช้ไม่ได้เลย เซง สุด แล่ว อ้อแล้วช่วยเช็ก Network แถวบ้านให้หน่อยสัญญานไม่ดีเลย มีปัญหาตลอดโครหงุดหงิด"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้ค่ะ รบกวนแจ้งหมายเลขที่ต้องการเปิดใช้งานก่อนนะคะ"
+      },
+      {
+        "role": "user",
+        "content": "เบอร์ 086-031-xxxx ครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบแล้วเป็นซิมรายเดือนที่รอเปิดใช้งานอยู่ค่ะ ต้องการให้ดำเนินการเปิดใช้งานเลยไหมครับ"
+      },
+      {
+        "role": "user",
+        "content": "งั้นช่วยเปิดไช้งานเบอร์รายเดือนนี้ให้เลยคับ ต้องการด่วนๆเลยพอดีพรุ่งจะไปต่างจังหวัดพอดีมีประชุมด่วน"
+      }
+    ],
+    "temperature": 0.0,
+    "max_tokens": 50
+  }'`,
+    },
+    {
+      num: 5,
+      title: 'Decoder Response',
+      icon: 'OK',
+      color: '#22c55e',
+      desc: 'A successful decoder response returns a JSON object with the model name, generated intent classification, and usage statistics.',
+      command: `# Example successful decoder response:
+{
+  "id": "chatcmpl-fb92a1b9...",
+  "model": "qwen25-32b-finetuned",
+  "choices": [{
+    "message": {
+      "role": "assistant",
+      "content": "{\\"intent\\": \\"MOBILE_SIM_ACTIVATION_POSTPAID\\"}"
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {
+    "prompt_tokens": 44,
+    "completion_tokens": 19,
+    "total_tokens": 63
+  }
+}`,
+    },
+    {
+      num: 6,
+      title: 'Test with curl (Encoder)',
+      icon: 'ENC',
+      color: '#f43f5e',
+      desc: 'Query the encoder model using the /classify endpoint. The encoder takes a conversation string and returns a classification label with confidence scores.',
+      command: `# Get the encoder endpoint
+export ENC_ENDPOINT=$(oc get isvc phayathaibert \\
+  -n encoder-sft -o jsonpath='{.status.url}')
+
+# Classify a conversation
+curl $ENC_ENDPOINT/classify \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "phayathaibert",
+    "input": "[BOT]: สวัสดีค่ะ ติดต่อเรื่องเปิดใช้งานซิมรายเดือนใช่ไหมคะ [USER]: ใช่ครับ เพิ่งได้รับซิมใหม่มา ยังใช้ไม่ได้เลย เซง สุด แล่ว อ้อแล้วช่วยเช็ก Network แถวบ้านให้หน่อยสัญญานไม่ดีเลย มีปัญหาตลอดโครหงุดหงิด [BOT]: ได้ค่ะ รบกวนแจ้งหมายเลขที่ต้องการเปิดใช้งานก่อนนะคะ [USER]: เบอร์ 086-031-xxxx ครับ [BOT]: ตรวจสอบแล้วเป็นซิมรายเดือนที่รอเปิดใช้งานอยู่ค่ะ ต้องการให้ดำเนินการเปิดใช้งานเลยไหมครับ [USER]: งั้นช่วยเปิดไช้งานเบอร์รายเดือนนี้ให้เลยคับ ต้องการด่วนๆเลยพอดีพรุ่งจะไปต่างจังหวัดพอดีมีประชุมด่วน"
+  }' | jq '.data[0] | {label: .label, confidence: (.probs | max)}'`,
+    },
+    {
+      num: 7,
+      title: 'Encoder Response',
+      icon: 'OK',
+      color: '#22c55e',
+      desc: 'A successful encoder response returns a classification label and confidence score. The model outputs probabilities across all intent classes.',
+      command: `# Example successful encoder response:
+{
+  "label": "MOBILE_SIM_ACTIVATION_POSTPAID",
+  "confidence": 0.853497576713562
+}
+
+# The full response from vLLM includes all class probabilities:
+# .data[0].probs  ->  array of probabilities per class
+# .data[0].label  ->  the predicted class with highest probability
+# Use jq to extract just the label and max confidence as shown above`,
+    },
+  ];
+
+  const step = steps[activeStep];
+
+  return (
+    <div className="fade-in">
+      <div className="text-center mb-5">
+        <h2 className="text-xl font-bold text-white mb-1">Verify & Test</h2>
+        <p className="text-sm text-slate-400">Confirm your models are serving and query them with the OpenAI-compatible API</p>
+      </div>
+
+      {/* Step timeline */}
+      <div className="relative mb-6">
+        <div className="absolute top-6 left-0 right-0 h-0.5 bg-slate-800 z-0"></div>
+        <div className="absolute top-6 left-0 h-0.5 bg-gradient-to-r from-blue-500/60 to-green-500/60 z-0 transition-all duration-500"
+          style={{ width: `${(activeStep / (steps.length - 1)) * 100}%` }}></div>
+
+        <div className="relative z-10 flex justify-between">
+          {steps.map((s, i) => (
+            <button key={i} onClick={() => setActiveStep(i)}
+              className={`flex flex-col items-center transition-all ${i <= activeStep ? '' : 'opacity-40'}`}
+              style={{ width: `${100 / steps.length}%` }}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mono text-[10px] font-bold border-2 transition-all ${
+                i === activeStep ? 'scale-110' : i < activeStep ? 'scale-100' : 'scale-90'
+              }`}
+                style={{
+                  background: i <= activeStep ? `${s.color}20` : '#0f172a',
+                  borderColor: i <= activeStep ? `${s.color}80` : '#334155',
+                  color: i <= activeStep ? s.color : '#64748b',
+                  boxShadow: i === activeStep ? `0 0 16px 4px ${s.color}30` : 'none'
+                }}>
+                {s.icon}
+              </div>
+              <span className={`text-[9px] mt-1.5 text-center leading-tight max-w-[80px] ${
+                i === activeStep ? 'font-semibold' : ''
+              }`}
+                style={{ color: i <= activeStep ? s.color : '#64748b' }}>
+                {s.title}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Step detail */}
+      <div className="rounded-2xl border border-slate-700/40 bg-slate-800/20 p-6 fade-in" key={activeStep}>
+        <div className="flex items-start gap-4 mb-4">
+          <div className="w-14 h-14 rounded-xl flex items-center justify-center mono text-sm font-bold flex-shrink-0"
+            style={{ background: `${step.color}15`, border: `2px solid ${step.color}50`, color: step.color }}>
+            {step.num}
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white mb-1">{step.title}</h3>
+            <p className="text-[12px] text-slate-400">{step.desc}</p>
+          </div>
+        </div>
+
+        {step.command && (
+          <div className="rounded-xl border border-slate-700/60 bg-[#0b1121] overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/40 border-b border-slate-700/40">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500/60"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-green-500/60"></div>
+              <span className="mono text-[10px] text-slate-500 ml-2">terminal</span>
+            </div>
+            <div className="p-4 overflow-x-auto">
+              <pre className="mono text-[11px] text-slate-300 whitespace-pre leading-relaxed">{step.command}</pre>
+            </div>
+          </div>
+        )}
+
+        {activeStep === 0 && (
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[
+              { status: 'Pending', color: '#f59e0b', desc: 'Pod being created, image pulling', icon: '&#9711;' },
+              { status: 'Loading', color: '#3b82f6', desc: 'Model weights being loaded into memory/GPU', icon: '&#9684;' },
+              { status: 'Loaded', color: '#22c55e', desc: 'Model is ready to serve inference requests', icon: '&#10003;' },
+            ].map((s, i) => (
+              <div key={i} className="rounded-lg border p-3 text-center" style={{ borderColor: `${s.color}30`, background: `${s.color}05` }}>
+                <div className="text-lg mb-1" dangerouslySetInnerHTML={{ __html: s.icon }} style={{ color: s.color }}></div>
+                <div className="text-[11px] font-semibold mb-0.5" style={{ color: s.color }}>{s.status}</div>
+                <div className="text-[9px] text-slate-500">{s.desc}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Navigation */}
+      <div className="flex justify-between mt-4">
+        <button onClick={() => setActiveStep(Math.max(0, activeStep - 1))}
+          disabled={activeStep === 0}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeStep === 0 ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+          }`}>
+          &#8592; Previous
+        </button>
+        <span className="mono text-[10px] text-slate-500 self-center">Step {activeStep + 1} / {steps.length}</span>
+        <button onClick={() => setActiveStep(Math.min(steps.length - 1, activeStep + 1))}
+          disabled={activeStep === steps.length - 1}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeStep === steps.length - 1 ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/20'
+          }`}>
+          Next &#8594;
+        </button>
+      </div>
+
+      {/* API Endpoints Reference */}
+      <div className="mt-6 rounded-2xl border border-slate-700/40 bg-slate-800/15 p-5">
+        <h3 className="text-sm font-bold text-white mb-3">OpenAI-Compatible API Endpoints</h3>
+        <p className="text-[11px] text-slate-400 mb-3">
+          Both models expose the standard OpenAI API format. Any client that speaks OpenAI protocol can query your models.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            { endpoint: '/v1/chat/completions', method: 'POST', desc: 'Chat-style inference with system/user/assistant messages', model: 'Decoder (Qwen 2.5)', color: '#fbbf24' },
+            { endpoint: '/v1/completions', method: 'POST', desc: 'Raw text completion without chat formatting', model: 'Decoder (Qwen 2.5)', color: '#fbbf24' },
+            { endpoint: '/classify', method: 'POST', desc: 'Classification endpoint -- returns label and per-class probabilities', model: 'Encoder (Phayathaibert)', color: '#f43f5e' },
+            { endpoint: '/metrics', method: 'GET', desc: 'Prometheus metrics: latency, throughput, GPU utilization', model: 'Both', color: '#06b6d4' },
+          ].map((ep, i) => (
+            <div key={i} className="rounded-lg border border-slate-700/30 bg-slate-900/30 p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">{ep.method}</span>
+                <span className="mono text-[10px]" style={{ color: ep.color }}>{ep.endpoint}</span>
+              </div>
+              <div className="text-[9px] text-slate-400">{ep.desc}</div>
+              <div className="text-[8px] text-slate-600 mt-1">Model: {ep.model}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// MAIN APP
+// ======================================================================
+
+const TABS = [
+  { id: 'overview', label: 'Overview', icon: 'ARCH' },
+  { id: 'concepts', label: 'Core Concepts', icon: 'KEY' },
+  { id: 'runtime', label: 'ServingRuntime', icon: 'SR' },
+  { id: 'encoder', label: 'InferenceService (Encoder)', icon: 'ENC' },
+  { id: 'decoder', label: 'InferenceService (Decoder)', icon: 'DEC' },
+  { id: 'compare', label: 'InferenceService (Encoder vs Decoder)', icon: 'VS' },
+  { id: 'verify', label: 'Verify & Test', icon: 'API' },
+];
+
+function App() {
+  const [activeTab, setActiveTab] = useState('overview');
+
+  return (
+    <div className="relative z-10 max-w-6xl mx-auto px-4 py-6">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <div className="h-px flex-1 max-w-[80px] bg-gradient-to-r from-transparent to-green-500/40"></div>
+          <span className="mono text-[10px] text-green-400/60 tracking-[0.2em] uppercase">OpenShift AI Model Serving</span>
+          <div className="h-px flex-1 max-w-[80px] bg-gradient-to-l from-transparent to-green-500/40"></div>
+        </div>
+        <h1 className="text-3xl font-extrabold text-white mb-2" style={{ letterSpacing: '-0.02em' }}>
+          Deploying Models with <span className="text-green-300">vLLM</span>
+        </h1>
+        <p className="text-sm text-slate-400 max-w-xl mx-auto">
+          From fine-tuned weights to live API endpoints -- serving encoder and decoder models on OpenShift AI with KServe and vLLM
+        </p>
+      </div>
+
+      {/* Tab navigation */}
+      <div className="flex gap-1.5 mb-6 justify-center flex-wrap">
+        {TABS.map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-medium transition-all border ${
+              tab.id === activeTab
+                ? 'bg-green-600/20 border-green-500/40 text-green-300 shadow-lg shadow-green-500/10'
+                : 'bg-slate-800/30 border-slate-700/30 text-slate-400 hover:bg-slate-700/30 hover:text-slate-300'
+            }`}>
+            <span className={`mono text-[10px] font-bold px-1.5 py-0.5 rounded ${
+              tab.id === activeTab ? 'bg-green-500/20 text-green-300' : 'bg-slate-700/30 text-slate-500'
+            }`}>{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="min-h-[500px]">
+        {activeTab === 'overview' && <OverviewTab />}
+        {activeTab === 'concepts' && <ConceptsTab />}
+        {activeTab === 'runtime' && <RuntimeTab />}
+        {activeTab === 'encoder' && <EncoderTab />}
+        {activeTab === 'decoder' && <DecoderTab />}
+        {activeTab === 'compare' && <CompareTab />}
+        {activeTab === 'verify' && <VerifyTab />}
+      </div>
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

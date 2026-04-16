@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>TrainJob & TrainingRuntime — OpenShift AI Training Explainer</title>
+<title>TrainJob & TrainingRuntime Explainer</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -114,7 +114,7 @@ const { useState, useEffect, useRef, useMemo } = React;
 const TRAINING_RUNTIME_YAML = `apiVersion: trainer.kubeflow.org/v1alpha1
 kind: TrainingRuntime
 metadata:
-  name: qwen-custom-runtime
+  name: decoder-sft-training-runtime
   labels:
     trainer.kubeflow.org/framework: torch
 spec:
@@ -173,7 +173,7 @@ spec:
                       value: /tmp/hf_home_base
                     envFrom:
                     - configMapRef:
-                        name: intent-nlu-train-args
+                        name: decoder-sft-train-args
                     - secretRef:
                         name: hf-secret
                     volumeMounts:
@@ -190,7 +190,7 @@ spec:
                   volumes:
                   - name: train-script-volume
                     configMap:
-                      name: intent-nlu-train-script
+                      name: decoder-sft-train-script
                   - name: shared-data-volume
                     emptyDir: {}
                   - name: adapters-volume
@@ -203,10 +203,10 @@ spec:
 const TRAINJOB_YAML = `apiVersion: trainer.kubeflow.org/v1alpha1
 kind: TrainJob
 metadata:
-  name: intent-nlu-fine-tuning
+  name: decoder-sft-trainjob
 spec:
   runtimeRef:
-    name: qwen-custom-runtime
+    name: decoder-sft-training-runtime
     kind: TrainingRuntime
     apiGroup: trainer.kubeflow.org
   trainer:
@@ -232,9 +232,9 @@ spec:
       - name: MLFLOW_TRACKING_URI
         value: https://mlflow.redhat-ods-applications.svc.cluster.local:8443
       - name: MLFLOW_EXPERIMENT_NAME
-        value: qwen_intent_finetuning
+        value: decoder-sft-qwen-intent-finetuning
       - name: MLFLOW_RUN_NAME
-        value: qwen-1k-run-v1
+        value: decoder-sft-qwen-1k-run-v1
       - name: MLFLOW_TRACKING_TOKEN
         value: <<token>>
       - name: MLFLOW_TRACKING_INSECURE_TLS
@@ -253,10 +253,10 @@ const RUNTIME_SECTIONS = [
     subtitle: 'Distributed training configuration',
     icon: '{ }',
     color: '#3b82f6',
-    lines: [7, 8, 9, 10],
-    description: 'Defines the distributed training framework and topology. Here we use PyTorch with 4 processes per node (one per GPU), enabling data-parallel training across all 4 GPUs.',
+    lines: [8, 9, 10, 11],
+    description: 'Defines the distributed training framework and topology. Here we use torch with 4 processes per node (one per GPU), enabling data-parallel training across all 4 GPUs.',
     details: [
-      { label: 'Framework', value: 'PyTorch (torch)', note: 'Automatically configures torchrun/torch.distributed' },
+      { label: 'Framework', value: 'torch', note: 'Sets up distributed environment vars (MASTER_ADDR, WORLD_SIZE, RANK, etc.)' },
       { label: 'Nodes', value: '1', note: 'Single node — scale by increasing numNodes' },
       { label: 'Procs/Node', value: '4', note: 'Matches the number of GPUs requested' },
     ]
@@ -267,7 +267,7 @@ const RUNTIME_SECTIONS = [
     subtitle: 'Node selection & tolerations',
     icon: 'GPU',
     color: '#22c55e',
-    lines: [17, 18, 19, 20, 21, 22],
+    lines: [21, 22, 23, 24, 25, 26],
     description: 'Ensures pods land on GPU-equipped nodes. The nodeSelector targets nodes with NVIDIA GPUs, and the toleration allows scheduling onto GPU-tainted nodes that repel non-GPU workloads.',
     details: [
       { label: 'nodeSelector', value: 'nvidia.com/gpu.present: "true"', note: 'Only schedule on nodes with GPUs' },
@@ -280,7 +280,7 @@ const RUNTIME_SECTIONS = [
     subtitle: 'Data loader sidecar pattern',
     icon: 'INIT',
     color: '#f59e0b',
-    lines: [23, 24, 25, 26, 27, 28, 29, 30, 31],
+    lines: [27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
     description: 'An init container that runs BEFORE the training container. It copies training data from a pre-built data image into a shared volume. This pattern decouples data preparation from training execution.',
     details: [
       { label: 'Image', value: 'quay.io/balki404/sdg-intent-classifier-data', note: 'Pre-built container with training data baked in' },
@@ -294,7 +294,7 @@ const RUNTIME_SECTIONS = [
     subtitle: 'Red Hat certified training image',
     icon: 'TRAIN',
     color: '#ef4444',
-    lines: [32, 33, 34, 35, 36, 37, 38, 39, 40],
+    lines: [38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49],
     description: 'The main training container uses a Red Hat certified image with CUDA 12.8, PyTorch 2.8, and Python 3.12. It requests 4 GPUs with 32Gi memory — matched to the ML Policy\'s numProcPerNode.',
     details: [
       { label: 'Image', value: 'registry.redhat.io/rhoai/odh-training-cuda128-torch28-py312-rhel9:v3.0', note: 'Red Hat certified, enterprise-supported' },
@@ -309,12 +309,12 @@ const RUNTIME_SECTIONS = [
     subtitle: 'HuggingFace, CUDA, ConfigMaps & Secrets',
     icon: 'ENV',
     color: '#a855f7',
-    lines: [41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53],
+    lines: [50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65],
     description: 'Environment variables configure HuggingFace cache paths and CUDA memory allocation. External config is injected via ConfigMaps (training hyperparameters) and Secrets (HF token).',
     details: [
       { label: 'HF_HUB_CACHE', value: '/mnt/hf_cache/hub', note: 'Persistent model cache on PVC — avoids re-downloading' },
       { label: 'PYTORCH_CUDA_ALLOC_CONF', value: 'expandable_segments:True', note: 'Reduces CUDA memory fragmentation' },
-      { label: 'ConfigMap', value: 'intent-nlu-train-args', note: 'Hyperparameters: lr, epochs, batch_size, etc.' },
+      { label: 'ConfigMap', value: 'decoder-sft-train-args', note: 'Hyperparameters: lr, epochs, batch_size, etc.' },
       { label: 'Secret', value: 'hf-secret', note: 'HuggingFace API token for gated models' },
     ]
   },
@@ -324,7 +324,7 @@ const RUNTIME_SECTIONS = [
     subtitle: 'PVCs, ConfigMaps, shared data',
     icon: 'VOL',
     color: '#06b6d4',
-    lines: [54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71],
+    lines: [66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88],
     description: 'Four volumes wire everything together: the training script from a ConfigMap, shared training data from the init container, persistent storage for LoRA adapters, and a cache for HuggingFace models.',
     details: [
       { label: 'train-script-volume', value: 'ConfigMap → /app/train.py', note: 'Training script injected as a ConfigMap mount' },
@@ -346,10 +346,10 @@ const TRAINJOB_SECTIONS = [
     subtitle: 'Pointer to the infrastructure blueprint',
     icon: 'REF',
     color: '#06b6d4',
-    lines: [5, 6, 7, 8],
+    lines: [5, 6, 7, 8, 9],
     description: 'The runtimeRef field is the key link — it tells the TrainJob controller which TrainingRuntime blueprint to use. This is a namespace-scoped reference (vs ClusterTrainingRuntime for cluster-wide).',
     details: [
-      { label: 'name', value: 'qwen-custom-runtime', note: 'Must match a TrainingRuntime in the same namespace' },
+      { label: 'name', value: 'decoder-sft-training-runtime', note: 'Must match a TrainingRuntime in the same namespace' },
       { label: 'kind', value: 'TrainingRuntime', note: 'Namespace-scoped. Use ClusterTrainingRuntime for cluster-wide' },
       { label: 'apiGroup', value: 'trainer.kubeflow.org', note: 'Kubeflow Training Operator v2 API' },
     ]
@@ -360,7 +360,7 @@ const TRAINJOB_SECTIONS = [
     subtitle: 'The actual training execution',
     icon: 'RUN',
     color: '#f59e0b',
-    lines: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+    lines: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26],
     description: 'The trainer section overrides the command in the runtime\'s container. It installs dependencies and launches distributed training with torchrun. The --nproc_per_node=4 matches the runtime\'s mlPolicy.',
     details: [
       { label: 'Dependencies', value: 'scipy, mlflow (RHOAI fork)', note: 'Installed at runtime for flexibility' },
@@ -375,7 +375,7 @@ const TRAINJOB_SECTIONS = [
     subtitle: 'Per-experiment overrides',
     icon: 'ENV',
     color: '#a855f7',
-    lines: [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38],
+    lines: [27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
     description: 'Environment variables specific to THIS experiment. These override or extend the runtime\'s defaults. Key config: the S3 data source, MLflow tracking server, experiment name, and run name.',
     details: [
       { label: 'DATASET_SOURCE', value: 's3://my-enterprise-bucket/...', note: 'Points to versioned training data in object storage' },
@@ -394,10 +394,10 @@ const FLOW_STEPS = [
   {
     num: 1,
     title: 'Submit TrainJob',
-    detail: 'Data scientist runs oc apply -f trainjob.yaml',
+    detail: 'AI Engineer runs oc apply -f trainjob.yaml',
     icon: 'CLI',
     color: '#f59e0b',
-    longDesc: 'The data scientist submits a lightweight TrainJob manifest. It contains only experiment-specific configuration: the training command, environment variables for this run, and a reference to which runtime blueprint to use. No infrastructure details needed.',
+    longDesc: 'The AI Engineer submits a lightweight TrainJob manifest. It contains only experiment-specific configuration: the training command, environment variables for this run, and a reference to which runtime blueprint to use. No infrastructure details needed.',
   },
   {
     num: 2,
@@ -413,7 +413,7 @@ const FLOW_STEPS = [
     detail: 'Looks up the TrainingRuntime blueprint',
     icon: 'FIND',
     color: '#06b6d4',
-    longDesc: 'The controller follows the runtimeRef pointer to find the TrainingRuntime named "qwen-custom-runtime" in the same namespace. This runtime contains the full infrastructure blueprint: GPU resources, container images, volumes, init containers, and distributed training topology.',
+    longDesc: 'The controller follows the runtimeRef pointer to find the TrainingRuntime named "decoder-sft-training-runtime" in the same namespace. This runtime contains the full infrastructure blueprint: GPU resources, container images, volumes, init containers, and distributed training topology.',
   },
   {
     num: 4,
@@ -429,7 +429,7 @@ const FLOW_STEPS = [
     detail: 'Materialized as a Kubernetes JobSet with the merged spec',
     icon: 'JOB',
     color: '#22c55e',
-    longDesc: 'The controller creates a Kubernetes JobSet (or PyTorchJob) resource from the merged spec. This JobSet manages the lifecycle of training pods, handles restarts (restartPolicy: OnFailure), and coordinates multi-node training if numNodes > 1.',
+    longDesc: 'The controller creates a Kubernetes JobSet resource from the merged spec. This JobSet manages the lifecycle of training pods, handles restarts (restartPolicy: OnFailure), and coordinates multi-node training if numNodes > 1.',
   },
   {
     num: 6,
@@ -562,29 +562,29 @@ function OverviewTab() {
           </defs>
           <rect width="960" height="420" fill="url(#grid)"/>
 
-          {/* Data Scientist side */}
+          {/* AI Engineer side */}
           <rect x="20" y="20" width="220" height="180" rx="16" fill="#0d1424" stroke="#fbbf2440" strokeWidth="1.5"/>
-          <text x="130" y="48" textAnchor="middle" className="text-[13px] font-bold" fill="#fbbf24">Data Scientist</text>
+          <text x="130" y="48" textAnchor="middle" className="text-[13px] font-bold" fill="#fbbf24">AI Engineer</text>
           <text x="130" y="68" textAnchor="middle" className="text-[10px]" fill="#94a3b8">Creates per experiment</text>
 
           {/* TrainJob box */}
           <rect x="45" y="85" width="170" height="100" rx="12" fill="#1a1408" stroke="#fbbf2460" strokeWidth="2" strokeDasharray="0"/>
           <text x="130" y="110" textAnchor="middle" className="mono text-[11px] font-bold" fill="#fbbf24">TrainJob</text>
-          <text x="130" y="128" textAnchor="middle" className="mono text-[9px]" fill="#d4a94a">intent-nlu-fine-tuning</text>
+          <text x="130" y="128" textAnchor="middle" className="mono text-[9px]" fill="#d4a94a">decoder-sft-trainjob</text>
           <line x1="55" y1="136" x2="205" y2="136" stroke="#fbbf2420" strokeWidth="1"/>
           <text x="65" y="152" className="mono text-[9px]" fill="#94a3b8">runtimeRef:</text>
-          <text x="75" y="166" className="mono text-[9px]" fill="#fde68a">qwen-custom-runtime</text>
+          <text x="75" y="166" className="mono text-[9px]" fill="#fde68a">decoder-sft-training-runtime</text>
           <text x="65" y="180" className="mono text-[9px]" fill="#94a3b8">trainer: command, env</text>
 
-          {/* Platform Engineer side */}
+          {/* AI Architect + Platform Engineer side */}
           <rect x="340" y="20" width="280" height="180" rx="16" fill="#0a1620" stroke="#06b6d440" strokeWidth="1.5"/>
-          <text x="480" y="48" textAnchor="middle" className="text-[13px] font-bold" fill="#06b6d4">Platform / ML Engineer</text>
+          <text x="480" y="48" textAnchor="middle" className="text-[13px] font-bold" fill="#06b6d4">AI Architect + Platform Engineer</text>
           <text x="480" y="68" textAnchor="middle" className="text-[10px]" fill="#94a3b8">Defines once, reused by many</text>
 
           {/* TrainingRuntime box */}
           <rect x="365" y="85" width="230" height="100" rx="12" fill="#081418" stroke="#06b6d460" strokeWidth="2"/>
           <text x="480" y="110" textAnchor="middle" className="mono text-[11px] font-bold" fill="#06b6d4">TrainingRuntime</text>
-          <text x="480" y="128" textAnchor="middle" className="mono text-[9px]" fill="#67d4e0">qwen-custom-runtime</text>
+          <text x="480" y="128" textAnchor="middle" className="mono text-[9px]" fill="#67d4e0">decoder-sft-training-runtime</text>
           <line x1="375" y1="136" x2="585" y2="136" stroke="#06b6d420" strokeWidth="1"/>
           <text x="385" y="152" className="mono text-[9px]" fill="#94a3b8">mlPolicy, GPU config</text>
           <text x="385" y="166" className="mono text-[9px]" fill="#94a3b8">containers, volumes</text>
@@ -618,7 +618,7 @@ function OverviewTab() {
 
           {/* JobSet */}
           <rect x="640" y="268" width="220" height="48" rx="10" fill="#081a10" stroke="#22c55e40" strokeWidth="1.5"/>
-          <text x="750" y="290" textAnchor="middle" className="mono text-[10px] font-bold" fill="#22c55e">JobSet / PyTorchJob</text>
+          <text x="750" y="290" textAnchor="middle" className="mono text-[10px] font-bold" fill="#22c55e">JobSet</text>
           <text x="750" y="304" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Created by controller</text>
 
           {/* Arrow down to pods */}
@@ -660,7 +660,7 @@ function OverviewTab() {
             <SectionBadge icon="TJ" color="#fbbf24" size={40}/>
             <div>
               <h3 className="text-sm font-bold text-amber-300">TrainJob</h3>
-              <p className="text-[10px] text-slate-400">What the Data Scientist writes</p>
+              <p className="text-[10px] text-slate-400">What the AI Engineer writes</p>
             </div>
           </div>
           <ul className="space-y-2 text-[11px] text-slate-300">
@@ -688,7 +688,7 @@ function OverviewTab() {
             <SectionBadge icon="TR" color="#06b6d4" size={40}/>
             <div>
               <h3 className="text-sm font-bold text-cyan-300">TrainingRuntime</h3>
-              <p className="text-[10px] text-slate-400">What the Platform Engineer defines</p>
+              <p className="text-[10px] text-slate-400">What the AI Architect + Platform Engineer defines</p>
             </div>
           </div>
           <ul className="space-y-2 text-[11px] text-slate-300">
@@ -951,16 +951,16 @@ function TrainJobTab() {
                 </defs>
                 <rect x="10" y="10" width="160" height="90" rx="12" fill="#1a1408" stroke="#fbbf2450" strokeWidth="2"/>
                 <text x="90" y="40" textAnchor="middle" className="mono text-[11px] font-bold" fill="#fbbf24">TrainJob</text>
-                <text x="90" y="58" textAnchor="middle" className="mono text-[9px]" fill="#d4a94a">intent-nlu-fine-tuning</text>
+                <text x="90" y="58" textAnchor="middle" className="mono text-[9px]" fill="#d4a94a">decoder-sft-trainjob</text>
                 <text x="90" y="82" textAnchor="middle" className="text-[9px]" fill="#94a3b8">runtimeRef.name:</text>
-                <text x="90" y="94" textAnchor="middle" className="mono text-[9px]" fill="#fde68a">qwen-custom-runtime</text>
+                <text x="90" y="94" textAnchor="middle" className="mono text-[9px]" fill="#fde68a">decoder-sft-training-runtime</text>
 
                 <line x1="170" y1="55" x2="300" y2="55" stroke="#fbbf24" strokeWidth="2.5" markerEnd="url(#arrowAmber2)" className="arrow-flow"/>
                 <text x="235" y="48" textAnchor="middle" className="mono text-[9px] font-semibold" fill="#fbbf24">references</text>
 
                 <rect x="300" y="10" width="170" height="90" rx="12" fill="#081418" stroke="#06b6d450" strokeWidth="2"/>
                 <text x="385" y="40" textAnchor="middle" className="mono text-[11px] font-bold" fill="#06b6d4">TrainingRuntime</text>
-                <text x="385" y="58" textAnchor="middle" className="mono text-[9px]" fill="#67d4e0">qwen-custom-runtime</text>
+                <text x="385" y="58" textAnchor="middle" className="mono text-[9px]" fill="#67d4e0">decoder-sft-training-runtime</text>
                 <text x="385" y="80" textAnchor="middle" className="text-[9px]" fill="#94a3b8">GPU, images, volumes,</text>
                 <text x="385" y="92" textAnchor="middle" className="text-[9px]" fill="#94a3b8">init containers, env</text>
               </svg>
@@ -1107,7 +1107,7 @@ function FlowTab() {
         {activeStep === 0 && (
           <div className="rounded-xl bg-[#0b1121] border border-slate-700/40 p-4">
             <div className="mono text-[11px] text-slate-400 mb-2">$ <span className="text-amber-300">oc apply -f trainjob.yaml</span></div>
-            <div className="mono text-[11px] text-green-400">trainjob.trainer.kubeflow.org/intent-nlu-fine-tuning created</div>
+            <div className="mono text-[11px] text-green-400">trainjob.trainer.kubeflow.org/decoder-sft-trainjob created</div>
           </div>
         )}
 
@@ -1199,7 +1199,7 @@ function WhyTab() {
       color: '#06b6d4',
       accent: 'rgba(6,182,212,0.1)',
       description: 'Define the infrastructure once, run many experiments against it. Change the runtime in one place and all future TrainJobs benefit.',
-      example: 'One TrainingRuntime "qwen-custom-runtime" can serve dozens of fine-tuning experiments — different datasets, different hyperparameters, same infrastructure.',
+      example: 'One TrainingRuntime "decoder-sft-training-runtime" can serve dozens of fine-tuning experiments — different datasets, different hyperparameters, same infrastructure.',
       metrics: [
         { label: 'Runtime definitions needed', value: '1', highlight: true },
         { label: 'TrainJobs using it', value: 'unlimited' },
@@ -1211,11 +1211,11 @@ function WhyTab() {
       icon: '&#x2702;',
       color: '#f59e0b',
       accent: 'rgba(245,158,11,0.1)',
-      description: 'Platform engineers own infrastructure (GPUs, images, storage). Data scientists own experiments (commands, data, tracking). Neither needs to understand the other\'s domain deeply.',
-      example: 'Data scientist writes: "run this training command with this data." Platform engineer ensures: "GPU nodes are available, images are certified, storage is provisioned."',
+      description: 'Platform engineers own infrastructure (GPUs, images, storage). AI Engineer own experiments (commands, data, tracking). Neither needs to understand the other\'s domain deeply.',
+      example: 'AI Engineer writes: "run this training command with this data." Platform engineer ensures: "GPU nodes are available, images are certified, storage is provisioned."',
       metrics: [
-        { label: 'Platform engineer manages', value: 'TrainingRuntime' },
-        { label: 'Data scientist manages', value: 'TrainJob' },
+        { label: 'AI Architect + Platform Engineer manages', value: 'TrainingRuntime' },
+        { label: 'AI Engineer manages', value: 'TrainJob' },
         { label: 'Overlap / conflict', value: 'Minimal' },
       ]
     },
@@ -1238,7 +1238,7 @@ function WhyTab() {
       color: '#a855f7',
       accent: 'rgba(168,85,247,0.1)',
       description: 'Both resources are declarative YAML — perfect for version control, code review, and automated deployment pipelines. Infrastructure and experiments are fully auditable.',
-      example: 'Store training-runtime.yaml in an infra repo (reviewed by platform team). Store trainjob.yaml in the ML repo (reviewed by data scientists). Both tracked in Git, deployed via ArgoCD.',
+      example: 'Store training-runtime.yaml in an infra repo (reviewed by platform team). Store trainjob.yaml in the ML repo (reviewed by AI Engineer). Both tracked in Git, deployed via ArgoCD.',
       metrics: [
         { label: 'Version controlled', value: 'Both resources' },
         { label: 'Audit trail', value: 'Full Git history' },
@@ -1294,7 +1294,7 @@ function WhyTab() {
             <div className="text-[11px] font-bold text-red-400 mb-3">Without (Monolithic PyTorchJob)</div>
             <div className="space-y-2 text-[11px] text-slate-400">
               <div className="flex items-start gap-2"><span className="text-red-400 flex-shrink-0">&#x2717;</span> Every job repeats all infrastructure config (~150 lines)</div>
-              <div className="flex items-start gap-2"><span className="text-red-400 flex-shrink-0">&#x2717;</span> Data scientists must understand GPU scheduling, PVCs, images</div>
+              <div className="flex items-start gap-2"><span className="text-red-400 flex-shrink-0">&#x2717;</span> AI Engineer must understand GPU scheduling, PVCs, images</div>
               <div className="flex items-start gap-2"><span className="text-red-400 flex-shrink-0">&#x2717;</span> No standardization — each job may use different images/configs</div>
               <div className="flex items-start gap-2"><span className="text-red-400 flex-shrink-0">&#x2717;</span> Updating GPU config means editing every job YAML</div>
               <div className="flex items-start gap-2"><span className="text-red-400 flex-shrink-0">&#x2717;</span> Easy to misconfigure — copy-paste errors across jobs</div>
@@ -1304,7 +1304,7 @@ function WhyTab() {
             <div className="text-[11px] font-bold text-green-400 mb-3">With (TrainJob + TrainingRuntime)</div>
             <div className="space-y-2 text-[11px] text-slate-400">
               <div className="flex items-start gap-2"><span className="text-green-400 flex-shrink-0">&#x2713;</span> Infrastructure defined once, experiments are ~40 lines</div>
-              <div className="flex items-start gap-2"><span className="text-green-400 flex-shrink-0">&#x2713;</span> Data scientists only write training command + env vars</div>
+              <div className="flex items-start gap-2"><span className="text-green-400 flex-shrink-0">&#x2713;</span> AI Engineer only write training command + env vars</div>
               <div className="flex items-start gap-2"><span className="text-green-400 flex-shrink-0">&#x2713;</span> Platform team enforces certified images, consistent config</div>
               <div className="flex items-start gap-2"><span className="text-green-400 flex-shrink-0">&#x2713;</span> Update runtime once — all new jobs get the change</div>
               <div className="flex items-start gap-2"><span className="text-green-400 flex-shrink-0">&#x2713;</span> Clear ownership boundaries reduce errors</div>
@@ -1337,7 +1337,7 @@ function App() {
       <div className="text-center mb-6">
         <div className="flex items-center justify-center gap-3 mb-2">
           <div className="h-px flex-1 max-w-[80px] bg-gradient-to-r from-transparent to-cyan-500/40"></div>
-          <span className="mono text-[10px] text-cyan-400/60 tracking-[0.2em] uppercase">OpenShift AI Training</span>
+          <span className="mono text-[10px] text-cyan-400/60 tracking-[0.2em] uppercase">OpenShift AI</span>
           <div className="h-px flex-1 max-w-[80px] bg-gradient-to-l from-transparent to-cyan-500/40"></div>
         </div>
         <h1 className="text-3xl font-extrabold text-white mb-2" style={{ letterSpacing: '-0.02em' }}>
@@ -1372,17 +1372,6 @@ function App() {
         {activeTab === 'trainjob' && <TrainJobTab />}
         {activeTab === 'flow' && <FlowTab />}
         {activeTab === 'why' && <WhyTab />}
-      </div>
-
-      {/* Footer */}
-      <div className="mt-8 pt-4 border-t border-slate-800/60 text-center">
-        <p className="text-[10px] text-slate-600">
-          Based on real training configuration from the Intent NLU Fine-Tuning project
-          <span className="mx-2 text-slate-700">|</span>
-          Kubeflow Training Operator v2 (trainer.kubeflow.org/v1alpha1)
-          <span className="mx-2 text-slate-700">|</span>
-          OpenShift AI (RHOAI)
-        </p>
       </div>
     </div>
   );
