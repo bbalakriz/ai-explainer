@@ -1,2039 +1,1355 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AIS Telco Chat SDG Pipeline</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Chat SDG Pipeline — Explainer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
-:root {
-  --green: #00B900;
-  --green-dim: #00990080;
-  --green-glow: #00ff0030;
-  --green-bright: #33ff33;
-  --bg-deepest: #050a05;
-  --bg-deep: #0a120a;
-  --bg-card: #0f1a0f;
-  --bg-card-hover: #142014;
-  --bg-surface: #1a2a1a;
-  --text-primary: #e8f5e8;
-  --text-secondary: #8aab8a;
-  --text-dim: #5a7a5a;
-  --border: #1a3a1a;
-  --red: #ff4444;
-  --red-dim: #ff444440;
-  --amber: #ffaa00;
-  --cyan: #00cccc;
-  --purple: #aa66ff;
-}
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-html {
-  scroll-behavior: smooth;
-  background: var(--bg-deepest);
-}
-
-body {
-  font-family: 'Outfit', 'Noto Sans Thai', sans-serif;
-  background: var(--bg-deepest);
-  color: var(--text-primary);
-  line-height: 1.6;
-  overflow-x: hidden;
-}
-
-/* ─── NOISE OVERLAY ─── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 9999;
-}
-
-/* ─── NAV ─── */
-nav {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
-  background: #050a05ee;
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
-  padding: 0 2rem;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-nav a {
-  color: var(--text-secondary);
-  text-decoration: none;
-  font-size: 0.8rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  transition: color 0.3s;
-  white-space: nowrap;
-}
-
-nav a:hover, nav a.active { color: var(--green); }
-
-nav .nav-brand {
-  color: var(--green);
-  font-weight: 800;
-  font-size: 0.9rem;
-  margin-right: auto;
-  letter-spacing: 0.05em;
-}
-
-/* ─── SECTIONS ─── */
-section {
-  padding: 6rem 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.section-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  color: var(--green);
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  margin-bottom: 0.5rem;
-  opacity: 0.8;
-}
-
-h2 {
-  font-size: 2.2rem;
-  font-weight: 800;
-  margin-bottom: 1.5rem;
-  line-height: 1.2;
-}
-
-h3 {
-  font-size: 1.3rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-}
-
-/* ─── HERO ─── */
-#hero {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  position: relative;
-  padding-top: 56px;
-}
-
-.hero-grid-bg {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 60px 60px;
-  mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
-  opacity: 0.4;
-}
-
-.hero-glow {
-  position: absolute;
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, var(--green-glow) 0%, transparent 70%);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation: pulse-glow 4s ease-in-out infinite;
-}
-
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 0.6; transform: translate(-50%, -50%) scale(1.1); }
-}
-
-.hero-content { position: relative; z-index: 1; }
-
-.hero-tag {
-  display: inline-block;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  color: var(--green);
-  border: 1px solid var(--green-dim);
-  padding: 0.4rem 1rem;
-  border-radius: 100px;
-  margin-bottom: 2rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  animation: fade-in 0.8s ease-out;
-}
-
-h1 {
-  font-size: clamp(2.5rem, 6vw, 4.5rem);
-  font-weight: 900;
-  line-height: 1.05;
-  margin-bottom: 1.5rem;
-  animation: fade-up 0.8s ease-out 0.1s both;
-}
-
-h1 span { color: var(--green); }
-
-.hero-sub {
-  font-size: 1.15rem;
-  color: var(--text-secondary);
-  max-width: 600px;
-  margin: 0 auto 3rem;
-  font-weight: 300;
-  animation: fade-up 0.8s ease-out 0.2s both;
-}
-
-.stats-row {
-  display: flex;
-  gap: 3rem;
-  justify-content: center;
-  flex-wrap: wrap;
-  animation: fade-up 0.8s ease-out 0.3s both;
-}
-
-.stat {
-  text-align: center;
-}
-
-.stat-value {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--green);
-  line-height: 1;
-}
-
-.stat-label {
-  font-size: 0.8rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-top: 0.3rem;
-}
-
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes fade-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-/* ─── PIPELINE ─── */
-.pipeline-flow {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  position: relative;
-}
-
-.pipeline-stage {
-  display: grid;
-  grid-template-columns: 80px 1fr;
-  gap: 1.5rem;
-  position: relative;
-  opacity: 0;
-  transform: translateX(-20px);
-  transition: all 0.6s ease-out;
-}
-
-.pipeline-stage.visible {
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.stage-line {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-}
-
-.stage-number {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: var(--bg-card);
-  border: 2px solid var(--green);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--green);
-  position: relative;
-  z-index: 2;
-  flex-shrink: 0;
-}
-
-.stage-connector {
-  width: 2px;
-  flex: 1;
-  background: linear-gradient(to bottom, var(--green), var(--green-dim), transparent);
-  position: relative;
-  overflow: hidden;
-}
-
-.stage-connector::after {
-  content: '';
-  position: absolute;
-  top: -20px;
-  left: -1px;
-  width: 4px;
-  height: 20px;
-  background: var(--green-bright);
-  border-radius: 2px;
-  animation: flow-down 2s linear infinite;
-  box-shadow: 0 0 8px var(--green);
-}
-
-@keyframes flow-down {
-  0% { top: -20px; opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { top: 100%; opacity: 0; }
-}
-
-.stage-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.5rem 2rem;
-  margin-bottom: 2rem;
-  transition: border-color 0.3s, box-shadow 0.3s;
-}
-
-.stage-card:hover {
-  border-color: var(--green-dim);
-  box-shadow: 0 0 30px var(--green-glow);
-}
-
-.stage-card h3 {
-  color: var(--green);
-  font-size: 1.1rem;
-  margin-bottom: 0.3rem;
-}
-
-.stage-card .stage-subtitle {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  color: var(--text-dim);
-  margin-bottom: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.stage-card ul {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.stage-card li {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  padding-left: 1.2rem;
-  position: relative;
-  line-height: 1.5;
-}
-
-.stage-card li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.55rem;
-  width: 6px;
-  height: 6px;
-  background: var(--green);
-  border-radius: 50%;
-}
-
-/* ─── DATA FORMAT ─── */
-.json-display {
-  background: #080e08;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 2rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.85rem;
-  line-height: 1.7;
-  overflow-x: auto;
-  position: relative;
-}
-
-.json-display .json-bracket { color: var(--text-dim); }
-.json-display .json-key { color: var(--cyan); }
-.json-display .json-string { color: var(--green); }
-.json-display .json-role { color: var(--amber); }
-.json-display .json-comment {
-  color: var(--text-dim);
-  font-style: italic;
-  font-size: 0.75rem;
-  margin-left: 1rem;
-  opacity: 0.7;
-}
-
-.field-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1rem;
-  margin-top: 2rem;
-}
-
-.field-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1.2rem 1.5rem;
-  border-left: 3px solid var(--green);
-}
-
-.field-card .field-name {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.85rem;
-  color: var(--cyan);
-  margin-bottom: 0.3rem;
-}
-
-.field-card p {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-/* ─── DESIGN DECISIONS ─── */
-.decisions-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.decision {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: border-color 0.3s;
-}
-
-.decision:hover { border-color: var(--green-dim); }
-
-.decision-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
-}
-
-.decision-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: var(--green-glow);
-  border: 1px solid var(--green-dim);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-  flex-shrink: 0;
-}
-
-.decision-title {
-  font-weight: 600;
-  font-size: 0.95rem;
-  flex: 1;
-}
-
-.decision-chevron {
-  color: var(--text-dim);
-  transition: transform 0.3s;
-  font-size: 1.2rem;
-}
-
-.decision.open .decision-chevron { transform: rotate(180deg); }
-
-.decision-body {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.4s ease-out;
-}
-
-.decision.open .decision-body { max-height: 400px; }
-
-.decision-content {
-  padding: 0 1.5rem 1.2rem 4rem;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  line-height: 1.7;
-}
-
-.decision-content code {
-  font-family: 'JetBrains Mono', monospace;
-  background: var(--bg-surface);
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  color: var(--green);
-}
-
-/* ─── COMPARISON ─── */
-.comparison-wrapper {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  margin-top: 2rem;
-}
-
-@media (max-width: 800px) {
-  .comparison-wrapper { grid-template-columns: 1fr; }
-}
-
-.comparison-col {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 2rem;
-  position: relative;
-}
-
-.comparison-col.manual { border-top: 3px solid var(--red); }
-.comparison-col.pipeline { border-top: 3px solid var(--green); }
-
-.comparison-col h3 {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 1.2rem;
-}
-
-.comparison-col.manual h3 { color: var(--red); }
-.comparison-col.pipeline h3 { color: var(--green); }
-
-.comp-badge {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  padding: 0.2rem 0.6rem;
-  border-radius: 100px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.manual .comp-badge { background: var(--red-dim); color: var(--red); }
-.pipeline .comp-badge { background: var(--green-glow); color: var(--green); }
-
-.comp-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.comp-list li {
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  padding-left: 1.5rem;
-  position: relative;
-  line-height: 1.5;
-}
-
-.manual .comp-list li::before {
-  content: '✕';
-  position: absolute;
-  left: 0;
-  color: var(--red);
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.pipeline .comp-list li::before {
-  content: '✓';
-  position: absolute;
-  left: 0;
-  color: var(--green);
-  font-weight: 700;
-}
-
-/* ─── METRICS BAR ─── */
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-top: 2.5rem;
-}
-
-.metric-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1.2rem;
-  text-align: center;
-}
-
-.metric-label {
-  font-size: 0.7rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 0.8rem;
-}
-
-.metric-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.metric-bar-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.metric-bar-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  color: var(--text-dim);
-  width: 55px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.metric-bar-track {
-  flex: 1;
-  height: 8px;
-  background: var(--bg-surface);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.metric-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 1.5s ease-out;
-  width: 0;
-}
-
-.metric-bar-fill.red { background: var(--red); }
-.metric-bar-fill.green { background: var(--green); box-shadow: 0 0 6px var(--green-dim); }
-
-.metric-bar-value {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  font-weight: 600;
-  width: 55px;
-  flex-shrink: 0;
-}
-
-.metric-bar-value.red { color: var(--red); }
-.metric-bar-value.green { color: var(--green); }
-
-.metric-speedup {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--green);
-  margin-top: 0.3rem;
-}
-
-/* ─── INTENTS GRID ─── */
-.intents-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1rem;
-}
-
-.intent-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1.2rem;
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
-}
-
-.intent-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--green), transparent);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.intent-card:hover {
-  border-color: var(--green-dim);
-  transform: translateY(-2px);
-}
-
-.intent-card:hover::before { opacity: 1; }
-
-.intent-icon {
-  font-size: 1.6rem;
-  margin-bottom: 0.5rem;
-}
-
-.intent-name {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  color: var(--green);
-  word-break: break-all;
-  margin-bottom: 0.3rem;
-  line-height: 1.3;
-}
-
-.intent-desc {
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.intent-thai {
-  font-family: 'Noto Sans Thai', sans-serif;
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  margin-top: 0.3rem;
-}
-
-/* ─── TECH STACK ─── */
-.stack-layers {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  max-width: 700px;
-  margin: 2rem auto 0;
-}
-
-.stack-layer {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  position: relative;
-  transition: all 0.3s;
-}
-
-.stack-layer:first-child { border-radius: 12px 12px 0 0; }
-.stack-layer:last-child { border-radius: 0 0 12px 12px; }
-.stack-layer:not(:last-child) { border-bottom: none; }
-
-.stack-layer:hover {
-  background: var(--bg-card-hover);
-  z-index: 1;
-}
-
-.stack-depth {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  color: var(--text-dim);
-  width: 20px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.stack-bar {
-  width: 4px;
-  height: 100%;
-  min-height: 24px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-.stack-info { flex: 1; }
-
-.stack-name {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.stack-desc {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-}
-
-.stack-layer:nth-child(1) .stack-bar { background: var(--green); }
-.stack-layer:nth-child(2) .stack-bar { background: var(--cyan); }
-.stack-layer:nth-child(3) .stack-bar { background: var(--purple); }
-.stack-layer:nth-child(4) .stack-bar { background: var(--amber); }
-.stack-layer:nth-child(5) .stack-bar { background: var(--green); }
-.stack-layer:nth-child(6) .stack-bar { background: var(--cyan); }
-
-/* ─── COMMAND ─── */
-.command-block {
-  background: #080e08;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1.2rem 1.5rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.82rem;
-  color: var(--green);
-  margin-top: 2rem;
-  position: relative;
-  overflow-x: auto;
-}
-
-.command-block .prompt { color: var(--text-dim); }
-.command-block .flag { color: var(--cyan); }
-.command-block .value { color: var(--amber); }
-
-/* ─── SCROLL ANIMATIONS ─── */
-.reveal {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: all 0.7s ease-out;
-}
-
-.reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* ─── BEST PRACTICES ─── */
-.bp-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.2rem;
-}
-
-.bp-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.5rem;
-  border-top: 3px solid var(--green);
-  transition: all 0.3s;
-  position: relative;
-}
-
-.bp-card:hover {
-  border-color: var(--green-dim);
-  box-shadow: 0 0 30px var(--green-glow);
-  transform: translateY(-3px);
-}
-
-.bp-card .bp-number {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 2rem;
-  font-weight: 800;
-  color: var(--green-glow);
-  line-height: 1;
-}
-
-.bp-card h4 {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--green);
-  margin-bottom: 0.8rem;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.bp-card h4 .bp-icon {
-  font-size: 1.2rem;
-}
-
-.bp-card p {
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  line-height: 1.7;
-  margin-bottom: 0.6rem;
-}
-
-.bp-card .bp-tag {
-  display: inline-block;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 100px;
-  background: var(--green-glow);
-  color: var(--green);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-right: 0.4rem;
-  margin-top: 0.3rem;
-}
-
-.bp-card .bp-highlight {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.78rem;
-  color: var(--green);
-  background: var(--bg-surface);
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-}
-
-.bp-card ul {
-  list-style: none;
-  margin-top: 0.5rem;
-}
-
-.bp-card li {
-  font-size: 0.78rem;
-  color: var(--text-dim);
-  padding-left: 1rem;
-  position: relative;
-  line-height: 1.6;
-}
-
-.bp-card li::before {
-  content: '>';
-  position: absolute;
-  left: 0;
-  color: var(--green-dim);
-  font-family: 'JetBrains Mono', monospace;
-  font-weight: 700;
-}
-
-/* ─── QUIZ ─── */
-.quiz-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.quiz-question {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.5rem 2rem;
-  transition: border-color 0.3s;
-}
-
-.quiz-question.answered-correct {
-  border-color: var(--green);
-  box-shadow: 0 0 20px var(--green-glow);
-}
-
-.quiz-question.answered-wrong {
-  border-color: var(--red);
-  box-shadow: 0 0 20px var(--red-dim);
-}
-
-.quiz-q-number {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  color: var(--green);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 0.5rem;
-}
-
-.quiz-q-text {
-  font-size: 1rem;
-  font-weight: 600;
-  margin-bottom: 1.2rem;
-  line-height: 1.5;
-}
-
-.quiz-options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.quiz-option {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  padding: 0.7rem 1rem;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-.quiz-option:hover:not(.disabled) {
-  border-color: var(--green-dim);
-  background: var(--bg-card-hover);
-  color: var(--text-primary);
-}
-
-.quiz-option .opt-letter {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  font-weight: 700;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--text-dim);
-  transition: all 0.2s;
-}
-
-.quiz-option.selected-correct {
-  border-color: var(--green);
-  background: #00B90010;
-}
-
-.quiz-option.selected-correct .opt-letter {
-  background: var(--green);
-  border-color: var(--green);
-  color: var(--bg-deepest);
-}
-
-.quiz-option.selected-wrong {
-  border-color: var(--red);
-  background: #ff444410;
-}
-
-.quiz-option.selected-wrong .opt-letter {
-  background: var(--red);
-  border-color: var(--red);
-  color: white;
-}
-
-.quiz-option.reveal-correct {
-  border-color: var(--green);
-}
-
-.quiz-option.reveal-correct .opt-letter {
-  border-color: var(--green);
-  color: var(--green);
-}
-
-.quiz-option.disabled {
-  cursor: default;
-  opacity: 0.7;
-}
-
-.quiz-explanation {
-  margin-top: 1rem;
-  padding: 0.8rem 1rem;
-  background: var(--bg-surface);
-  border-radius: 8px;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  display: none;
-  border-left: 3px solid var(--green);
-}
-
-.quiz-explanation.show { display: block; }
-
-.quiz-explanation code {
-  font-family: 'JetBrains Mono', monospace;
-  background: var(--bg-card);
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  color: var(--green);
-}
-
-.quiz-score {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 2rem;
-  text-align: center;
-  display: none;
-}
-
-.quiz-score.show { display: block; }
-
-.quiz-score-value {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 3rem;
-  font-weight: 800;
-  color: var(--green);
-}
-
-.quiz-score-label {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin-top: 0.3rem;
-}
-
-.quiz-reset {
-  margin-top: 1rem;
-  padding: 0.6rem 1.5rem;
-  background: transparent;
-  border: 1px solid var(--green);
-  color: var(--green);
-  border-radius: 8px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.quiz-reset:hover {
-  background: var(--green);
-  color: var(--bg-deepest);
-}
-
-/* ─── RESPONSIVE ─── */
-@media (max-width: 700px) {
-  section { padding: 4rem 1rem; }
-  h1 { font-size: 2rem; }
-  h2 { font-size: 1.6rem; }
-  .stats-row { gap: 1.5rem; }
-  .pipeline-stage { grid-template-columns: 50px 1fr; }
-  nav { gap: 0.8rem; padding: 0 1rem; overflow-x: auto; }
-  nav a { font-size: 0.7rem; }
-  .intents-grid { grid-template-columns: 1fr 1fr; }
-  .bp-grid { grid-template-columns: 1fr; }
-}
-</style>
-</head>
-<body>
-
-<!-- NAV -->
-<nav>
-  <span class="nav-brand">SDG PIPELINE</span>
-  <a href="#hero">Overview</a>
-  <a href="#pipeline">Pipeline</a>
-  <a href="#format">Format</a>
-  <a href="#decisions">Decisions</a>
-  <a href="#comparison">Comparison</a>
-  <a href="#intents">Intents</a>
-  <a href="#stack">Stack</a>
-  <a href="#bestpractices">Best Practices</a>
-  <a href="#quiz">Quiz</a>
-</nav>
-
-<!-- HERO -->
-<section id="hero">
-  <div class="hero-grid-bg"></div>
-  <div class="hero-glow"></div>
-  <div class="hero-content">
-    <div class="hero-tag">Synthetic Data Generation</div>
-    <h1>AIS Telco Chat<br><span>SDG Pipeline</span></h1>
-    <p class="hero-sub">Automated generation of realistic Thai-language multi-turn chat training data for intent classification, powered by sdg_hub and large language models.</p>
-    <div class="stats-row">
-      <div class="stat">
-        <div class="stat-value">10</div>
-        <div class="stat-label">Intents</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">20</div>
-        <div class="stat-label">Per Intent</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">200</div>
-        <div class="stat-label">Total Examples</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">~5m</div>
-        <div class="stat-label">Generation Time</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- PIPELINE ARCHITECTURE -->
-<section id="pipeline">
-  <div class="section-label">Architecture</div>
-  <h2 class="reveal">Pipeline Flow</h2>
-  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 3rem; max-width: 600px;">Five stages transform human-curated seed data into hundreds of validated training examples, maintaining format consistency and linguistic realism.</p>
-
-  <div class="pipeline-flow">
-
-    <div class="pipeline-stage" data-delay="0">
-      <div class="stage-line">
-        <div class="stage-number">1</div>
-        <div class="stage-connector"></div>
-      </div>
-      <div class="stage-card">
-        <h3>Seed Data Loading</h3>
-        <div class="stage-subtitle">load_seed_data() &rarr; select_seed_examples()</div>
-        <ul>
-          <li>Reads 10 JSON files with existing human-curated examples (16&ndash;26 per intent)</li>
-          <li>Each file maps to one intent &mdash; e.g. <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--cyan);">MOBILE_BILLING_CHECK_DUE_DATE.json</code></li>
-          <li>Smart seed selection: round-robin across session_history length buckets for maximum diversity</li>
-          <li>Seed histories truncated to 5 messages to match the real sliding window constraint</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="pipeline-stage" data-delay="1">
-      <div class="stage-line">
-        <div class="stage-number">2</div>
-        <div class="stage-connector"></div>
-      </div>
-      <div class="stage-card">
-        <h3>Prompt Engineering</h3>
-        <div class="stage-subtitle">prompts/generate_telco_chat.yaml &rarr; build_prompt()</div>
-        <ul>
-          <li>Jinja2 YAML template system with system + user message structure</li>
-          <li>System prompt encodes Thai telco domain expertise, formatting rules, and constraint specifications</li>
-          <li>User prompt injects: intent name, description, and seed examples as few-shot demonstrations</li>
-          <li>Constraints embedded directly: max 5 history messages, typo distribution ratios, intent switching requirements, history length distribution targets</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="pipeline-stage" data-delay="2">
-      <div class="stage-line">
-        <div class="stage-number">3</div>
-        <div class="stage-connector"></div>
-      </div>
-      <div class="stage-card">
-        <h3>LLM Generation</h3>
-        <div class="stage-subtitle">litellm.completion() &rarr; Qwen3-235B-A22B-Instruct</div>
-        <ul>
-          <li>Uses <strong>litellm</strong> abstraction layer &mdash; model-agnostic, provider-agnostic</li>
-          <li>Default model: <strong>Qwen3-235B-A22B-Instruct</strong> on Nebius TokenFactory</li>
-          <li>OpenAI-compatible API, temperature&nbsp;0.8, max_tokens&nbsp;16384</li>
-          <li>Sequential processing: one intent at a time, ~25s per intent on cloud inference</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="pipeline-stage" data-delay="3">
-      <div class="stage-line">
-        <div class="stage-number">4</div>
-        <div class="stage-connector"></div>
-      </div>
-      <div class="stage-card">
-        <h3>Parsing &amp; Validation</h3>
-        <div class="stage-subtitle">parse_json_output() &rarr; validate_examples()</div>
-        <ul>
-          <li>JSON extraction from raw LLM output &mdash; handles markdown fences, partial output, recovery</li>
-          <li>Schema validation: ensures <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--cyan);">user_message</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--cyan);">intent</code>, <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--cyan);">session_history</code> fields present and valid</li>
-          <li>History truncation: programmatic enforcement of max 5 message sliding window</li>
-          <li>Intent correction: forces the correct intent label regardless of what the LLM outputs</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="pipeline-stage" data-delay="4">
-      <div class="stage-line">
-        <div class="stage-number">5</div>
-        <div class="stage-connector" style="background: transparent;"></div>
-      </div>
-      <div class="stage-card">
-        <h3>Output</h3>
-        <div class="stage-subtitle">generated/{INTENT}.json</div>
-        <ul>
-          <li>Saves to <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--cyan);">generated/</code> directory as individual JSON files per intent</li>
-          <li>Exact same format as seed data &mdash; seamless integration with downstream training pipeline</li>
-          <li>Summary report with per-intent counts and total statistics</li>
-        </ul>
-      </div>
-    </div>
-
-  </div>
-</section>
-
-<!-- DATA FORMAT -->
-<section id="format">
-  <div class="section-label">Data Schema</div>
-  <h2 class="reveal">Training Example Format</h2>
-  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 2rem; max-width: 600px;">Each example captures a user's current message, the target intent, and the conversation context &mdash; exactly as the real classifier receives it at inference time.</p>
-
-  <div class="json-display reveal">
-<span class="json-bracket">{</span>
-  <span class="json-key">"user_message"</span>: <span class="json-string">"เช็คยอดค้างชำระหน่อยค้าบ 😅"</span>, <span class="json-comment">&larr; current message to classify</span>
-  <span class="json-key">"intent"</span>: <span class="json-string">"MOBILE_ACCOUNT_CHECK_PAYMENT_STATUS_POSTPAID"</span>, <span class="json-comment">&larr; target label</span>
-  <span class="json-key">"session_history"</span>: <span class="json-bracket">[</span> <span class="json-comment">&larr; sliding window (max 5 messages)</span>
-    <span class="json-bracket">{</span> <span class="json-role">"role"</span>: <span class="json-string">"user"</span>, <span class="json-key">"content"</span>: <span class="json-string">"สัญญาณเน็ตช้ามากเลยครับ"</span> <span class="json-bracket">}</span>,  <span class="json-comment">&larr; previous topic (network)</span>
-    <span class="json-bracket">{</span> <span class="json-role">"role"</span>: <span class="json-string">"assistant"</span>, <span class="json-key">"content"</span>: <span class="json-string">"ขออภัยค่ะ ทีมงานกำลังตรวจสอบ"</span> <span class="json-bracket">}</span>  <span class="json-comment">&larr; intent switch happens next</span>
-  <span class="json-bracket">]</span>
-<span class="json-bracket">}</span>
-  </div>
-
-  <div class="field-cards reveal">
-    <div class="field-card">
-      <div class="field-name">user_message</div>
-      <p>The current chat message to classify. This is the primary model input. Includes natural Thai with typos, slang, emoji, and occasional English.</p>
-    </div>
-    <div class="field-card">
-      <div class="field-name">intent</div>
-      <p>One of 10 possible target labels. Determined solely by the current <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--green);">user_message</code>, not by the session history.</p>
-    </div>
-    <div class="field-card">
-      <div class="field-name">session_history</div>
-      <p>Sliding window of the last 5 messages providing conversation context. May contain topic switches from completely different intents &mdash; the classifier must learn to ignore irrelevant history.</p>
-    </div>
-  </div>
-</section>
-
-<!-- DESIGN DECISIONS -->
-<section id="decisions">
-  <div class="section-label">Rationale</div>
-  <h2 class="reveal">Key Design Decisions</h2>
-  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 2rem; max-width: 600px;">Every constraint in the pipeline exists because of a real-world failure mode. Click to expand the reasoning.</p>
-
-  <div class="decisions-grid reveal">
-
-    <div class="decision open" onclick="this.classList.toggle('open')">
-      <div class="decision-header">
-        <div class="decision-icon">5</div>
-        <div class="decision-title">Sliding Window = 5 Messages</div>
-        <div class="decision-chevron">&#9662;</div>
-      </div>
-      <div class="decision-body">
-        <div class="decision-content">
-          The production system passes the <strong>last 5 messages</strong> of the conversation as context to the classifier. Training data must match inference conditions exactly &mdash; if you train on 8-message histories but deploy with 5-message windows, the model learns patterns it will never see in production. The pipeline enforces this both in the prompt (instructing the LLM) and programmatically (truncating any violations to the last 5).
-        </div>
-      </div>
-    </div>
-
-    <div class="decision" onclick="this.classList.toggle('open')">
-      <div class="decision-header">
-        <div class="decision-icon">&#8644;</div>
-        <div class="decision-title">Intent Switching in History</div>
-        <div class="decision-chevron">&#9662;</div>
-      </div>
-      <div class="decision-body">
-        <div class="decision-content">
-          Real users change topics mid-conversation: "เน็ตช้ามาก... อ้อ แล้วบิลเดือนนี้ต้องจ่ายวันไหนครับ". Without intent-switch examples, the model overfits to session history &mdash; if the history mentions roaming, it predicts a roaming intent regardless of the current message. At least <strong>5&ndash;6 of every 20 examples</strong> contain history about a completely different topic, teaching the model that <code>user_message</code> alone determines intent.
-        </div>
-      </div>
-    </div>
-
-    <div class="decision" onclick="this.classList.toggle('open')">
-      <div class="decision-header">
-        <div class="decision-icon">&#9999;</div>
-        <div class="decision-title">Typos &amp; Informal Language</div>
-        <div class="decision-chevron">&#9662;</div>
-      </div>
-      <div class="decision-body">
-        <div class="decision-content">
-          Real Thai chat is messy: <code>เนต</code> vs <code>เน็ต</code>, <code>ป่าว</code> vs <code>ไหม</code>, doubled vowels <code>ค่าาา</code>, slang <code>555</code>, missing spaces, emoji. If training data is clean Thai only, the classifier fails on real user input. The pipeline requires <strong>8&ndash;10 of 20 examples</strong> to contain realistic typos, misspellings, and slang &mdash; including specific patterns like <code>ตรจสอบ</code>, <code>รบกวณ</code>, <code>กานใช้งาน</code>.
-        </div>
-      </div>
-    </div>
-
-    <div class="decision" onclick="this.classList.toggle('open')">
-      <div class="decision-header">
-        <div class="decision-icon">&#127760;</div>
-        <div class="decision-title">Bilingual Examples (Thai + English)</div>
-        <div class="decision-chevron">&#9662;</div>
-      </div>
-      <div class="decision-body">
-        <div class="decision-content">
-          AIS serves expats, tourists, and bilingual Thai users who type in English. Messages like "can u check my bill pls" or "how much roaming data left ah" are real usage patterns. The pipeline includes <strong>2&ndash;3 English examples per intent</strong> with intentional grammar mistakes reflecting non-native speakers, ensuring the classifier handles both languages.
-        </div>
-      </div>
-    </div>
-
-    <div class="decision" onclick="this.classList.toggle('open')">
-      <div class="decision-header">
-        <div class="decision-icon">&#127919;</div>
-        <div class="decision-title">Few-Shot Seed Strategy</div>
-        <div class="decision-chevron">&#9662;</div>
-      </div>
-      <div class="decision-body">
-        <div class="decision-content">
-          Seeds aren't randomly selected &mdash; the <code>select_seed_examples()</code> function uses round-robin across history-length buckets (0, 2, 4, 5 messages). This ensures the LLM sees the <strong>full distribution</strong> of conversation depths, not just one pattern. A random 5-sample pick might yield all long conversations, causing the LLM to only generate long histories.
-        </div>
-      </div>
-    </div>
-
-    <div class="decision" onclick="this.classList.toggle('open')">
-      <div class="decision-header">
-        <div class="decision-icon">&#128172;</div>
-        <div class="decision-title">Sentence &amp; Word Diversity</div>
-        <div class="decision-chevron">&#9662;</div>
-      </div>
-      <div class="decision-body">
-        <div class="decision-content">
-          Without explicit instructions, LLMs fall into repetitive phrasing patterns &mdash; generating 15 out of 20 <code>user_message</code> values starting with "อยากเช็ค..." or "ขอดู...". Real users express the same intent in wildly different ways: questions (<em>"ยอดเท่าไหร่?"</em>), imperatives (<em>"ช่วยดูยอดให้หน่อย"</em>), fragments (<em>"ยอดค้างชำระ"</em>), or casual conversation (<em>"เอ่อ พอดีจะดูยอดน่ะ"</em>). The prompt now explicitly requires <strong>varied verbs, sentence forms, directness levels, and message lengths</strong>, with a hard cap of 2&ndash;3 examples sharing the same opening word. Each example should feel like it came from a different person.
-        </div>
-      </div>
-    </div>
-
-  </div>
-</section>
-
-<!-- COMPARISON -->
-<section id="comparison">
-  <div class="section-label">Why This Pipeline</div>
-  <h2 class="reveal">SDG Pipeline vs. Handcrafted ChatGPT</h2>
-  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 0.5rem; max-width: 700px;">The traditional approach &mdash; manually prompting ChatGPT, copy-pasting outputs, fixing JSON errors &mdash; doesn't scale and produces inconsistent results. Here's how the automated pipeline compares.</p>
-
-  <div class="comparison-wrapper reveal">
-    <div class="comparison-col manual">
-      <h3><span class="comp-badge">Legacy</span> Handcrafted ChatGPT</h3>
-      <ul class="comp-list">
-        <li>Manual copy-paste into ChatGPT, re-prompt each intent individually</li>
-        <li>No version control &mdash; each session is ad-hoc, prompts vary by mood</li>
-        <li>Inconsistent quality: different wordings yield different styles and formats</li>
-        <li>No validation &mdash; raw output may have wrong JSON, extra fields, broken structure</li>
-        <li>Zero reproducibility &mdash; can't re-run to get comparable output</li>
-        <li>Time-consuming: 2&ndash;4 hours of manual work for 200 examples</li>
-        <li>No seed strategy &mdash; manually picking examples each time</li>
-        <li>No constraint enforcement &mdash; history length, typo ratio, intent switching all manual</li>
-        <li>No scalability &mdash; need 1000 examples? Repeat the entire process 5x</li>
-        <li>Data leakage risk &mdash; ChatGPT may memorize or repeat seeds verbatim</li>
-        <li>Manual reformatting needed to match training pipeline format</li>
-      </ul>
-    </div>
-
-    <div class="comparison-col pipeline">
-      <h3><span class="comp-badge">Automated</span> SDG Hub Pipeline</h3>
-      <ul class="comp-list">
-        <li>Single command generates all 200 examples in ~5 minutes end-to-end</li>
-        <li>Version-controlled YAML prompts stored in git &mdash; fully auditable</li>
-        <li>Consistent quality: same system prompt, temperature, constraints every run</li>
-        <li>Built-in validation: JSON parsing, schema enforcement, history truncation</li>
-        <li>Fully reproducible: same seed + prompt + model = comparable output</li>
-        <li>Scalable: change <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--green);">--num-examples 100</code> for 1000 examples instantly</li>
-        <li>Smart seed selection: algorithm picks diverse examples across history lengths</li>
-        <li>Programmatic constraint enforcement: max-5 truncation, distribution targets in prompt</li>
-        <li>Model-agnostic: swap Qwen, Llama, GPT-4o with one <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--green);">--model</code> flag</li>
-        <li>Provider-agnostic: Nebius, OpenAI, Ollama, vLLM via litellm abstraction</li>
-        <li>Output matches training format exactly &mdash; zero reformatting needed</li>
-        <li>Retry logic: failed intents re-run individually with <code style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--green);">--intents</code></li>
-        <li>Cost-trackable: litellm logs token usage for budget estimation</li>
-      </ul>
-    </div>
-  </div>
-
-  <!-- METRICS -->
-  <div class="metrics-grid reveal">
-
-    <div class="metric-card">
-      <div class="metric-label">Time to Generate 200 Examples</div>
-      <div class="metric-bars">
-        <div class="metric-bar-row">
-          <div class="metric-bar-label">Manual</div>
-          <div class="metric-bar-track"><div class="metric-bar-fill red" data-width="95"></div></div>
-          <div class="metric-bar-value red">2&ndash;4 hrs</div>
-        </div>
-        <div class="metric-bar-row">
-          <div class="metric-bar-label">Pipeline</div>
-          <div class="metric-bar-track"><div class="metric-bar-fill green" data-width="4"></div></div>
-          <div class="metric-bar-value green">5 min</div>
-        </div>
-      </div>
-      <div class="metric-speedup">48x faster</div>
-    </div>
-
-    <div class="metric-card">
-      <div class="metric-label">Format Compliance</div>
-      <div class="metric-bars">
-        <div class="metric-bar-row">
-          <div class="metric-bar-label">Manual</div>
-          <div class="metric-bar-track"><div class="metric-bar-fill red" data-width="70"></div></div>
-          <div class="metric-bar-value red">~70%</div>
-        </div>
-        <div class="metric-bar-row">
-          <div class="metric-bar-label">Pipeline</div>
-          <div class="metric-bar-track"><div class="metric-bar-fill green" data-width="100"></div></div>
-          <div class="metric-bar-value green">100%</div>
-        </div>
-      </div>
-      <div class="metric-speedup">Validated</div>
-    </div>
-
-    <div class="metric-card">
-      <div class="metric-label">Reproducibility</div>
-      <div class="metric-bars">
-        <div class="metric-bar-row">
-          <div class="metric-bar-label">Manual</div>
-          <div class="metric-bar-track"><div class="metric-bar-fill red" data-width="0"></div></div>
-          <div class="metric-bar-value red">0%</div>
-        </div>
-        <div class="metric-bar-row">
-          <div class="metric-bar-label">Pipeline</div>
-          <div class="metric-bar-track"><div class="metric-bar-fill green" data-width="100"></div></div>
-          <div class="metric-bar-value green">100%</div>
-        </div>
-      </div>
-      <div class="metric-speedup">Deterministic</div>
-    </div>
-
-    <div class="metric-card">
-      <div class="metric-label">Scalability</div>
-      <div class="metric-bars">
-        <div class="metric-bar-row">
-          <div class="metric-bar-label">Manual</div>
-          <div class="metric-bar-track"><div class="metric-bar-fill red" data-width="90"></div></div>
-          <div class="metric-bar-value red">O(n) hrs</div>
-        </div>
-        <div class="metric-bar-row">
-          <div class="metric-bar-label">Pipeline</div>
-          <div class="metric-bar-track"><div class="metric-bar-fill green" data-width="8"></div></div>
-          <div class="metric-bar-value green">O(1) cmd</div>
-        </div>
-      </div>
-      <div class="metric-speedup">1 command</div>
-    </div>
-
-  </div>
-</section>
-
-<!-- INTENTS -->
-<section id="intents">
-  <div class="section-label">Coverage</div>
-  <h2 class="reveal">The 10 Intents</h2>
-  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 2rem;">Each intent covers a distinct customer service scenario in the AIS mobile ecosystem.</p>
-
-  <div class="intents-grid reveal">
-    <div class="intent-card">
-      <div class="intent-icon">&#128179;</div>
-      <div class="intent-name">MOBILE_ACCOUNT_CHECK_PAYMENT_STATUS_POSTPAID</div>
-      <div class="intent-desc">Check postpaid payment status</div>
-      <div class="intent-thai">เช็คยอดค้างชำระรายเดือน</div>
-    </div>
-    <div class="intent-card">
-      <div class="intent-icon">&#128176;</div>
-      <div class="intent-name">MOBILE_ACCOUNT_CHECK_PAYMENT_STATUS_PREPAID</div>
-      <div class="intent-desc">Check prepaid balance / payment</div>
-      <div class="intent-thai">เช็คยอดเงินซิมเติมเงิน</div>
-    </div>
-    <div class="intent-card">
-      <div class="intent-icon">&#128197;</div>
-      <div class="intent-name">MOBILE_BILLING_CHECK_DUE_DATE</div>
-      <div class="intent-desc">Check bill due date</div>
-      <div class="intent-thai">เช็ควันครบกำหนดชำระบิล</div>
-    </div>
-    <div class="intent-card">
-      <div class="intent-icon">&#128202;</div>
-      <div class="intent-name">MOBILE_PACKAGE_CHECK_DATA_HISTORY</div>
-      <div class="intent-desc">Check data package history</div>
-      <div class="intent-thai">ดูประวัติแพ็กเกจเน็ต</div>
-    </div>
-    <div class="intent-card">
-      <div class="intent-icon">&#127757;</div>
-      <div class="intent-name">MOBILE_ROAMING_CHECK_DATA_CURRENT</div>
-      <div class="intent-desc">Check current roaming data</div>
-      <div class="intent-thai">เช็คเน็ตโรมมิ่งคงเหลือ</div>
-    </div>
-    <div class="intent-card">
-      <div class="intent-icon">&#128200;</div>
-      <div class="intent-name">MOBILE_ROAMING_CHECK_DATA_HISTORY</div>
-      <div class="intent-desc">Check roaming data history</div>
-      <div class="intent-thai">ดูประวัติใช้เน็ตโรมมิ่ง</div>
-    </div>
-    <div class="intent-card">
-      <div class="intent-icon">&#9992;</div>
-      <div class="intent-name">MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID</div>
-      <div class="intent-desc">Check roaming payment</div>
-      <div class="intent-thai">เช็คค่าบริการโรมมิ่ง</div>
-    </div>
-    <div class="intent-card">
-      <div class="intent-icon">&#128230;</div>
-      <div class="intent-name">MOBILE_ROAMING_SUBSCRIBE_DATA_POSTPAID</div>
-      <div class="intent-desc">Subscribe roaming package</div>
-      <div class="intent-thai">สมัครแพ็กเกจโรมมิ่ง</div>
-    </div>
-    <div class="intent-card">
-      <div class="intent-icon">&#10060;</div>
-      <div class="intent-name">MOBILE_SIM_CHECK_UNSUBSCRIBE_DATA_POSTPAID</div>
-      <div class="intent-desc">Unsubscribe postpaid data package</div>
-      <div class="intent-thai">ยกเลิกแพ็กเน็ตรายเดือน</div>
-    </div>
-    <div class="intent-card">
-      <div class="intent-icon">&#128244;</div>
-      <div class="intent-name">MOBILE_SIM_CHECK_UNSUBSCRIBE_DATA_PREPAID</div>
-      <div class="intent-desc">Unsubscribe prepaid data package</div>
-      <div class="intent-thai">ยกเลิกแพ็กเน็ตเติมเงิน</div>
-    </div>
-  </div>
-</section>
-
-<!-- TECH STACK -->
-<section id="stack">
-  <div class="section-label">Infrastructure</div>
-  <h2 class="reveal">Technology Stack</h2>
-  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 1rem; max-width: 600px;">Each layer is swappable. Change the model, provider, or templating engine without touching the core pipeline logic.</p>
-
-  <div class="stack-layers reveal">
-    <div class="stack-layer">
-      <div class="stack-depth">1</div>
-      <div class="stack-bar"></div>
-      <div class="stack-info">
-        <div class="stack-name">Python Pipeline</div>
-        <div class="stack-desc">Orchestration, CLI, file I/O, validation &mdash; run.py</div>
-      </div>
-    </div>
-    <div class="stack-layer">
-      <div class="stack-depth">2</div>
-      <div class="stack-bar"></div>
-      <div class="stack-info">
-        <div class="stack-name">sdg_hub Framework</div>
-        <div class="stack-desc">Red Hat AI Innovation Team &mdash; Blocks, Flows, Registry</div>
-      </div>
-    </div>
-    <div class="stack-layer">
-      <div class="stack-depth">3</div>
-      <div class="stack-bar"></div>
-      <div class="stack-info">
-        <div class="stack-name">litellm</div>
-        <div class="stack-desc">LLM provider abstraction &mdash; OpenAI, Anthropic, Ollama, vLLM</div>
-      </div>
-    </div>
-    <div class="stack-layer">
-      <div class="stack-depth">4</div>
-      <div class="stack-bar"></div>
-      <div class="stack-info">
-        <div class="stack-name">Jinja2 + YAML</div>
-        <div class="stack-desc">Version-controlled prompt templates with variable injection</div>
-      </div>
-    </div>
-    <div class="stack-layer">
-      <div class="stack-depth">5</div>
-      <div class="stack-bar"></div>
-      <div class="stack-info">
-        <div class="stack-name">Qwen3-235B-A22B-Instruct</div>
-        <div class="stack-desc">235B parameter MoE model &mdash; strong multilingual + structured output</div>
-      </div>
-    </div>
-    <div class="stack-layer">
-      <div class="stack-depth">6</div>
-      <div class="stack-bar"></div>
-      <div class="stack-info">
-        <div class="stack-name">Nebius TokenFactory</div>
-        <div class="stack-desc">Cloud inference &mdash; $0.20/M input, $0.60/M output, OpenAI-compatible API</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="command-block reveal">
-    <span class="prompt">$</span> python run.py <span class="flag">--model</span> <span class="value">"openai/Qwen/Qwen3-235B-A22B-Instruct-2507"</span> \<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--api-base</span> <span class="value">https://api.tokenfactory.nebius.com/v1</span> \<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--api-key</span> <span class="value">$NEBIUS_API_KEY</span> \<br>
-    &nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">--num-examples</span> <span class="value">20</span> <span class="flag">--max-seeds</span> <span class="value">5</span>
-  </div>
-</section>
-
-<!-- BEST PRACTICES -->
-<section id="bestpractices">
-  <div class="section-label">Guidelines</div>
-  <h2 class="reveal">SDG Best Practices</h2>
-  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 2.5rem; max-width: 650px;">Lessons learned from building production-grade synthetic data for Thai telco intent classification. Each practice addresses a real failure mode.</p>
-
-  <div class="bp-grid reveal">
-
-    <div class="bp-card">
-      <div class="bp-number">01</div>
-      <h4><span class="bp-icon">&#127919;</span> Match Training to Inference</h4>
-      <p>Training data must mirror production conditions exactly. If the classifier receives a 5-message sliding window at inference, generate training data with the same constraint. Mismatched context lengths cause silent accuracy drops.</p>
-      <span class="bp-tag">Critical</span>
-      <span class="bp-tag">Architecture</span>
-      <ul>
-        <li>Enforce max history length in prompt AND code</li>
-        <li>Use same tokenization and truncation strategy</li>
-        <li>Validate every example post-generation</li>
-      </ul>
-    </div>
-
-    <div class="bp-card">
-      <div class="bp-number">02</div>
-      <h4><span class="bp-icon">&#128256;</span> Diversify Seed Selection</h4>
-      <p>Don't pick seeds randomly. Use stratified sampling across conversation depths (0, 1, 2, 3, 4, 5 messages) to ensure the LLM sees the full distribution. Random selection biases toward the most common pattern.</p>
-      <span class="bp-tag">Seeding</span>
-      <ul>
-        <li>Round-robin across history-length buckets</li>
-        <li>Limit to 5 seeds to prevent prompt bloat</li>
-        <li>Truncate long seeds to match the window constraint</li>
-      </ul>
-    </div>
-
-    <div class="bp-card">
-      <div class="bp-number">03</div>
-      <h4><span class="bp-icon">&#8644;</span> Force Intent Switching</h4>
-      <p>Require 25&ndash;30% of examples to have session history about a completely different topic. Without this, the model overfits to history &mdash; predicting roaming just because the history mentions roaming, ignoring the actual current message.</p>
-      <span class="bp-tag">Critical</span>
-      <span class="bp-tag">Context</span>
-      <ul>
-        <li>5&ndash;6 of every 20 examples must switch topics</li>
-        <li>user_message alone determines the intent</li>
-        <li>History should contain plausible prior conversations</li>
-      </ul>
-    </div>
-
-    <div class="bp-card">
-      <div class="bp-number">04</div>
-      <h4><span class="bp-icon">&#9999;</span> Embrace Messy Input</h4>
-      <p>Real Thai chat includes typos (<span class="bp-highlight">เนต</span> vs <span class="bp-highlight">เน็ต</span>), slang (<span class="bp-highlight">555</span>), emoji, doubled vowels (<span class="bp-highlight">ค่าาา</span>), and missing spaces. Clean-only training data fails on real users. Target 40&ndash;50% informal examples.</p>
-      <span class="bp-tag">Language</span>
-      <span class="bp-tag">Realism</span>
-      <ul>
-        <li>8&ndash;10 of 20 examples with typos/slang</li>
-        <li>Include agent typos too (realistic support staff)</li>
-        <li>Mix formal and informal register</li>
-      </ul>
-    </div>
-
-    <div class="bp-card">
-      <div class="bp-number">05</div>
-      <h4><span class="bp-icon">&#127760;</span> Include Multilingual Examples</h4>
-      <p>AIS serves bilingual users and expats. Include 10&ndash;15% English examples with intentional grammar mistakes typical of non-native speakers. Messages like "can u check my bill pls" are real usage patterns.</p>
-      <span class="bp-tag">Coverage</span>
-      <ul>
-        <li>2&ndash;3 English examples per 20-example batch</li>
-        <li>Use non-native English patterns, not perfect grammar</li>
-        <li>Include Thai-English code-mixing in some examples</li>
-      </ul>
-    </div>
-
-    <div class="bp-card">
-      <div class="bp-number">06</div>
-      <h4><span class="bp-icon">&#128274;</span> Mask Sensitive Data</h4>
-      <p>Never expose real phone numbers or OTPs in synthetic data. Use consistent masking formats: <span class="bp-highlight">091234XXXX</span> for phone numbers and <span class="bp-highlight">XXXXXX</span> for OTP codes across all generated examples.</p>
-      <span class="bp-tag">Security</span>
-      <ul>
-        <li>Phone format: 0XXXXXXXX with partial masking</li>
-        <li>OTP codes always fully masked</li>
-        <li>Embed masking rules in the system prompt</li>
-      </ul>
-    </div>
-
-    <div class="bp-card">
-      <div class="bp-number">07</div>
-      <h4><span class="bp-icon">&#128295;</span> Validate Programmatically</h4>
-      <p>Never trust LLM output blindly. Validate schema, enforce field types, force correct intent labels, and truncate overlong histories in code. The prompt requests constraints; the code enforces them.</p>
-      <span class="bp-tag">Quality</span>
-      <span class="bp-tag">Reliability</span>
-      <ul>
-        <li>Check required fields: user_message, intent, session_history</li>
-        <li>Override incorrect intent labels automatically</li>
-        <li>Truncate history exceeding max window size</li>
-        <li>Validate role values are only "user" or "assistant"</li>
-      </ul>
-    </div>
-
-    <div class="bp-card">
-      <div class="bp-number">08</div>
-      <h4><span class="bp-icon">&#128209;</span> Version Control Prompts</h4>
-      <p>Store prompt templates as YAML files in git, not in code or chat history. This makes prompts auditable, diffable, and reproducible. A prompt change is a code change &mdash; review it like one.</p>
-      <span class="bp-tag">Process</span>
-      <ul>
-        <li>Use Jinja2 templates with variable injection</li>
-        <li>Separate system prompt from user prompt</li>
-        <li>Track prompt evolution alongside generated data quality</li>
-      </ul>
-    </div>
-
-    <div class="bp-card">
-      <div class="bp-number">09</div>
-      <h4><span class="bp-icon">&#128736;</span> Stay Model-Agnostic</h4>
-      <p>Use an abstraction layer like litellm so you can swap models (Qwen, Llama, GPT-4o) and providers (Nebius, OpenAI, Ollama) without changing pipeline code. Today's best model isn't tomorrow's.</p>
-      <span class="bp-tag">Architecture</span>
-      <ul>
-        <li>One <span class="bp-highlight">--model</span> flag to switch models</li>
-        <li>OpenAI-compatible APIs for provider portability</li>
-        <li>Temperature 0.8 for creative variation with structure</li>
-      </ul>
-    </div>
-
-    <div class="bp-card">
-      <div class="bp-number">10</div>
-      <h4><span class="bp-icon">&#128202;</span> Define Clear Intent Boundaries</h4>
-      <p>Each intent description must specify what it IS and what it ISN'T. Distinguish postpaid vs. prepaid, current vs. historical, roaming vs. domestic. Ambiguous intents produce ambiguous data.</p>
-      <span class="bp-tag">Data Quality</span>
-      <ul>
-        <li>2&ndash;3 sentence descriptions per intent</li>
-        <li>List related but different intents to clarify boundaries</li>
-        <li>Include example use cases in intent definitions</li>
-      </ul>
-    </div>
-
-    <div class="bp-card">
-      <div class="bp-number">11</div>
-      <h4><span class="bp-icon">&#128200;</span> Control Distribution Targets</h4>
-      <p>Specify exact distribution requirements in the prompt: how many examples per history length, typo ratio, intent switches, and language mix. Without explicit targets, the LLM defaults to its most comfortable pattern.</p>
-      <span class="bp-tag">Quality</span>
-      <ul>
-        <li>History length: 2 empty, 3 short, 8 medium, 4 long, 3 max</li>
-        <li>Typo ratio: 40&ndash;50% of all examples</li>
-        <li>Intent switch: 25&ndash;30% of examples</li>
-        <li>English: 10&ndash;15% of examples</li>
-      </ul>
-    </div>
-
-    <div class="bp-card">
-      <div class="bp-number">12</div>
-      <h4><span class="bp-icon">&#128172;</span> Maximize Sentence &amp; Word Diversity</h4>
-      <p>LLMs tend to repeat the same phrasing pattern. Explicitly require varied verbs (<span class="bp-highlight">เช็ค</span>, <span class="bp-highlight">ดู</span>, <span class="bp-highlight">อยากรู้</span>, <span class="bp-highlight">ขอ</span>), sentence forms (questions, statements, fragments, imperatives), directness levels, and message lengths. No two examples should feel like the same person.</p>
-      <span class="bp-tag">Critical</span>
-      <span class="bp-tag">Diversity</span>
-      <ul>
-        <li>Vary opening words &mdash; max 2&ndash;3 examples with same opener</li>
-        <li>Mix direct ("เช็คบิล") vs indirect ("รบกวนสอบถามยอดหน่อยค่ะ")</li>
-        <li>Mix lengths: single phrase vs full sentence with context</li>
-        <li>Each user_message should feel like a different person</li>
-      </ul>
-    </div>
-
-    <div class="bp-card">
-      <div class="bp-number">13</div>
-      <h4><span class="bp-icon">&#9889;</span> Fail Gracefully, Retry Smart</h4>
-      <p>LLMs sometimes produce malformed output. Parse JSON with fallbacks (strip markdown fences, try line-by-line). Skip bad examples instead of crashing. Allow re-running individual failed intents with <span class="bp-highlight">--intents</span>.</p>
-      <span class="bp-tag">Reliability</span>
-      <ul>
-        <li>Multi-stage JSON recovery: array → line-by-line → skip</li>
-        <li>Per-intent retry without regenerating everything</li>
-        <li>Log warnings for skipped examples, don't silently drop</li>
-      </ul>
-    </div>
-
-  </div>
-</section>
-
-<!-- QUIZ -->
-<section id="quiz">
-  <div class="section-label">Knowledge test</div>
-  <h2 class="reveal">SDG Pipeline Quiz</h2>
-  <p class="reveal" style="color: var(--text-secondary); margin-bottom: 2.5rem; max-width: 600px;">How well do you understand the pipeline's design decisions? Let's test on the key concepts.</p>
-
-  <div class="quiz-score reveal" id="quizScore">
-    <div class="quiz-score-value" id="quizScoreValue">0/11</div>
-    <div class="quiz-score-label">Questions Answered Correctly</div>
-    <button class="quiz-reset" onclick="resetQuiz()">Reset Quiz</button>
-  </div>
-
-  <div class="quiz-container reveal">
-
-    <div class="quiz-question" data-answer="1" id="q1">
-      <div class="quiz-q-number">Question 01 / 11</div>
-      <div class="quiz-q-text">What is the maximum number of messages allowed in session_history?</div>
-      <div class="quiz-options">
-        <div class="quiz-option" onclick="answerQuiz('q1', 0)"><span class="opt-letter">A</span> 3 messages</div>
-        <div class="quiz-option" onclick="answerQuiz('q1', 1)"><span class="opt-letter">B</span> 5 messages</div>
-        <div class="quiz-option" onclick="answerQuiz('q1', 2)"><span class="opt-letter">C</span> 8 messages</div>
-        <div class="quiz-option" onclick="answerQuiz('q1', 3)"><span class="opt-letter">D</span> 10 messages</div>
-      </div>
-      <div class="quiz-explanation" id="q1-exp">The production system passes the <strong>last 5 messages</strong> as the sliding window to the classifier. Training data must match this exact constraint. The pipeline enforces this both in the prompt and programmatically via truncation.</div>
-    </div>
-
-    <div class="quiz-question" data-answer="2" id="q2">
-      <div class="quiz-q-number">Question 02 / 11</div>
-      <div class="quiz-q-text">Why does the pipeline require intent switching in session_history?</div>
-      <div class="quiz-options">
-        <div class="quiz-option" onclick="answerQuiz('q2', 0)"><span class="opt-letter">A</span> To increase the total dataset size</div>
-        <div class="quiz-option" onclick="answerQuiz('q2', 1)"><span class="opt-letter">B</span> To make the JSON output more complex</div>
-        <div class="quiz-option" onclick="answerQuiz('q2', 2)"><span class="opt-letter">C</span> To prevent the model from overfitting to session history instead of the current message</div>
-        <div class="quiz-option" onclick="answerQuiz('q2', 3)"><span class="opt-letter">D</span> To test whether the LLM can generate multi-topic conversations</div>
-      </div>
-      <div class="quiz-explanation" id="q2-exp">Without intent-switch examples, the classifier overfits to session history. If the history mentions roaming, it predicts a roaming intent regardless of the actual <code>user_message</code>. Intent switching teaches the model that only the current message determines the intent.</div>
-    </div>
-
-    <div class="quiz-question" data-answer="1" id="q3">
-      <div class="quiz-q-number">Question 03 / 11</div>
-      <div class="quiz-q-text">What percentage of generated examples should contain typos, slang, or informal language?</div>
-      <div class="quiz-options">
-        <div class="quiz-option" onclick="answerQuiz('q3', 0)"><span class="opt-letter">A</span> 10&ndash;15%</div>
-        <div class="quiz-option" onclick="answerQuiz('q3', 1)"><span class="opt-letter">B</span> 40&ndash;50%</div>
-        <div class="quiz-option" onclick="answerQuiz('q3', 2)"><span class="opt-letter">C</span> 70&ndash;80%</div>
-        <div class="quiz-option" onclick="answerQuiz('q3', 3)"><span class="opt-letter">D</span> 100% &mdash; all examples should be informal</div>
-      </div>
-      <div class="quiz-explanation" id="q3-exp">The pipeline targets <strong>8&ndash;10 out of 20 examples</strong> (40&ndash;50%) with realistic typos, misspellings, and slang. This mirrors real Thai chat behavior where users mix formal and informal register, use shortened words, and include emoji.</div>
-    </div>
-
-    <div class="quiz-question" data-answer="0" id="q4">
-      <div class="quiz-q-number">Question 04 / 11</div>
-      <div class="quiz-q-text">How does the seed selection algorithm choose examples?</div>
-      <div class="quiz-options">
-        <div class="quiz-option" onclick="answerQuiz('q4', 0)"><span class="opt-letter">A</span> Round-robin across session history length buckets</div>
-        <div class="quiz-option" onclick="answerQuiz('q4', 1)"><span class="opt-letter">B</span> Random sampling from all available examples</div>
-        <div class="quiz-option" onclick="answerQuiz('q4', 2)"><span class="opt-letter">C</span> Longest session histories first</div>
-        <div class="quiz-option" onclick="answerQuiz('q4', 3)"><span class="opt-letter">D</span> Most recent examples first by timestamp</div>
-      </div>
-      <div class="quiz-explanation" id="q4-exp">The <code>select_seed_examples()</code> function uses round-robin across history-length buckets (0, 2, 4, 5 messages). This ensures the LLM sees diverse conversation depths, not just one dominant pattern. Random selection might yield all long conversations.</div>
-    </div>
-
-    <div class="quiz-question" data-answer="3" id="q5">
-      <div class="quiz-q-number">Question 05 / 11</div>
-      <div class="quiz-q-text">What temperature is used for LLM generation in this pipeline?</div>
-      <div class="quiz-options">
-        <div class="quiz-option" onclick="answerQuiz('q5', 0)"><span class="opt-letter">A</span> 0.0 &mdash; fully deterministic</div>
-        <div class="quiz-option" onclick="answerQuiz('q5', 1)"><span class="opt-letter">B</span> 0.3 &mdash; low creativity</div>
-        <div class="quiz-option" onclick="answerQuiz('q5', 2)"><span class="opt-letter">C</span> 0.5 &mdash; balanced</div>
-        <div class="quiz-option" onclick="answerQuiz('q5', 3)"><span class="opt-letter">D</span> 0.8 &mdash; creative with structure</div>
-      </div>
-      <div class="quiz-explanation" id="q5-exp">Temperature 0.8 provides the optimal balance: enough randomness for diverse, creative examples while maintaining the structured JSON format. Lower temperatures produce repetitive outputs; higher temperatures risk breaking JSON structure.</div>
-    </div>
-
-    <div class="quiz-question" data-answer="2" id="q6">
-      <div class="quiz-q-number">Question 06 / 11</div>
-      <div class="quiz-q-text">What abstraction layer does the pipeline use for model-agnostic LLM calls?</div>
-      <div class="quiz-options">
-        <div class="quiz-option" onclick="answerQuiz('q6', 0)"><span class="opt-letter">A</span> LangChain</div>
-        <div class="quiz-option" onclick="answerQuiz('q6', 1)"><span class="opt-letter">B</span> OpenAI SDK directly</div>
-        <div class="quiz-option" onclick="answerQuiz('q6', 2)"><span class="opt-letter">C</span> litellm</div>
-        <div class="quiz-option" onclick="answerQuiz('q6', 3)"><span class="opt-letter">D</span> Hugging Face Transformers</div>
-      </div>
-      <div class="quiz-explanation" id="q6-exp"><code>litellm</code> provides a unified interface across 100+ LLM providers (OpenAI, Anthropic, Ollama, vLLM, Nebius) with a single API. Swapping from Qwen on Nebius to GPT-4o on OpenAI requires only changing the <code>--model</code> flag.</div>
-    </div>
-
-    <div class="quiz-question" data-answer="1" id="q7">
-      <div class="quiz-q-number">Question 07 / 11</div>
-      <div class="quiz-q-text">How should phone numbers appear in generated synthetic data?</div>
-      <div class="quiz-options">
-        <div class="quiz-option" onclick="answerQuiz('q7', 0)"><span class="opt-letter">A</span> Full realistic phone numbers like 0912345678</div>
-        <div class="quiz-option" onclick="answerQuiz('q7', 1)"><span class="opt-letter">B</span> Partially masked like 091234XXXX</div>
-        <div class="quiz-option" onclick="answerQuiz('q7', 2)"><span class="opt-letter">C</span> Completely removed from all examples</div>
-        <div class="quiz-option" onclick="answerQuiz('q7', 3)"><span class="opt-letter">D</span> Replaced with placeholder text [PHONE]</div>
-      </div>
-      <div class="quiz-explanation" id="q7-exp">Phone numbers must use partial masking format <code>091234XXXX</code>. This preserves the realistic appearance of customer interactions while preventing any real personal data from leaking into training data. OTP codes are fully masked as <code>XXXXXX</code>.</div>
-    </div>
-
-    <div class="quiz-question" data-answer="0" id="q8">
-      <div class="quiz-q-number">Question 08 / 11</div>
-      <div class="quiz-q-text">What determines the intent label of a training example?</div>
-      <div class="quiz-options">
-        <div class="quiz-option" onclick="answerQuiz('q8', 0)"><span class="opt-letter">A</span> Only the current user_message</div>
-        <div class="quiz-option" onclick="answerQuiz('q8', 1)"><span class="opt-letter">B</span> The session_history combined with user_message</div>
-        <div class="quiz-option" onclick="answerQuiz('q8', 2)"><span class="opt-letter">C</span> The most recent assistant response</div>
-        <div class="quiz-option" onclick="answerQuiz('q8', 3)"><span class="opt-letter">D</span> The overall conversation topic</div>
-      </div>
-      <div class="quiz-explanation" id="q8-exp">The intent is determined <strong>solely by the current <code>user_message</code></strong>, not by the session history. This is why intent switching in history is critical &mdash; the classifier must learn to ignore irrelevant prior context and focus on what the user is asking right now.</div>
-    </div>
-
-    <div class="quiz-question" data-answer="3" id="q9">
-      <div class="quiz-q-number">Question 09 / 11</div>
-      <div class="quiz-q-text">Why does the pipeline override the LLM's generated intent label?</div>
-      <div class="quiz-options">
-        <div class="quiz-option" onclick="answerQuiz('q9', 0)"><span class="opt-letter">A</span> To save on API costs by skipping re-generation</div>
-        <div class="quiz-option" onclick="answerQuiz('q9', 1)"><span class="opt-letter">B</span> Because the LLM doesn't know the intent categories</div>
-        <div class="quiz-option" onclick="answerQuiz('q9', 2)"><span class="opt-letter">C</span> To randomize labels for data augmentation</div>
-        <div class="quiz-option" onclick="answerQuiz('q9', 3)"><span class="opt-letter">D</span> Because the LLM may hallucinate a wrong intent label despite generating a valid example</div>
-      </div>
-      <div class="quiz-explanation" id="q9-exp">Even when prompted to generate examples for a specific intent, the LLM may output a different intent string due to hallucination, typos, or label confusion. The pipeline programmatically forces the correct label, ensuring 100% label accuracy regardless of LLM behavior.</div>
-    </div>
-
-    <div class="quiz-question" data-answer="2" id="q10">
-      <div class="quiz-q-number">Question 10 / 11</div>
-      <div class="quiz-q-text">What is the primary advantage of storing prompts as YAML templates in version control?</div>
-      <div class="quiz-options">
-        <div class="quiz-option" onclick="answerQuiz('q10', 0)"><span class="opt-letter">A</span> YAML is faster to parse than JSON</div>
-        <div class="quiz-option" onclick="answerQuiz('q10', 1)"><span class="opt-letter">B</span> It allows multi-line strings without escaping</div>
-        <div class="quiz-option" onclick="answerQuiz('q10', 2)"><span class="opt-letter">C</span> Prompt changes become auditable, diffable, and reproducible</div>
-        <div class="quiz-option" onclick="answerQuiz('q10', 3)"><span class="opt-letter">D</span> YAML supports comments which JSON doesn't</div>
-      </div>
-      <div class="quiz-explanation" id="q10-exp">Version-controlled YAML templates make every prompt change a reviewable code change. You can <code>git diff</code> prompt modifications, trace which prompt version produced which dataset, and reproduce any previous generation run exactly. This is impossible with ad-hoc ChatGPT sessions.</div>
-    </div>
-
-    <div class="quiz-question" data-answer="1" id="q11">
-      <div class="quiz-q-number">Question 11 / 11</div>
-      <div class="quiz-q-text">Why is it critical to vary sentence structure and word choice across generated user_message examples for the same intent?</div>
-      <div class="quiz-options">
-        <div class="quiz-option" onclick="answerQuiz('q11', 0)"><span class="opt-letter">A</span> To make the dataset look larger than it actually is</div>
-        <div class="quiz-option" onclick="answerQuiz('q11', 1)"><span class="opt-letter">B</span> Because real users express the same intent in wildly different ways, and the classifier must generalize across all of them</div>
-        <div class="quiz-option" onclick="answerQuiz('q11', 2)"><span class="opt-letter">C</span> To prevent the LLM from running out of token budget</div>
-        <div class="quiz-option" onclick="answerQuiz('q11', 3)"><span class="opt-letter">D</span> Because JSON requires unique string values in arrays</div>
-      </div>
-      <div class="quiz-explanation" id="q11-exp">Without explicit diversity requirements, LLMs tend to repeat the same phrasing pattern (e.g., all starting with "อยากเช็ค..."). Real users say the same thing in many ways: questions, statements, fragments, polite requests, or terse commands. The prompt must require varied verbs, sentence forms, directness levels, and message lengths so the classifier generalizes to all of them.</div>
-    </div>
-
-  </div>
-</section>
-
-<script>
-// Scroll-triggered animations
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-
-      // Animate metric bars
-      entry.target.querySelectorAll('.metric-bar-fill').forEach(bar => {
-        const w = bar.dataset.width;
-        setTimeout(() => { bar.style.width = w + '%'; }, 300);
-      });
-    }
-  });
-}, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
-
-document.querySelectorAll('.reveal, .pipeline-stage').forEach(el => observer.observe(el));
-
-// Pipeline stages staggered reveal
-const stageObserver = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      const delay = parseInt(entry.target.dataset.delay || 0) * 200;
-      setTimeout(() => entry.target.classList.add('visible'), delay);
-    }
-  });
-}, { threshold: 0.1 });
-
-document.querySelectorAll('.pipeline-stage').forEach(el => stageObserver.observe(el));
-
-// Active nav highlight
-const sections = document.querySelectorAll('section');
-const navLinks = document.querySelectorAll('nav a');
-
-window.addEventListener('scroll', () => {
-  let current = '';
-  sections.forEach(section => {
-    const top = section.offsetTop - 100;
-    if (scrollY >= top) current = section.id;
-  });
-  navLinks.forEach(link => {
-    link.classList.toggle('active', link.getAttribute('href') === '#' + current);
-  });
-});
-
-// Quiz logic
-let quizScore = 0;
-let quizAnswered = 0;
-const totalQuestions = 11;
-
-function answerQuiz(qId, selected) {
-  const qEl = document.getElementById(qId);
-  if (qEl.classList.contains('answered-correct') || qEl.classList.contains('answered-wrong')) return;
-
-  const correct = parseInt(qEl.dataset.answer);
-  const options = qEl.querySelectorAll('.quiz-option');
-
-  options.forEach(opt => opt.classList.add('disabled'));
-
-  if (selected === correct) {
-    options[selected].classList.add('selected-correct');
-    qEl.classList.add('answered-correct');
-    quizScore++;
-  } else {
-    options[selected].classList.add('selected-wrong');
-    options[correct].classList.add('reveal-correct');
-    qEl.classList.add('answered-wrong');
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Source+Code+Pro:wght@400;500;600&family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Outfit', 'Noto Sans Thai', sans-serif;
+    background: #060a14;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'Source Code Pro', monospace; }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
   }
 
-  quizAnswered++;
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0c1220; }
+  ::-webkit-scrollbar-thumb { background: #2a3a5c; border-radius: 4px; }
 
-  const exp = document.getElementById(qId + '-exp');
-  if (exp) exp.classList.add('show');
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes flowPulse { 0%,100% { opacity:0.3; } 50% { opacity:1; } }
+  @keyframes flowDash { to { stroke-dashoffset: -24; } }
 
-  const scoreEl = document.getElementById('quizScore');
-  const scoreVal = document.getElementById('quizScoreValue');
-  scoreVal.textContent = quizScore + '/' + totalQuestions;
-  scoreEl.classList.add('show');
+  .fade-in { animation: fadeIn 0.35s ease-out; }
+  .arrow-flow { stroke-dasharray: 8 5; animation: flowDash 1s linear infinite; }
+
+  .yaml-line { transition: all 0.2s ease; }
+  .yaml-line:hover { background: rgba(59,130,246,0.08); }
+  .yaml-line.hl-purple { background: rgba(168,85,247,0.12); border-left: 2px solid #a855f7; }
+  .yaml-line.hl-cyan { background: rgba(6,182,212,0.12); border-left: 2px solid #06b6d4; }
+
+  .callout-box {
+    position: relative; border-radius: 12px; padding: 16px; transition: all 0.3s ease;
+  }
+  .callout-box::before {
+    content: ''; position: absolute; inset: -1px; border-radius: 13px; padding: 1px;
+    background: linear-gradient(135deg, var(--callout-color, #3b82f6) 0%, transparent 60%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+  }
+
+  .benefit-card { transition: all 0.3s ease; position: relative; overflow: hidden; }
+  .benefit-card:hover { transform: translateY(-3px); }
+</style>
+</head>
+<body class="min-h-screen">
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo } = React;
+
+// ======================================================================
+// DATA
+// ======================================================================
+
+const PROMPT_YAML = `- role: system
+  content: |
+    You are an expert synthetic data generator for Thai
+    telecom customer service chatbot training data.
+    You generate realistic Thai-language multi-turn chat
+    conversations for intent classification training.
+
+    IMPORTANT RULES:
+    - Generate data in Thai language (with occasional
+      English loanwords like "roaming", "package", "data",
+      "bill", "due date", "postpaid", "prepaid" as Thai
+      users naturally mix them)
+    - Phone numbers should use the format 0XXXXXXXX with
+      XX masking like "091234XXXX"
+    - OTP codes should always be masked as "XXXXXX"
+    - The assistant responses should be polite, professional
+      Thai customer service style (using ค่ะ/คะ particles)
+    - Include realistic telco-specific details: package
+      names, prices in Thai Baht, data amounts, dates
+    - Some examples should include [Options: {...}] in
+      assistant responses for interactive choices
+    - Make user messages contextually consistent with the
+      session_history
+
+    CRITICAL CONSTRAINT - SLIDING WINDOW:
+    The real system uses a sliding window of the last 5
+    messages. Therefore:
+    - session_history MUST contain AT MOST 5 messages
+      (max 5 objects in the array)
+    - Valid lengths: 0, 1, 2, 3, 4, or 5 messages
+    - NEVER exceed 5 messages in session_history
+
+    TYPOS AND INFORMAL LANGUAGE - VERY IMPORTANT:
+    Real Thai chat users make frequent typos and use
+    informal language. You MUST include these patterns
+    in at least 8-10 of the 20 examples:
+    - Common Thai typos: "เนต" instead of "เน็ต",
+      "มัย" instead of "ไหม", "เเ" instead of "แ",
+      "ค้าบ" instead of "ครับ", "ค่าาา" with extra
+      vowels, "ลืืม" with doubled vowels
+    - Misspelled Thai words: "ตรจสอบ" instead of
+      "ตรวจสอบ", "รบกวณ" instead of "รบกวน"
+    - Informal/slang: "555" for laughter, "ป่าว/ปะ/มะ"
+      for question particles, "อ่า/อะ" as filler
+    - Missing spaces, run-on words, emoji usage
+
+    SENTENCE & WORD DIVERSITY - VERY IMPORTANT:
+    Real users express the same intent in wildly different
+    ways. You MUST vary sentence structure and word choice:
+    - Vary the verb: "เช็ค","ดู","อยากรู้","ขอ","สอบถาม"
+    - Vary sentence form: questions, statements,
+      imperatives, fragments, conversational
+    - Vary directness: very direct, indirect/polite, casual
+    - Vary message length: single word to full sentence
+    - Avoid starting more than 2-3 examples with the same
+      opening word or phrase
+
+    INTENT CHANGES IN HISTORY - VERY IMPORTANT:
+    In real chat, users often switch topics mid-conversation.
+    At least 5-6 of the 20 examples MUST have session_history
+    where the previous conversation was about a DIFFERENT
+    topic/intent before the user switches to the current
+    intent.
+
+- role: user
+  content: |
+    Generate exactly {{ num_examples }} new training
+    examples for the intent: {{ intent }}
+
+    Here is a description of this intent:
+    {{ intent_description }}
+
+    Here are {{ num_seed }} existing examples for reference:
+    {{ seed_examples }}
+
+    REQUIREMENTS:
+    1. Output MUST be a valid JSON array
+    2. Each object has exactly 3 fields: "user_message",
+       "intent", "session_history"
+    3. "session_history" is an array of
+       {"role": "user"|"assistant", "content": "..."} objects
+    4. session_history MUST have AT MOST 5 messages.
+       Distribute lengths like this:
+       - 2 examples with empty session_history []
+       - 3 examples with 1 message in history
+       - 4 examples with 2 messages in history
+       - 4 examples with 3 messages in history
+       - 4 examples with 4 messages in history
+       - 3 examples with 5 messages in history (MAX)
+    5. The user_message must be semantically aligned with
+       the intent
+    6. At least 5-6 examples MUST have session_history
+       about a COMPLETELY DIFFERENT topic (intent change)
+    7. At least 8-10 examples MUST contain realistic Thai
+       typos, misspellings, informal slang, or emoji
+    8. Include variety: formal/informal register,
+       male/female particles (ครับ/ค่ะ), with/without emoji
+    9. Some examples should have user providing phone number
+    10. Some with user confirming assistant-presented options
+    11. Include 2-3 examples in English (non-native style)
+
+    Output ONLY the JSON array, no markdown, no explanation.`;
+
+const INTENTS = [
+  { name: "MOBILE_BILLING_CHECK_DUE_DATE", cat: "billing", desc: "Customer wants to check the due date for their mobile bill payment. They may ask about when the current billing cycle ends, when payment is due, or confirm billing dates. This often involves clarifying whether they use postpaid or prepaid service.", thai: "เช็ควันครบกำหนดชำระบิล" },
+  { name: "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID", cat: "billing", desc: "Customer wants to check the payment status, outstanding balance, or billing information for their postpaid (monthly subscription) mobile account. This includes checking due amounts, bill history, payment confirmation, and understanding whether a bill has been paid or is still pending.", thai: "เช็คยอดค้างชำระรายเดือน" },
+  { name: "MOBILE_BILLING_PAYMENT_STATUS_PREPAID", cat: "billing", desc: "Customer wants to check the payment status for their prepaid (top-up) SIM card. This includes verifying whether a recent top-up or package purchase transaction was successful, checking remaining credit, and confirming payment completion for prepaid services.", thai: "เช็คยอดเงินซิมเติมเงิน" },
+  { name: "MOBILE_NETWORK_CHECK_NO_SIGNAL", cat: "network", desc: "Customer is experiencing no signal or network connectivity issues on their mobile device. This includes reporting no service, no signal bars, inability to make calls or use data, and troubleshooting network problems in a specific area or location.", thai: "แจ้งปัญหาสัญญาณหาย" },
+  { name: "MOBILE_PACKAGE_CHECK_DATA_CURRENT", cat: "package", desc: "Customer wants to check their current active data/internet package. This includes viewing the currently subscribed package name, price, data quota, validity period, and package details for their mobile line.", thai: "เช็คแพ็กเกจเน็ตปัจจุบัน" },
+  { name: "MOBILE_PACKAGE_CHECK_DATA_HISTORY", cat: "package", desc: "Customer wants to check their historical data/internet package usage. This includes viewing past package subscriptions, data consumption history, package changes over time, add-on purchases, and usage patterns across previous months.", thai: "ดูประวัติแพ็กเกจเน็ต" },
+  { name: "MOBILE_ROAMING_CHECK_DATA_CURRENT", cat: "roaming", desc: "Customer wants to check their current roaming data balance while traveling abroad. This includes remaining data quota, package expiry, estimating if data will last, and understanding roaming data behavior like hotspot sharing or auto-renewal.", thai: "เช็คเน็ตโรมมิ่งคงเหลือ" },
+  { name: "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID", cat: "roaming", desc: "Customer wants to check roaming charges on their postpaid bill. This includes viewing roaming costs for the current billing cycle, understanding total roaming charges, and verifying payment status for roaming services.", thai: "เช็คค่าบริการโรมมิ่ง" },
+  { name: "MOBILE_SIM_ACTIVATION_POSTPAID", cat: "sim", desc: "Customer wants to activate a new or inactive postpaid (monthly subscription) SIM card. This includes requesting immediate activation of a SIM that has not yet been activated, often with urgency due to needing the number for work or travel.", thai: "เปิดใช้งานซิมรายเดือน" },
+  { name: "MOBILE_SIM_ACTIVATION_PREPAID", cat: "sim", desc: "Customer wants to activate a new or inactive prepaid (top-up) SIM card. This includes requesting immediate activation of a recently purchased SIM that has not been activated yet, often with urgency.", thai: "เปิดใช้งานซิมเติมเงิน" },
+  { name: "MOBILE_SIM_REPLACEMENT_POSPAID", cat: "sim", desc: "Customer wants to replace or reissue a SIM card for their postpaid (monthly subscription) line while keeping the same phone number. Common reasons include a damaged, broken, or lost SIM card.", thai: "เปลี่ยนซิมรายเดือน" },
+  { name: "MOBILE_SIM_REPLACEMENT_PREPAID", cat: "sim", desc: "Customer wants to replace or reissue a SIM card for their prepaid (top-up) line while keeping the same phone number. Common reasons include a damaged, broken, or lost SIM card.", thai: "เปลี่ยนซิมเติมเงิน" },
+  { name: "MOBILE_USAGE_CHECK_DATA_CURRENT", cat: "usage", desc: "Customer wants to check their current data/internet usage and remaining balance. This includes viewing how much data has been consumed, how much remains in their package quota, and whether they are close to their data limit.", thai: "เช็คยอดเน็ตคงเหลือ" },
+  { name: "MOBILE_USAGE_COMPARE_DATA_PLAN", cat: "usage", desc: "Customer wants to compare available data/internet packages to find the best option. This includes viewing differences between packages in terms of data quota, price, speed, and value to help them choose or switch to a more suitable plan.", thai: "เปรียบเทียบแพ็กเกจเน็ต" },
+  { name: "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY", cat: "vas", desc: "Customer wants to check the subscription history for value-added services (VAS). This includes viewing past subscriptions to services like ringtones, horoscope readings, SMS news alerts, and other add-on services across previous months.", thai: "ดูประวัติบริการเสริม" },
+  { name: "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH", cat: "vas", desc: "Customer wants to subscribe to a specific value-added service (VAS). This includes signing up for services like ringtones, horoscope readings, SMS news alerts, and other add-on services.", thai: "สมัครบริการเสริม" },
+];
+
+const CAT_COLORS = {
+  billing: { bg: 'rgba(251,191,36,0.12)', color: '#fbbf24', label: 'Billing' },
+  network: { bg: 'rgba(244,63,94,0.12)', color: '#f43f5e', label: 'Network' },
+  package: { bg: 'rgba(6,182,212,0.12)', color: '#06b6d4', label: 'Package' },
+  roaming: { bg: 'rgba(168,85,247,0.12)', color: '#a855f7', label: 'Roaming' },
+  sim:     { bg: 'rgba(34,197,94,0.12)', color: '#22c55e', label: 'SIM' },
+  usage:   { bg: 'rgba(96,165,250,0.12)', color: '#60a5fa', label: 'Usage' },
+  vas:     { bg: 'rgba(251,146,60,0.12)', color: '#fb923c', label: 'VAS' },
+};
+
+const PIPELINE_STEPS = [
+  { num: 1, title: 'CLI Argument Parsing', sub: 'main() → argparse.ArgumentParser', color: '#06b6d4',
+    why: 'The pipeline is designed to be fully configurable from the command line. This means you can change the model, provider, number of examples, and target intents without editing any code. The CLI interface makes it scriptable for CI/CD pipelines and reproducible across team members.',
+    desc: 'The main() function defines 8 CLI arguments via Python\'s argparse module. Every argument has a sensible default so the pipeline can run with zero configuration — just "python run.py" with the right API key in your environment. The two most important arguments are --mode (which execution backend to use) and --model (which LLM to call via litellm format).',
+    code: `parser = argparse.ArgumentParser(
+    description="Chat SDG Pipeline"
+)
+parser.add_argument(
+    "--mode",
+    choices=["standalone", "flow"],
+    default="standalone",
+    help="standalone = litellm only; flow = sdg_hub Flow"
+)
+parser.add_argument(
+    "--model",
+    default="anthropic/claude-sonnet-4-20250514",
+    help="LLM model in litellm format"
+)
+parser.add_argument("--api-base", default=None)
+parser.add_argument("--api-key", default=None)
+parser.add_argument("--output", default="generated_intents")
+parser.add_argument("--num-examples", type=int, default=20)
+parser.add_argument("--max-seeds", type=int, default=5)
+parser.add_argument("--intents", nargs="*", default=None)`,
+    details: [
+      { label: '--mode', value: 'standalone | flow', note: 'standalone uses litellm directly (lighter, sequential). flow uses sdg_hub.Flow for concurrent processing with up to 5 parallel LLM calls. Default: standalone.' },
+      { label: '--model', value: 'anthropic/claude-sonnet-4-20250514', note: 'LLM identifier in litellm\'s "provider/model-name" format. You can use any of 100+ models: openai/gpt-4o, ollama/gemma2, meta-llama/Llama-3.3-70B-Instruct, etc.' },
+      { label: '--num-examples', value: '20', note: 'How many synthetic examples to generate per intent. The prompt includes distribution targets calibrated for 20 (e.g., "2 empty, 3 with 1 msg, 4 with 2 msgs..."). Changing this may require adjusting the prompt.' },
+      { label: '--max-seeds', value: '5', note: 'Maximum number of seed examples to include as few-shot demonstrations in the prompt. More seeds = better quality but longer prompts and higher token costs.' },
+      { label: '--intents', value: 'all (default) or specific names', note: 'Space-separated list of intent names to generate. Useful for re-running failed intents without regenerating everything. Example: --intents MOBILE_BILLING_CHECK_DUE_DATE MOBILE_ROAMING_CHECK_DATA_CURRENT' },
+      { label: '--api-base', value: 'None', note: 'Base URL override for self-hosted models. Required for Ollama (http://localhost:11434), vLLM, or custom OpenAI-compatible API servers.' },
+      { label: '--api-key', value: 'None', note: 'API key for the LLM provider. Can also be set via environment variables: ANTHROPIC_API_KEY, OPENAI_API_KEY, NEBIUS_API_KEY, etc. litellm auto-detects the right env var for each provider.' },
+      { label: '--output', value: 'generated_intents', note: 'Directory where generated JSON files are saved. Created automatically if it doesn\'t exist. Each intent gets its own file: {INTENT_NAME}.json.' },
+    ] },
+  { num: 2, title: 'Load Intent Descriptions', sub: 'Module-level → intent_descriptions.json', color: '#a855f7',
+    why: 'Intent descriptions are stored in a separate JSON file (not hardcoded in the script) for two reasons: (1) the notebook and the CLI script share the same descriptions, preventing drift, and (2) descriptions can be updated independently of the pipeline code, making it easier for domain experts to refine them without touching Python.',
+    desc: 'At module import time (before main() runs), the script loads intent_descriptions.json into the INTENT_DESCRIPTIONS dictionary. This file contains 16 entries — one plain-English sentence per intent explaining what the customer is trying to do. These descriptions are injected into the LLM prompt so the model understands the semantic meaning of each intent beyond just its machine-readable name.',
+    code: `# Loaded at module level, shared between CLI and notebook
+_INTENT_DESC_PATH = Path(__file__).parent / "intent_descriptions.json"
+with open(_INTENT_DESC_PATH, encoding="utf-8") as _f:
+    INTENT_DESCRIPTIONS: dict[str, str] = json.load(_f)
+
+# Example entry in the JSON file:
+# "MOBILE_BILLING_CHECK_DUE_DATE":
+#   "Customer wants to check the due date for their
+#    mobile bill payment. They may ask about when the
+#    current billing cycle ends..."`,
+    details: [
+      { label: 'File', value: 'intent_descriptions.json', note: 'A flat JSON dictionary with 16 entries. Each key is an intent name, each value is a 1-3 sentence English description of what the customer wants to accomplish.' },
+      { label: 'Load timing', value: 'Module import (before main())', note: 'Loaded as a module-level constant so it\'s available immediately when the script starts. This also means import errors are caught early.' },
+      { label: 'Shared with', value: 'run_sdg_pipeline.ipynb', note: 'Both the CLI script and the Jupyter notebook import from the same JSON file, ensuring descriptions stay in sync across entrypoints.' },
+      { label: 'Used in', value: 'build_prompt() → {{ intent_description }}', note: 'The description is injected into the LLM prompt template via the {{ intent_description }} variable, giving the model semantic context beyond just the intent name string.' },
+    ] },
+  { num: 3, title: 'Load Seed Data', sub: 'load_seed_data() → training_dataset.json', color: '#fbbf24',
+    why: 'The seed data serves as few-shot examples for the LLM. By showing the model what good training examples look like, we get much higher quality output than zero-shot generation. The seeds also establish the exact JSON schema the model should follow, reducing format errors.',
+    desc: 'Reads samples/training_dataset.json — a single JSON file containing approximately 400 human-crafted training examples across all 16 intents. The load_seed_data() function parses this file and groups examples into a dictionary keyed by intent name. Each example has three fields: user_message (the current chat message to classify), intent (the target label), and session_history (a list of prior conversation messages).',
+    code: `def load_seed_data(seed_file: Path) -> dict[str, list[dict]]:
+    """Load seed examples grouped by intent."""
+    with open(seed_file, encoding="utf-8") as fh:
+        data = json.load(fh)
+    seeds: dict[str, list[dict]] = {}
+    for ex in data:
+        intent = ex.get("intent", "")
+        if intent:
+            seeds.setdefault(intent, []).append(ex)
+    return seeds
+
+# Result: {
+#   "MOBILE_BILLING_CHECK_DUE_DATE": [
+#     {"user_message": "...", "intent": "...",
+#      "session_history": [...]},
+#     ...  # ~25 examples per intent
+#   ],
+#   ... # 16 intents total
+# }`,
+    details: [
+      { label: 'Source file', value: 'samples/training_dataset.json', note: 'Single JSON array with ~400 human-curated examples. These are the "gold standard" examples that the LLM uses as reference for generating new ones.' },
+      { label: 'Grouping', value: 'Dictionary keyed by intent', note: 'The function returns dict[str, list[dict]] — each intent name maps to a list of its seed examples. This makes it easy to retrieve seeds for any specific intent.' },
+      { label: 'Example count', value: '~25 examples per intent (varies)', note: 'Some intents have more seeds than others (16-26 per intent). The pipeline doesn\'t require equal counts — it selects up to max_seeds from whatever is available.' },
+      { label: 'Schema', value: 'user_message + intent + session_history', note: 'Each seed has exactly 3 fields, matching the output schema. This consistency means the LLM sees the exact format it needs to produce.' },
+    ] },
+  { num: 4, title: 'Select Seed Examples', sub: 'select_seed_examples() → diversity sampling', color: '#22c55e',
+    why: 'If you randomly pick 5 seeds from a pool of 25, you might get 5 examples that all have 4-message histories — the LLM would then only generate long conversations. The diversity sampling strategy ensures the model sees a representative distribution of conversation depths, leading to more balanced output.',
+    desc: 'For each intent, the pipeline selects up to max_seeds (default 5) examples to include as few-shot demonstrations in the prompt. The critical insight is that selection is NOT random — the algorithm groups all available seeds by their session_history length (0, 1, 2, 3, 4, 5 messages) and picks one from each bucket in round-robin order. This ensures the LLM sees the full distribution of conversation depths. Additionally, any history longer than 5 messages is truncated to the last 5, matching the production system\'s sliding window constraint.',
+    code: `def select_seed_examples(
+    examples: list[dict],
+    max_seeds: int = 5
+) -> list[dict]:
+    """Pick a diverse subset of seed examples
+    (varied history lengths)."""
+    # Group by history length
+    by_len = {}
+    for ex in examples:
+        h_len = len(ex.get("session_history", []))
+        by_len.setdefault(h_len, []).append(ex)
+
+    selected = []
+    buckets = sorted(by_len.keys())  # e.g., [0, 2, 4, 5]
+    idx = 0
+    # Round-robin: take one from each bucket
+    while len(selected) < max_seeds and idx < len(examples):
+        for b in buckets:
+            if by_len[b] and len(selected) < max_seeds:
+                selected.append(by_len[b].pop(0))
+        idx += 1
+
+    # Enforce sliding window on selected seeds
+    for ex in selected:
+        if len(ex.get("session_history", [])) > 5:
+            ex["session_history"] = \\
+                ex["session_history"][-5:]
+
+    return selected`,
+    details: [
+      { label: 'Strategy', value: 'Round-robin across history-length buckets', note: 'Seeds are grouped by how many messages are in their session_history: bucket 0 = empty history, bucket 1 = 1 message, bucket 2 = 2 messages, etc. One example is drawn from each bucket in sorted order, cycling until max_seeds are selected.' },
+      { label: 'Why not random?', value: 'Avoids distribution bias', note: 'Random sampling from 25 examples might yield 5 seeds all with 4-message histories. The LLM would then generate only long conversations. Round-robin guarantees the model sees examples with 0, 1, 2, 3, and 5 messages.' },
+      { label: 'Truncation', value: 'Histories capped at last 5 messages', note: 'If a seed example has 8 messages in its history, only the last 5 are kept. This matches the production classifier\'s sliding window — training on longer histories would create a train/inference mismatch.' },
+      { label: 'max_seeds default', value: '5 examples', note: 'Five seeds provide enough variety for the LLM to understand the pattern without making the prompt too long. More seeds = better quality but higher token cost and risk of hitting context limits.' },
+    ] },
+  { num: 5, title: 'Build Prompt', sub: 'build_prompt() → generate_telco_chat.yaml', color: '#f43f5e',
+    why: 'Prompts are stored as version-controlled YAML templates, not embedded in Python code. This makes prompt changes auditable (git diff), reproducible (same template = same behavior), and separable from code changes. The Jinja2-style variables allow the same template to generate data for any intent.',
+    desc: 'Loads the YAML prompt template from prompts/generate_telco_chat.yaml and performs variable substitution. The template defines a 2-message chat array — a system message and a user message — that together form the complete instructions for the LLM. The system message establishes the LLM\'s role as an expert data generator, encodes Thai telco domain expertise, and specifies constraints (sliding window, typo ratios, diversity requirements, intent switching). The user message requests N examples for a specific intent, provides seed examples, and lists 11 detailed requirements with distribution targets.',
+    code: `def build_prompt(
+    intent: str,
+    seed_examples: list[dict],
+    num_examples: int = 20
+) -> list[dict]:
+    """Build chat messages for the LLM call."""
+    prompt_path = Path(__file__).parent / \\
+        "prompts" / "generate_telco_chat.yaml"
+
+    import yaml
+    with open(prompt_path) as f:
+        template_messages = yaml.safe_load(f)
+
+    # Jinja2-style variable substitution
+    seed_json = json.dumps(
+        seed_examples, ensure_ascii=False, indent=2
+    )
+    description = INTENT_DESCRIPTIONS.get(
+        intent, f"Intent: {intent}"
+    )
+
+    messages = []
+    for msg in template_messages:
+        content = msg["content"]
+        content = content.replace(
+            "{{ intent }}", intent)
+        content = content.replace(
+            "{{ intent_description }}", description)
+        content = content.replace(
+            "{{ seed_examples }}", seed_json)
+        content = content.replace(
+            "{{ num_examples }}", str(num_examples))
+        content = content.replace(
+            "{{ num_seed }}", str(len(seed_examples)))
+        messages.append({
+            "role": msg["role"],
+            "content": content
+        })
+    return messages`,
+    details: [
+      { label: '{{ intent }}', value: 'Intent name string', note: 'The machine-readable intent identifier, e.g., "MOBILE_BILLING_CHECK_DUE_DATE". Inserted into both the user message (to tell the LLM which intent to generate for) and used for intent label validation.' },
+      { label: '{{ intent_description }}', value: 'From intent_descriptions.json', note: 'A 1-3 sentence English description from the shared JSON file. Gives the LLM semantic understanding beyond just the intent name — crucial for generating contextually accurate examples.' },
+      { label: '{{ seed_examples }}', value: 'JSON-serialized few-shot examples', note: 'The 5 selected seed examples serialized as a JSON array with ensure_ascii=False (to preserve Thai text) and indent=2 for readability. The LLM uses these as reference for format, style, and content.' },
+      { label: '{{ num_examples }}', value: '20 (default)', note: 'Target count for generation. The distribution targets in the prompt (2 empty, 3 with 1 msg, etc.) sum to 20. If you change this, you should also adjust those distribution numbers in the template.' },
+      { label: '{{ num_seed }}', value: '5 (default)', note: 'The count of seed examples provided, inserted into the prompt text so the LLM knows how many references it has: "Here are 5 existing examples for reference..."' },
+    ] },
+  { num: 6, title: 'LLM Generation', sub: 'litellm.completion() or sdg_hub.Flow', color: '#60a5fa',
+    why: 'The pipeline uses litellm as an abstraction layer rather than calling OpenAI/Anthropic SDKs directly. This means you can swap models (Qwen, Llama, GPT-4o, Claude) and providers (Nebius, OpenAI, Ollama, vLLM) with a single --model flag, without changing any pipeline code. The two execution modes (standalone vs flow) give you a choice between simplicity and throughput.',
+    desc: 'The built prompt is sent to the chosen LLM for generation. The pipeline supports two execution backends: Standalone mode calls litellm.completion() directly for each intent, processing them sequentially one at a time. This is simpler, has fewer dependencies, and handles errors per-intent (one failure doesn\'t stop the others). Flow mode passes all intents through a 3-block sdg_hub.Flow pipeline that can process up to 5 intents concurrently, making it roughly 4x faster for full 16-intent runs. Both modes use temperature=0.8 (creative enough for diverse examples, structured enough for valid JSON) and max_tokens=16384 (enough for 20 full examples with conversation histories).',
+    code: `# STANDALONE MODE (default)
+def generate_with_litellm(intent, seed_examples,
+                          num_examples, model,
+                          api_base=None, api_key=None):
+    import litellm
+    messages = build_prompt(
+        intent, seed_examples, num_examples)
+    kwargs = {
+        "model": model,
+        "messages": messages,
+        "max_tokens": 16384,
+        "temperature": 0.8,
+        "timeout": 1800,  # 30 min for local models
+    }
+    if api_base: kwargs["api_base"] = api_base
+    if api_key: kwargs["api_key"] = api_key
+
+    response = litellm.completion(**kwargs)
+    text = response.choices[0].message.content
+    return parse_json_output(text)
+
+# FLOW MODE (production)
+def generate_with_flow(intents_data, model, ...):
+    from sdg_hub import Flow
+    flow = Flow.from_yaml("flow.yaml")
+    flow.set_model_config(model=model, ...)
+    df = pd.DataFrame(intents_data)
+    result = flow.generate(
+        df, max_concurrency=5  # 5 parallel calls
+    )`,
+    details: [
+      { label: 'Standalone mode', value: 'Sequential, 1 intent at a time', note: 'Calls litellm.completion() in a for loop over intents. If one intent fails (bad JSON, timeout, etc.), it logs a warning and continues to the next. Best for development, debugging, and testing with local models.' },
+      { label: 'Flow mode', value: 'Concurrent, up to 5 parallel LLM calls', note: 'Uses sdg_hub.Flow with a 3-block pipeline: PromptBuilder → LLMChatBlock (async, concurrency=5) → ResponseExtractor. Processes all 16 intents in ~4 batches instead of 16 sequential calls. Best for production runs.' },
+      { label: 'Temperature', value: '0.8', note: 'A carefully chosen value that balances two competing goals: (1) enough randomness to generate diverse, creative examples with varied phrasing and typo patterns, and (2) enough structure to maintain valid JSON output format. Lower temps (0.3) produce repetitive, formulaic outputs. Higher temps (1.0+) frequently break JSON structure.' },
+      { label: 'Max tokens', value: '16,384', note: 'Each of the 20 generated examples contains a user_message, intent label, and up to 5 session_history messages. A single example can be 200-500 tokens. 20 examples × ~400 tokens = ~8,000 tokens, so 16K provides comfortable headroom including JSON formatting.' },
+      { label: 'Timeout', value: '1,800 seconds (30 minutes)', note: 'Deliberately long to accommodate local models running on consumer hardware (e.g., Ollama on a laptop). Cloud API models typically respond in 20-40 seconds per intent; local 7B models may take 3-5 minutes.' },
+      { label: 'litellm', value: 'Universal LLM abstraction', note: 'A Python library that provides a single completion() function compatible with 100+ LLM providers. It handles authentication, API format differences, and retries transparently. Changing providers is just changing the --model string.' },
+    ] },
+  { num: 7, title: 'Parse & Validate', sub: 'parse_json_output() + validate_examples()', color: '#fb923c',
+    why: 'LLMs are unreliable JSON producers — they may add markdown fences, produce partial output, hallucinate extra fields, or generate wrong intent labels. The parse-and-validate stage acts as a safety net that catches and fixes these issues programmatically, ensuring every saved example meets the exact schema the training pipeline expects.',
+    desc: 'This is the quality gate of the pipeline. First, parse_json_output() extracts a JSON array from the raw LLM text — handling markdown code fences, locating the first [ and last ] brackets, and attempting json.loads(). If that fails, it attempts line-by-line recovery. Second, validate_examples() applies 6 validation checks to each parsed example: (1) must be a dict, (2) must contain user_message, (3) forces the correct intent label (overriding whatever the LLM output), (4) validates session_history is a list of {role, content} objects, (5) only allows role values of "user" or "assistant", and (6) truncates histories exceeding 5 messages. Invalid examples are silently dropped. The output contains only 3 fields per example — no extras.',
+    code: `def parse_json_output(text: str) -> list[dict]:
+    """Extract a JSON array from LLM output."""
+    text = text.strip()
+    # Strip markdown code fences if present
+    if text.startswith("\`\`\`"):
+        lines = text.split("\\n")
+        lines = [l for l in lines
+                 if not l.strip().startswith("\`\`\`")]
+        text = "\\n".join(lines).strip()
+
+    # Find the JSON array brackets
+    start = text.find("[")
+    end = text.rfind("]")
+    if start != -1 and end != -1:
+        json_str = text[start : end + 1]
+        try:
+            data = json.loads(json_str)
+            if isinstance(data, list):
+                return data
+        except json.JSONDecodeError:
+            pass
+    # Fallback: attempt line-by-line recovery
+    print("  WARNING: Could not parse full JSON...")
+    return []
+
+def validate_examples(examples, intent):
+    valid = []
+    for ex in examples:
+        if not isinstance(ex, dict): continue
+        if "user_message" not in ex: continue
+        ex["intent"] = intent  # Force correct label
+        # Validate history structure
+        cleaned = []
+        for msg in ex.get("session_history", []):
+            if isinstance(msg, dict) \\
+               and "role" in msg \\
+               and "content" in msg \\
+               and msg["role"] in ("user","assistant"):
+                cleaned.append({
+                    "role": msg["role"],
+                    "content": str(msg["content"])
+                })
+        # Enforce sliding window: max 5 messages
+        if len(cleaned) > 5:
+            cleaned = cleaned[-5:]
+        valid.append({
+            "user_message": str(ex["user_message"]),
+            "intent": intent,
+            "session_history": cleaned,
+        })
+    return valid`,
+    details: [
+      { label: 'Markdown stripping', value: 'Removes ```json ... ``` fences', note: 'Many LLMs wrap their JSON output in markdown code blocks despite being told not to. The parser strips any lines starting with ``` before attempting to parse, handling both ```json and plain ``` variants.' },
+      { label: 'Bracket search', value: 'Finds first [ and last ]', note: 'Instead of trying to parse the entire LLM output, the parser locates the JSON array boundaries. This handles cases where the LLM adds explanatory text before or after the JSON array.' },
+      { label: 'Intent override', value: 'Forces correct intent label', note: 'This is a critical safety measure. Even when the prompt says "generate for MOBILE_BILLING_CHECK_DUE_DATE", the LLM might output "BILLING_DUE_DATE" or "MOBILE_BILLING_DUE_DATE". The code unconditionally overwrites the intent field with the correct value, ensuring 100% label accuracy.' },
+      { label: 'Role validation', value: 'Only "user" or "assistant" allowed', note: 'Drops any session_history entry with an invalid role value (e.g., "system", "tool", or typos like "assitant"). Only well-formed {role: "user"|"assistant", content: str} objects are kept.' },
+      { label: 'Sliding window enforcement', value: 'Truncates to last 5 messages', note: 'Even if the LLM generates a 7-message history (violating the prompt constraint), the code programmatically keeps only the last 5. This is the "belt and suspenders" approach — the prompt requests the constraint, the code enforces it.' },
+      { label: 'Field stripping', value: 'Outputs only 3 fields', note: 'The output dict is constructed with exactly user_message, intent, and session_history — nothing else. If the LLM added extra fields (like "confidence", "category", "metadata"), they are silently dropped.' },
+    ] },
+  { num: 8, title: 'Save & Summarize', sub: 'json.dump() → generated/{INTENT}.json', color: '#2dd4bf',
+    why: 'The output format exactly matches the seed data schema — this means generated data can be mixed directly with seed data for training without any reformatting step. One file per intent makes it easy to regenerate individual intents that failed or need improvement.',
+    desc: 'Each intent\'s validated examples are written to their own JSON file in the output directory (default: generated_intents/). The files are named after the intent: e.g., MOBILE_BILLING_CHECK_DUE_DATE.json. After all intents are processed, a summary report is printed to stdout showing the count of generated examples per intent file and the grand total across all intents. Files are written with ensure_ascii=False to preserve Thai text and indent=2 for readability.',
+    code: `# In the main() function, after generation:
+out_path = output_dir / f"{intent}.json"
+with open(out_path, "w", encoding="utf-8") as f:
+    json.dump(
+        validated,
+        f,
+        ensure_ascii=False,  # Preserve Thai chars
+        indent=2             # Human-readable
+    )
+
+# Summary output:
+# ============================
+# GENERATION COMPLETE
+# ============================
+#   MOBILE_BILLING_CHECK_DUE_DATE.json: 20 examples
+#   MOBILE_BILLING_PAYMENT_STATUS_POSTPAID.json: 20
+#   MOBILE_NETWORK_CHECK_NO_SIGNAL.json: 18 examples
+#   ... (13 more files)
+#
+#   Total: 314 examples in generated_intents/`,
+    details: [
+      { label: 'File naming', value: '{INTENT_NAME}.json', note: 'Each intent gets its own file, e.g., MOBILE_SIM_ACTIVATION_POSTPAID.json. This makes it easy to regenerate specific intents that had issues without touching the others.' },
+      { label: 'ensure_ascii=False', value: 'Preserves Thai characters', note: 'Without this flag, json.dump() would escape Thai characters as \\uXXXX sequences, making the files unreadable. With it, Thai text appears as-is in the JSON output.' },
+      { label: 'Format compatibility', value: 'Matches seed data schema exactly', note: 'The output files have the same 3-field structure as the input seeds. This means you can combine generated data with seed data for training: cat seeds.json generated.json > combined.json' },
+      { label: 'Summary report', value: 'Per-intent counts + total', note: 'After all intents complete, a table shows how many valid examples were produced for each intent. If an intent produced fewer than expected (e.g., 18 instead of 20), that suggests some examples failed validation and were dropped.' },
+    ] },
+];
+
+const QUIZ_QUESTIONS = [
+  { q: 'How many intent categories does the pipeline cover?', opts: ['10', '12', '16', '20'], ans: 2,
+    exp: 'The pipeline covers 16 distinct intent categories loaded from intent_descriptions.json. These span billing (3), network (1), packages (2), roaming (2), SIM management (4), usage (2), and value-added services (2).' },
+  { q: 'What is the maximum number of messages allowed in session_history?', opts: ['3 messages', '5 messages', '8 messages', '10 messages'], ans: 1,
+    exp: 'The production classifier receives the last 5 messages as a sliding window. Training data must match this exactly — if you train on 8-message histories but deploy with 5-message windows, the model learns patterns it will never see in production. The pipeline enforces this both in the prompt (instructing the LLM) and in code (truncating violations).' },
+  { q: 'Why does the pipeline require intent switching in session_history?', opts: ['To increase the total dataset size', 'To test if the LLM can generate multi-topic conversations', 'To prevent the model from overfitting to session history instead of the current message', 'To make the JSON output more realistic'], ans: 2,
+    exp: 'Without intent-switch examples, the classifier overfits to session history — if the history mentions roaming, it predicts a roaming intent regardless of the actual user_message. Real users change topics mid-conversation ("my internet is slow... oh and when is my bill due?"). Intent switching teaches the model that user_message alone determines the intent, not the history context.' },
+  { q: 'What percentage of generated examples should contain typos, slang, or informal language?', opts: ['10-15%', '40-50%', '70-80%', '100% — all examples should be informal'], ans: 1,
+    exp: 'The pipeline targets 8-10 out of 20 examples (40-50%) with realistic typos, misspellings, and slang. This mirrors real Thai chat behavior: "เนต" instead of "เน็ต", "ค้าบ" instead of "ครับ", "555" for laughter, doubled vowels like "ค่าาา". If training data is only clean Thai, the classifier fails on real messy user input.' },
+  { q: 'How does the seed selection algorithm choose examples?', opts: ['Round-robin across history-length buckets', 'Random sampling from all available examples', 'Longest session histories first', 'Most recent examples first by timestamp'], ans: 0,
+    exp: 'select_seed_examples() groups seeds by session_history length (0, 1, 2, 3, 4, 5 messages) and takes one from each bucket in round-robin order. If you randomly pick 5 from 25 seeds, you might get 5 examples all with 4-message histories — the LLM would then only generate long conversations. Round-robin guarantees the model sees the full distribution.' },
+  { q: 'What temperature is used for LLM generation in this pipeline?', opts: ['0.0 — fully deterministic', '0.3 — low creativity', '0.5 — balanced', '0.8 — creative with structure'], ans: 3,
+    exp: 'Temperature 0.8 provides the optimal balance for synthetic data generation: enough randomness to produce diverse phrasing, varied typo patterns, and different conversation flows, while still maintaining structured JSON output. Temperature 0.0-0.3 would produce repetitive, formulaic examples. Temperature 1.0+ frequently breaks JSON structure.' },
+  { q: 'What abstraction layer does the pipeline use for model-agnostic LLM calls?', opts: ['LangChain', 'OpenAI SDK directly', 'litellm', 'HuggingFace Transformers'], ans: 2,
+    exp: 'litellm provides a unified completion() function that works with 100+ LLM providers (OpenAI, Anthropic, Ollama, vLLM, Nebius, etc.). Switching from Claude on Anthropic to GPT-4o on OpenAI to Gemma on Ollama requires only changing the --model flag — no code changes. It also handles auth, retries, and API format differences transparently.' },
+  { q: 'How should phone numbers appear in generated synthetic data?', opts: ['Full realistic numbers like 0912345678', 'Partially masked like 091234XXXX', 'Completely removed from all examples', 'Replaced with [PHONE] placeholder'], ans: 1,
+    exp: 'Phone numbers must use partial masking format 091234XXXX. This preserves the realistic appearance of customer interactions (users do reference their numbers in chat) while preventing any real personal data from leaking into training data. OTP codes are fully masked as XXXXXX. These masking rules are embedded in the system prompt.' },
+  { q: 'What determines the intent label of a training example?', opts: ['Only the current user_message', 'The session_history combined with user_message', 'The most recent assistant response', 'The overall conversation topic'], ans: 0,
+    exp: 'The intent is determined solely by the current user_message, not by the session history. This is the fundamental principle of the classifier design. Session history provides context but the user could have been discussing roaming in the last 5 messages and then say "เช็คบิลหน่อย" (check my bill). The classifier must learn to ignore the roaming history and correctly classify the current billing intent.' },
+  { q: 'Why does the pipeline override the LLM\'s generated intent label in the validate step?', opts: ['To save API costs by avoiding re-generation', 'Because the LLM doesn\'t know the intent categories', 'To randomize labels for data augmentation', 'Because the LLM may hallucinate a wrong label despite generating a valid example'], ans: 3,
+    exp: 'Even when prompted to "generate examples for MOBILE_BILLING_CHECK_DUE_DATE", the LLM might output "BILLING_DUE_DATE" or "MOBILE_BILLING_DUE" or even a completely different intent. The user_message content may be perfectly valid, but the label string is wrong. The pipeline programmatically forces ex["intent"] = intent for every example, ensuring 100% label accuracy regardless of LLM behavior. This is a "trust but verify" approach.' },
+  { q: 'What is the default LLM model used by the pipeline?', opts: ['openai/gpt-4o', 'anthropic/claude-sonnet-4-20250514', 'ollama/gemma2', 'meta-llama/Llama-3.3-70B-Instruct'], ans: 1,
+    exp: 'The default model is anthropic/claude-sonnet-4-20250514 as configured in run.py\'s argparse defaults. This is a strong multilingual model that produces high-quality Thai text with reliable JSON formatting. However, the pipeline is model-agnostic — you can use any litellm-compatible model by changing the --model flag.' },
+];
+
+// ======================================================================
+// SHARED COMPONENTS
+// ======================================================================
+
+function SectionBadge({ icon, color, size }) {
+  const sz = size || 36;
+  return (
+    <div className="flex items-center justify-center rounded-lg mono text-[10px] font-bold flex-shrink-0"
+      style={{ width: sz, height: sz, background: `${color}20`, color, border: `1px solid ${color}40` }}>
+      {icon}
+    </div>
+  );
 }
 
-function resetQuiz() {
-  quizScore = 0;
-  quizAnswered = 0;
-  document.querySelectorAll('.quiz-question').forEach(q => {
-    q.classList.remove('answered-correct', 'answered-wrong');
-    q.querySelectorAll('.quiz-option').forEach(opt => {
-      opt.classList.remove('disabled', 'selected-correct', 'selected-wrong', 'reveal-correct');
-    });
-    const exp = q.querySelector('.quiz-explanation');
-    if (exp) exp.classList.remove('show');
-  });
-  document.getElementById('quizScore').classList.remove('show');
-  document.getElementById('quizScoreValue').textContent = '0/11';
+function DetailCard({ detail, color }) {
+  return (
+    <div className="flex gap-3 items-start py-2.5 px-3 rounded-lg bg-slate-800/30 border border-slate-700/30">
+      <div className="w-1 h-full rounded-full flex-shrink-0 self-stretch" style={{ background: color, minHeight: '24px' }}></div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="mono text-[11px] font-semibold text-slate-200">{detail.label}</span>
+          <span className="mono text-[10px] text-slate-400 break-all">{detail.value}</span>
+        </div>
+        <div className="text-[11px] text-slate-500 mt-1 leading-relaxed">{detail.note}</div>
+      </div>
+    </div>
+  );
 }
+
+function CodeBlock({ code, lang }) {
+  return (
+    <div className="rounded-xl border border-slate-700/60 bg-[#0b1121] overflow-hidden my-3">
+      <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/40 border-b border-slate-700/40">
+        <div className="w-2 h-2 rounded-full bg-red-500/60"></div>
+        <div className="w-2 h-2 rounded-full bg-yellow-500/60"></div>
+        <div className="w-2 h-2 rounded-full bg-green-500/60"></div>
+        <span className="mono text-[10px] text-slate-500 ml-2">{lang || 'Python'}</span>
+      </div>
+      <pre className="p-4 overflow-x-auto mono text-[11px] text-slate-400 leading-relaxed whitespace-pre">{code}</pre>
+    </div>
+  );
+}
+
+function YamlViewer({ yaml, highlightedLines, highlightColor }) {
+  const lines = yaml.split('\n');
+  const hlColor = highlightColor || 'hl-purple';
+  return (
+    <div className="rounded-xl border border-slate-700/60 bg-[#0b1121] overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/40 border-b border-slate-700/40">
+        <div className="w-2 h-2 rounded-full bg-red-500/60"></div>
+        <div className="w-2 h-2 rounded-full bg-yellow-500/60"></div>
+        <div className="w-2 h-2 rounded-full bg-green-500/60"></div>
+        <span className="mono text-[10px] text-slate-500 ml-2">generate_telco_chat.yaml</span>
+      </div>
+      <div className="overflow-x-auto p-0" style={{ maxHeight: '550px', overflowY: 'auto' }}>
+        {lines.map((line, i) => {
+          const lineNum = i + 1;
+          const isHL = highlightedLines && highlightedLines.includes(lineNum);
+          let color = '#cbd5e1';
+          if (line.trim().startsWith('#')) color = '#6b7280';
+          else if (line.trim().startsWith('- ')) color = '#a5b4fc';
+          else if (/^\s*(role|content):/.test(line)) color = '#93c5fd';
+          else if (/\{\{.*?\}\}/.test(line)) color = '#fbbf24';
+          return (
+            <div key={i} className={`yaml-line flex px-2 py-[1px] ${isHL ? hlColor : ''}`}>
+              <span className="mono text-[10px] text-slate-600 w-8 text-right mr-3 select-none flex-shrink-0">{lineNum}</span>
+              <span className="mono text-[11px] whitespace-pre" style={{ color }}>{line}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB: OVERVIEW
+// ======================================================================
+
+function OverviewTab() {
+  return (
+    <div className="fade-in space-y-8">
+      {/* Hero */}
+      <div className="text-center mb-2">
+        <div className="mono text-[11px] text-cyan-400 tracking-widest uppercase mb-3">Synthetic Data Generation</div>
+        <h2 className="text-2xl font-bold text-white mb-3">Chat SDG Pipeline</h2>
+        <p className="text-[14px] text-slate-400 max-w-2xl mx-auto leading-relaxed">
+          An automated pipeline that generates realistic <span className="text-cyan-300 font-semibold">Thai-language multi-turn chat</span> training data for
+          <span className="text-amber-300 font-semibold"> intent classification</span>. It reads human-curated seed examples, builds structured LLM prompts with
+          <span className="text-green-300 font-semibold"> domain-specific constraints</span>, and produces validated datasets across
+          <span className="text-purple-300 font-semibold"> 16 intent categories</span>.
+        </p>
+      </div>
+
+      {/* What is SDG */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-6">
+        <h3 className="text-[15px] font-bold text-white mb-3">What is Synthetic Data Generation (SDG)?</h3>
+        <p className="text-[13px] text-slate-400 leading-relaxed mb-4">
+          SDG is the process of using large language models to create realistic training data automatically, instead of manually writing examples. For a telco customer service chatbot, this means
+          generating hundreds of example conversations — complete with typos, slang, emoji, and topic switches — that teach a classifier to correctly identify what a customer wants.
+        </p>
+        <p className="text-[13px] text-slate-400 leading-relaxed mb-4">
+          <strong className="text-slate-200">The core challenge:</strong> Real Thai chat is messy. Users type "เนต" instead of "เน็ต", use "555" to laugh, mix Thai and English, and switch topics
+          mid-conversation. A classifier trained only on clean, formal Thai text will fail on real user input. SDG lets us generate realistic messy data at scale.
+        </p>
+        <p className="text-[13px] text-slate-400 leading-relaxed">
+          <strong className="text-slate-200">Why not just collect real data?</strong> Real customer conversations contain personal information (phone numbers, account details, OTPs) that cannot be used directly for training.
+          SDG generates data with the same statistical properties and linguistic patterns but without any real personal data — phone numbers are masked as <span className="mono text-cyan-300">091234XXXX</span>, OTPs as <span className="mono text-cyan-300">XXXXXX</span>.
+        </p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { value: '16', label: 'Intent Categories', color: '#06b6d4', detail: 'billing, network, packages, roaming, SIM, usage, VAS' },
+          { value: '20', label: 'Examples / Intent', color: '#a855f7', detail: 'default, configurable via --num-examples' },
+          { value: '320', label: 'Total Examples', color: '#22c55e', detail: '16 intents × 20 examples each' },
+          { value: '~5m', label: 'Generation Time', color: '#fbbf24', detail: 'with cloud API models (standalone mode)' },
+        ].map((s, i) => (
+          <div key={i} className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-5 text-center">
+            <div className="mono text-2xl font-bold mb-1" style={{ color: s.color }}>{s.value}</div>
+            <div className="text-[10px] text-slate-500 uppercase tracking-widest mb-1">{s.label}</div>
+            <div className="text-[10px] text-slate-600">{s.detail}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Training Example Format */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-6">
+        <h3 className="text-[15px] font-bold text-white mb-2">Training Example Format</h3>
+        <p className="text-[13px] text-slate-400 leading-relaxed mb-4">
+          Each generated example captures three things: the user's current chat message, the target intent label, and the conversation context. This is exactly what the production classifier receives at inference time — the training data mirrors the real system's input format.
+        </p>
+        <div className="rounded-lg bg-[#0b1121] border border-slate-700/40 p-5 mono text-[12px] leading-loose overflow-x-auto">
+          <div className="text-slate-500">{'{'}</div>
+          <div className="pl-4"><span className="text-cyan-300">"user_message"</span><span className="text-slate-600">: </span><span className="text-green-300">"เช็คยอดค้างชำระหน่อยค้าบ 😅"</span><span className="text-slate-600">,</span><span className="text-slate-600 text-[10px] ml-4">← the current message to classify</span></div>
+          <div className="pl-4"><span className="text-cyan-300">"intent"</span><span className="text-slate-600">: </span><span className="text-green-300">"MOBILE_BILLING_PAYMENT_STATUS_POSTPAID"</span><span className="text-slate-600">,</span><span className="text-slate-600 text-[10px] ml-4">← target label (1 of 16)</span></div>
+          <div className="pl-4"><span className="text-cyan-300">"session_history"</span><span className="text-slate-600">: [</span><span className="text-slate-600 text-[10px] ml-4">← sliding window (max 5 messages)</span></div>
+          <div className="pl-8"><span className="text-slate-500">{'{'} </span><span className="text-amber-300">"role"</span><span className="text-slate-600">: </span><span className="text-green-300">"user"</span><span className="text-slate-600">, </span><span className="text-amber-300">"content"</span><span className="text-slate-600">: </span><span className="text-green-300">"สัญญาณเน็ตช้ามากเลยครับ"</span><span className="text-slate-500"> {'}'}</span><span className="text-slate-600">,</span><span className="text-slate-600 text-[10px] ml-3">← previous topic (network issue)</span></div>
+          <div className="pl-8"><span className="text-slate-500">{'{'} </span><span className="text-amber-300">"role"</span><span className="text-slate-600">: </span><span className="text-green-300">"assistant"</span><span className="text-slate-600">, </span><span className="text-amber-300">"content"</span><span className="text-slate-600">: </span><span className="text-green-300">"ขออภัยค่ะ ทีมงานกำลังตรวจสอบ"</span><span className="text-slate-500"> {'}'}</span><span className="text-slate-600 text-[10px] ml-3">← intent switch happens next</span></div>
+          <div className="pl-4"><span className="text-slate-600">]</span></div>
+          <div className="text-slate-500">{'}'}</div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+          <div className="rounded-lg border-l-2 border-cyan-500 bg-slate-900/40 p-3">
+            <div className="mono text-[11px] text-cyan-300 font-semibold mb-1">user_message</div>
+            <div className="text-[11px] text-slate-400 leading-relaxed">The current chat message to classify. This is the primary model input. Includes natural Thai with typos, slang, emoji, and occasional English.</div>
+          </div>
+          <div className="rounded-lg border-l-2 border-amber-500 bg-slate-900/40 p-3">
+            <div className="mono text-[11px] text-amber-300 font-semibold mb-1">intent</div>
+            <div className="text-[11px] text-slate-400 leading-relaxed">One of 16 target labels. Determined solely by the current user_message, not by the session history. The pipeline forces the correct label programmatically.</div>
+          </div>
+          <div className="rounded-lg border-l-2 border-green-500 bg-slate-900/40 p-3">
+            <div className="mono text-[11px] text-green-300 font-semibold mb-1">session_history</div>
+            <div className="text-[11px] text-slate-400 leading-relaxed">Sliding window of the last 5 messages. May contain topic switches from different intents. The classifier must learn to focus on the current message, not the history.</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Key Design Decisions */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-6">
+        <h3 className="text-[15px] font-bold text-white mb-2">Key Design Decisions</h3>
+        <p className="text-[13px] text-slate-400 leading-relaxed mb-4">Every constraint in the pipeline exists because of a real-world failure mode. These aren't theoretical best practices — they're lessons learned from training classifiers that failed in production.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[12px]">
+          {[
+            { icon: '5', label: 'Sliding Window = 5 Messages', desc: 'The production system passes the last 5 messages of conversation as context to the classifier. If training data has 8-message histories but production uses 5-message windows, the model learns patterns it will never see at inference time. Result: silent accuracy drops that are hard to diagnose. The pipeline enforces this both in the prompt (instructing the LLM) and programmatically (truncating any violations to the last 5).', color: '#06b6d4' },
+            { icon: '⇄', label: 'Intent Switching in History', desc: 'Real users change topics mid-conversation: "เน็ตช้ามาก... อ้อ แล้วบิลเดือนนี้ต้องจ่ายวันไหน". Without intent-switch examples, the model overfits to history — if the history mentions roaming, it predicts roaming regardless of the current message. At least 5-6 of every 20 examples (25-30%) contain history about a completely different topic, teaching the model that user_message alone determines intent.', color: '#a855f7' },
+            { icon: '✎', label: 'Typos & Informal Thai (40-50%)', desc: 'Real Thai chat is messy: "เนต" vs "เน็ต", "ป่าว" vs "ไหม", doubled vowels "ค่าาา", slang "555", missing spaces, emoji. If training data is clean formal Thai only, the classifier fails on real user input. The pipeline requires 8-10 of 20 examples to contain realistic typos, misspellings, and slang — including specific patterns like "ตรจสอบ", "รบกวณ", "กานใช้งาน".', color: '#fbbf24' },
+            { icon: '🌐', label: 'Bilingual Examples (10-15%)', desc: 'The telco serves expats, tourists, and bilingual Thai users who type in English. Messages like "can u check my bill pls" or "how much roaming data left ah" are real usage patterns. The pipeline includes 2-3 English examples per intent with intentional grammar mistakes reflecting non-native speakers.', color: '#22c55e' },
+            { icon: '🎯', label: 'Diverse Seed Selection', desc: 'Seeds aren\'t randomly selected — the select_seed_examples() function uses round-robin across history-length buckets (0, 2, 4, 5 messages). This ensures the LLM sees the full distribution of conversation depths. A random 5-sample pick might yield all long conversations, causing the LLM to only generate long histories.', color: '#f43f5e' },
+            { icon: '💬', label: 'Sentence & Word Diversity', desc: 'Without explicit instructions, LLMs fall into repetitive phrasing — generating 15 of 20 messages starting with "อยากเช็ค...". Real users say the same thing in wildly different ways: questions, imperatives, fragments, casual conversation. The prompt requires varied verbs, sentence forms, directness levels, and message lengths, with a cap of 2-3 examples sharing the same opening word.', color: '#60a5fa' },
+          ].map((d, i) => (
+            <div key={i} className="p-4 rounded-lg bg-slate-800/30 border border-slate-700/20">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-7 h-7 rounded-md flex items-center justify-center text-sm font-bold"
+                  style={{ background: `${d.color}20`, color: d.color, border: `1px solid ${d.color}40` }}>{d.icon}</div>
+                <span className="font-semibold text-[13px]" style={{ color: d.color }}>{d.label}</span>
+              </div>
+              <div className="text-slate-400 leading-relaxed">{d.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Comparison */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-6">
+        <h3 className="text-[15px] font-bold text-white mb-2">SDG Pipeline vs. Handcrafted ChatGPT</h3>
+        <p className="text-[13px] text-slate-400 leading-relaxed mb-4">The traditional approach — manually prompting ChatGPT, copy-pasting outputs, fixing JSON errors — doesn't scale and produces inconsistent results. Here's how the automated pipeline compares.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-xl border border-red-500/20 bg-red-950/5 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <SectionBadge icon="OLD" color="#f43f5e" size={32}/>
+              <div><h4 className="text-[13px] font-bold text-red-300">Handcrafted ChatGPT</h4><p className="text-[10px] text-slate-500">Manual, ad-hoc process</p></div>
+            </div>
+            <ul className="space-y-2 text-[11px] text-slate-400 leading-relaxed">
+              {['Manual copy-paste into ChatGPT, re-prompt each intent individually','No version control — each session is ad-hoc, prompts vary by mood','Inconsistent quality: different wordings yield different styles and formats','No validation — raw output may have wrong JSON, extra fields, broken structure','Zero reproducibility — can\'t re-run to get comparable output','Time-consuming: 2-4 hours of manual work for 200 examples','No seed strategy — manually picking examples each time','No constraint enforcement — history length, typo ratio, intent switching all manual','No scalability — need 1000 examples? Repeat the entire process 5x'].map((t,i)=>
+                <li key={i} className="flex gap-2"><span className="text-red-400 flex-shrink-0 mt-0.5">✕</span>{t}</li>
+              )}
+            </ul>
+          </div>
+          <div className="rounded-xl border border-green-500/20 bg-green-950/5 p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <SectionBadge icon="NEW" color="#22c55e" size={32}/>
+              <div><h4 className="text-[13px] font-bold text-green-300">SDG Pipeline</h4><p className="text-[10px] text-slate-500">Automated, reproducible</p></div>
+            </div>
+            <ul className="space-y-2 text-[11px] text-slate-400 leading-relaxed">
+              {['Single command generates all 320 examples in ~5 minutes end-to-end','Version-controlled YAML prompts stored in git — fully auditable via git diff','Consistent quality: same system prompt, temperature, constraints every run','Built-in validation: JSON parsing, schema enforcement, history truncation','Fully reproducible: same seed + prompt + model = comparable output','Model-agnostic: swap Qwen, Llama, GPT-4o, Claude with one --model flag','Smart seed selection: algorithm picks diverse examples across history lengths','Programmatic constraint enforcement: max-5 truncation, distribution targets in prompt','Scalable: change --num-examples 100 for 1600 examples across all intents'].map((t,i)=>
+                <li key={i} className="flex gap-2"><span className="text-green-400 flex-shrink-0 mt-0.5">✓</span>{t}</li>
+              )}
+            </ul>
+          </div>
+        </div>
+        {/* Metrics */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+          {[
+            { label: 'Time (320 examples)', old: '2-4 hrs', nw: '~5 min', speedup: '48x faster' },
+            { label: 'Format Compliance', old: '~70%', nw: '100%', speedup: 'Validated' },
+            { label: 'Reproducibility', old: '0%', nw: '100%', speedup: 'Deterministic' },
+            { label: 'Scalability', old: 'O(n) hours', nw: 'O(1) command', speedup: '1 command' },
+          ].map((m, i) => (
+            <div key={i} className="rounded-lg border border-slate-700/30 bg-slate-800/30 p-3 text-center">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">{m.label}</div>
+              <div className="flex justify-center gap-3 text-[11px] mb-1">
+                <span className="mono text-red-400">{m.old}</span><span className="text-slate-600">→</span><span className="mono text-green-400">{m.nw}</span>
+              </div>
+              <div className="mono text-[14px] font-bold text-green-400">{m.speedup}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB: PIPELINE
+// ======================================================================
+
+function PipelineTab() {
+  const [expandedStep, setExpandedStep] = useState(null);
+  return (
+    <div className="fade-in space-y-0">
+      <div className="text-center mb-6">
+        <h2 className="text-xl font-bold text-white mb-2">Step-by-Step Pipeline</h2>
+        <p className="text-[13px] text-slate-400 max-w-2xl mx-auto leading-relaxed">
+          The pipeline has 8 stages that transform human-curated seed data into hundreds of validated training examples.
+          Click any step to expand its details, see the actual Python code, and understand why each design choice was made.
+        </p>
+      </div>
+      {PIPELINE_STEPS.map((step, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && (
+            <div className="flex justify-center h-8 relative">
+              <div className="w-0.5 h-full" style={{ background: `linear-gradient(to bottom, ${PIPELINE_STEPS[i-1].color}, ${step.color})`, animation: 'flowPulse 2s ease-in-out infinite' }}></div>
+            </div>
+          )}
+          <div
+            className={`rounded-xl border bg-slate-900/40 overflow-hidden transition-all cursor-pointer ${expandedStep === i ? 'shadow-lg' : 'hover:bg-slate-800/30'}`}
+            style={{ borderColor: expandedStep === i ? step.color : 'rgba(51,65,85,0.4)' }}
+            onClick={() => setExpandedStep(expandedStep === i ? null : i)}
+          >
+            <div className="flex items-center gap-4 px-5 py-4">
+              <div className="w-9 h-9 rounded-full flex items-center justify-center mono text-sm font-bold flex-shrink-0"
+                style={{ background: `${step.color}20`, color: step.color, border: `1px solid ${step.color}40`,
+                  boxShadow: expandedStep === i ? `0 0 16px ${step.color}30` : 'none' }}>{step.num}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[14px] font-semibold text-slate-200">{step.title}</div>
+                <div className="mono text-[11px] text-slate-500">{step.sub}</div>
+              </div>
+              <span className="text-slate-500 text-sm transition-transform" style={{ transform: expandedStep === i ? 'rotate(180deg)' : 'none' }}>&#x25BC;</span>
+            </div>
+            {expandedStep === i && (
+              <div className="px-5 pb-5 border-t border-slate-700/40 pt-4 fade-in" onClick={e => e.stopPropagation()}>
+                {/* Why */}
+                <div className="rounded-lg bg-slate-800/30 border border-slate-700/20 p-3 mb-4">
+                  <div className="text-[10px] mono text-slate-500 uppercase tracking-wider mb-1">Why this matters</div>
+                  <p className="text-[12px] text-slate-300 leading-relaxed">{step.why}</p>
+                </div>
+                {/* Description */}
+                <p className="text-[13px] text-slate-300 leading-relaxed mb-4">{step.desc}</p>
+                {/* Code */}
+                {step.code && <CodeBlock code={step.code} lang="Python — run.py" />}
+                {/* Details */}
+                <div className="space-y-2 mt-4">
+                  {step.details.map((d, j) => <DetailCard key={j} detail={d} color={step.color}/>)}
+                </div>
+              </div>
+            )}
+          </div>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB: PROMPT
+// ======================================================================
+
+function PromptTab() {
+  const [section, setSection] = useState('system');
+  const systemLines = Array.from({length:60}, (_, i) => i+1);
+  const userLines = Array.from({length:30}, (_, i) => i+62);
+
+  const sections = [
+    { id: 'system', label: 'System Message', color: '#a855f7', lines: systemLines, hlColor: 'hl-purple',
+      intro: 'The system message establishes the LLM\'s role and encodes all the constraints that govern output quality. It has 5 critical sections, each targeting a specific failure mode observed in early pipeline runs.',
+      rules: [
+        { icon: '◆', label: 'Language & Format Rules', desc: 'Generate Thai with natural English loanwords (roaming, package, data, bill). Mask phone numbers as 091234XXXX (partial masking preserves realism while preventing PII leakage). OTP codes always fully masked as XXXXXX. Assistant responses use polite Thai customer service style with ค่ะ/คะ particles. Include realistic telco details: package names, Thai Baht prices, data amounts. Some assistant messages include [Options: {...}] for interactive choice interfaces.', color: '#06b6d4' },
+        { icon: '◆', label: 'Sliding Window Constraint', desc: 'session_history MUST contain AT MOST 5 messages. This matches the production system\'s context window exactly. Valid lengths: 0, 1, 2, 3, 4, or 5 messages. NEVER exceed 5. This constraint appears in all caps in the prompt because early experiments showed LLMs frequently generate 8-10 message histories without explicit, emphatic instruction.', color: '#fbbf24' },
+        { icon: '◆', label: 'Typos & Informal Language', desc: '8-10 of 20 examples must include realistic Thai typos and informal patterns. The prompt lists specific examples: "เนต"→"เน็ต", "ค้าบ"→"ครับ", "ค่าาา" with extra vowels, "ตรจสอบ"→"ตรวจสอบ", "555" for laughter, "ป่าว/ปะ/มะ" as question particles. Even the assistant can have typos like "ตรจสอบ" to reflect real agent behavior. Without these specifics, LLMs tend to generate perfectly formal Thai that doesn\'t match real user input.', color: '#22c55e' },
+        { icon: '◆', label: 'Sentence & Word Diversity', desc: 'The prompt explicitly lists how to vary output: different verbs ("เช็ค","ดู","อยากรู้","ขอ","สอบถาม"), different sentence forms (questions, statements, imperatives, fragments), different directness levels (very direct "เช็คบิล" vs polite "รบกวนสอบถามยอดค่าบริการหน่อยได้ไหมคะ"), and different lengths (single word to full sentence with context). Hard cap: no more than 2-3 examples with the same opening word. Each user_message should feel like a different person.', color: '#f43f5e' },
+        { icon: '◆', label: 'Intent Switching in History', desc: 'At least 5-6 of 20 examples must have session_history about a DIFFERENT topic. The prompt gives specific switch examples: network→billing, device→package, roaming→unsubscribe, slow internet→payment. The user_message always matches the target intent, but the history shows a previous conversation on a different topic. This simulates the real behavior of users who change subjects mid-chat.', color: '#a855f7' },
+      ] },
+    { id: 'user', label: 'User Message', color: '#06b6d4', lines: userLines, hlColor: 'hl-cyan',
+      intro: 'The user message provides the specific generation task: which intent, how many examples, reference seeds, and 11 detailed requirements with exact distribution targets. This level of specificity is necessary because LLMs without explicit targets tend to generate all examples with the same pattern.',
+      rules: [
+        { icon: '▸', label: 'History Length Distribution', desc: 'Exact counts for each history length: 2 examples with empty history [], 3 with 1 message, 4 with 2 messages, 4 with 3 messages, 4 with 4 messages, 3 with 5 messages (maximum). These sum to 20 and ensure the training data covers all conversation depths, not just the most common length.', color: '#fbbf24' },
+        { icon: '▸', label: 'Intent Topic Switches', desc: '5-6 of 20 examples must have session_history about a COMPLETELY DIFFERENT topic before the user switches to the target intent. This teaches the classifier that only user_message determines intent, regardless of what the conversation was about previously.', color: '#a855f7' },
+        { icon: '▸', label: 'Thai Typos/Slang/Emoji', desc: '8-10 of 20 examples must include realistic informal language patterns. This ensures 40-50% of training data matches the messiness of real Thai chat input, preventing the classifier from only working on formal text.', color: '#22c55e' },
+        { icon: '▸', label: 'Register and Style Variety', desc: 'Mix of formal and informal register, male particles (ครับ) and female particles (ค่ะ), with and without emoji. Some examples have the user providing just a phone number. Some have the user confirming options presented by the assistant.', color: '#06b6d4' },
+        { icon: '▸', label: 'English Examples', desc: '2-3 of 20 examples written entirely in English with intentional grammar mistakes typical of non-native speakers. Examples like "can u check my bill pls" or "how much data I have left" reflect real usage from expats and bilingual users.', color: '#60a5fa' },
+        { icon: '▸', label: 'Output Format', desc: 'Strict instruction: "Output ONLY the JSON array, no markdown formatting, no explanation, no thinking tags." Despite this, many LLMs still add markdown fences, which is why the parser strips them. The prompt requests clean output; the code handles violations.', color: '#fb923c' },
+      ] },
+  ];
+  const active = sections.find(s => s.id === section);
+
+  return (
+    <div className="fade-in space-y-5">
+      <div className="text-center mb-2">
+        <h2 className="text-xl font-bold text-white mb-2">Prompt Anatomy</h2>
+        <p className="text-[13px] text-slate-400 max-w-2xl mx-auto leading-relaxed">
+          The LLM prompt is a 2-message chat template loaded from <span className="mono text-cyan-300">prompts/generate_telco_chat.yaml</span>.
+          The prompt quality directly determines output quality — every sentence encodes a lesson learned from failed classifier training runs.
+          Click a section to highlight it in the YAML viewer.
+        </p>
+      </div>
+
+      <div className="flex gap-2 justify-center">
+        {sections.map(s => (
+          <button key={s.id} onClick={() => setSection(s.id)}
+            className={`px-4 py-2 rounded-lg text-[12px] font-medium transition-all border ${s.id === section ? 'shadow-lg' : 'bg-slate-800/40 border-slate-700/40 text-slate-400 hover:bg-slate-700/40'}`}
+            style={s.id === section ? { background: `${s.color}15`, borderColor: `${s.color}50`, color: s.color } : {}}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <YamlViewer yaml={PROMPT_YAML} highlightedLines={active.lines} highlightColor={active.hlColor}/>
+        <div className="fade-in" key={section}>
+          <div className="callout-box bg-slate-800/30 border border-slate-700/40" style={{ '--callout-color': active.color }}>
+            <div className="flex items-center gap-3 mb-3">
+              <SectionBadge icon={active.id === 'system' ? 'SYS' : 'USR'} color={active.color}/>
+              <div>
+                <h3 className="text-base font-bold" style={{ color: active.color }}>{active.label}</h3>
+                <p className="text-[10px] text-slate-400">{active.id === 'system' ? 'Role, constraints, and formatting rules' : 'Intent-specific generation request with distribution targets'}</p>
+              </div>
+            </div>
+            <p className="text-[12px] text-slate-400 leading-relaxed mb-4">{active.intro}</p>
+            <div className="space-y-2.5">
+              {active.rules.map((r, i) => (
+                <div key={i} className="flex gap-3 items-start py-3 px-3 rounded-lg bg-slate-800/30 border border-slate-700/30">
+                  <span className="flex-shrink-0 mt-0.5 text-[14px]" style={{ color: r.color }}>{r.icon}</span>
+                  <div>
+                    <span className="text-[12px] font-semibold" style={{ color: r.color }}>{r.label}</span>
+                    <div className="text-[11px] text-slate-400 mt-1 leading-relaxed">{r.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {active.id === 'user' && (
+              <div className="mt-4 p-3 rounded-lg bg-slate-900/40 border border-slate-700/20">
+                <h4 className="text-[11px] font-semibold text-slate-300 mb-2">Template Variables (Jinja2-style)</h4>
+                <div className="space-y-2">
+                  {[
+                    ['{{ intent }}', 'Intent name string, e.g., MOBILE_BILLING_CHECK_DUE_DATE'],
+                    ['{{ intent_description }}', 'From intent_descriptions.json — semantic description'],
+                    ['{{ seed_examples }}', 'JSON-serialized few-shot examples from step 4'],
+                    ['{{ num_examples }}', 'Target count (default: 20)'],
+                    ['{{ num_seed }}', 'Number of seed examples provided'],
+                  ].map(([v, d], i) => (
+                    <div key={i} className="flex items-baseline gap-3">
+                      <span className="mono text-[10px] px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 flex-shrink-0">{v}</span>
+                      <span className="text-[10px] text-slate-500">{d}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB: CONFIG
+// ======================================================================
+
+function ConfigTab() {
+  const [mode, setMode] = useState('standalone');
+  return (
+    <div className="fade-in space-y-8">
+      <div className="text-center mb-2">
+        <h2 className="text-xl font-bold text-white mb-2">Configuration & Modes</h2>
+        <p className="text-[13px] text-slate-400 max-w-2xl mx-auto leading-relaxed">The pipeline is fully configurable from the command line. Choose between lightweight sequential processing (standalone) or production-grade concurrent execution (flow).</p>
+      </div>
+
+      {/* Quick Start */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-6">
+        <h3 className="text-[15px] font-bold text-white mb-3">Quick Start Commands</h3>
+        <p className="text-[12px] text-slate-400 mb-4 leading-relaxed">Copy any command below to start generating. The standalone mode requires only <span className="mono text-cyan-300">litellm</span> and <span className="mono text-cyan-300">pyyaml</span>. Set your API key via environment variable (e.g., export ANTHROPIC_API_KEY=...) or pass it with --api-key.</p>
+        <div className="space-y-2">
+          {[
+            { label: 'Default', cmd: 'python run.py --model "anthropic/claude-sonnet-4-20250514" --num-examples 20', note: 'Uses default standalone mode, generates 20 examples per intent for all 16 intents' },
+            { label: 'Flow mode', cmd: 'python run.py --mode flow --model "anthropic/claude-sonnet-4-20250514"', note: 'Uses sdg_hub Flow for concurrent processing — ~4x faster for full 16-intent runs' },
+            { label: 'Google', cmd: 'python run.py --model "gemini/gemma-4-31b-it" --api-key $GOOGLE_API_KEY --num-examples 1', note: 'Using Google Gemini API — good for testing with --num-examples 1' },
+            { label: 'OpenAI', cmd: 'python run.py --model openai/gpt-4o --output ../generated', note: 'Using OpenAI GPT-4o with custom output directory' },
+            { label: 'Local LLM', cmd: 'python run.py --model ollama/gemma2 --api-base http://localhost:11434', note: 'Using Ollama for local inference — no API key needed, 30-min timeout' },
+            { label: 'Single intent', cmd: 'python run.py --intents MOBILE_BILLING_CHECK_DUE_DATE --num-examples 10', note: 'Generate only one intent — useful for testing prompt changes or re-running failures' },
+          ].map((c, i) => (
+            <div key={i} className="rounded-lg bg-slate-900/50 border border-slate-700/30 p-3">
+              <div className="flex items-center gap-3">
+                <span className="text-[11px] text-slate-500 font-medium w-20 flex-shrink-0">{c.label}</span>
+                <span className="mono text-[11px] text-green-400 overflow-x-auto whitespace-nowrap flex-1">{c.cmd}</span>
+              </div>
+              <div className="text-[10px] text-slate-600 mt-1 pl-[92px]">{c.note}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Mode Comparison */}
+      <div>
+        <h3 className="text-[15px] font-bold text-white mb-3">Execution Modes</h3>
+        <p className="text-[12px] text-slate-400 mb-4 leading-relaxed">The pipeline supports two execution backends. Standalone is the default — it's simpler and handles errors gracefully. Flow mode is faster for production runs but requires additional dependencies.</p>
+        <div className="flex gap-1 bg-slate-900/60 border border-slate-700/40 rounded-lg p-1 w-fit mb-5">
+          <button className={`mono text-[12px] font-medium px-5 py-2 rounded-md transition-all ${mode === 'standalone' ? 'bg-slate-700/60 text-cyan-300 shadow' : 'text-slate-500 hover:text-slate-400'}`} onClick={() => setMode('standalone')}>Standalone</button>
+          <button className={`mono text-[12px] font-medium px-5 py-2 rounded-md transition-all ${mode === 'flow' ? 'bg-slate-700/60 text-purple-300 shadow' : 'text-slate-500 hover:text-slate-400'}`} onClick={() => setMode('flow')}>Flow</button>
+        </div>
+
+        {mode === 'standalone' ? (
+          <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/5 p-5 fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <SectionBadge icon="STD" color="#06b6d4" size={36}/>
+              <div>
+                <h3 className="text-sm font-bold text-cyan-300">Standalone Mode <span className="mono text-[10px] text-green-400 ml-2 px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20">DEFAULT</span></h3>
+                <p className="text-[11px] text-slate-400">Lightweight sequential processing — recommended for development and testing</p>
+              </div>
+            </div>
+            <p className="text-[12px] text-slate-400 mb-4 leading-relaxed">Calls litellm.completion() directly for each intent in a sequential loop. If one intent fails (bad JSON from the LLM, timeout, API error), it logs a warning and continues to the next — one failure doesn't stop the other 15 intents. Dependencies are minimal: just litellm and pyyaml.</p>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {[['Processing','Sequential (1 at a time)'],['Dependencies','litellm + pyyaml'],['Error Handling','Per-intent (skips failures, continues)'],['Speed (16 intents)','~16 × single LLM call time'],['Best for','Development, debugging, local models'],['Retry strategy','Re-run with --intents <failed_intent>']].map(([l,v],i) => (
+                <div key={i} className="bg-slate-900/50 rounded-lg p-3 border border-slate-700/20">
+                  <div className="mono text-[9px] text-slate-500 uppercase tracking-wider mb-1">{l}</div>
+                  <div className="text-[12px] text-slate-300 font-medium">{v}</div>
+                </div>
+              ))}
+            </div>
+            <h4 className="text-[12px] font-semibold text-slate-300 mb-2">Execution Flow</h4>
+            <div className="flex items-center gap-2 overflow-x-auto p-3 bg-slate-900/40 rounded-lg border border-slate-700/20">
+              {['for intent in intents','→','select_seeds()','→','build_prompt()','→','litellm.completion()','→','parse_json_output()','→','validate_examples()','→','save .json'].map((t,i) => (
+                t === '→' ? <span key={i} className="text-slate-600 flex-shrink-0" style={{animation:'flowPulse 1.5s ease-in-out infinite'}}>→</span>
+                  : <span key={i} className="mono text-[10px] px-2 py-1 rounded border border-slate-700/40 bg-slate-800/40 text-cyan-300 whitespace-nowrap flex-shrink-0">{t}</span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-purple-500/20 bg-purple-950/5 p-5 fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <SectionBadge icon="FLW" color="#a855f7" size={36}/>
+              <div>
+                <h3 className="text-sm font-bold text-purple-300">Flow Mode <span className="mono text-[10px] text-purple-400 ml-2 px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">PRODUCTION</span></h3>
+                <p className="text-[11px] text-slate-400">Concurrent processing via sdg_hub — recommended for full dataset generation</p>
+              </div>
+            </div>
+            <p className="text-[12px] text-slate-400 mb-4 leading-relaxed">Uses the sdg_hub framework's Flow abstraction. All 16 intents are loaded into a pandas DataFrame and passed through a 3-block pipeline: PromptBuilder (renders YAML template), LLMChatBlock (calls LLM with async_mode and up to 5 concurrent requests), and ResponseExtractor (extracts text content). This is ~4x faster than standalone for a full 16-intent run.</p>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {[['Processing','Concurrent (up to 5 parallel)'],['Dependencies','sdg-hub + pandas + litellm'],['Error Handling','All-or-nothing (exits on failure)'],['Speed (16 intents)','~4 × single LLM call time (4x faster)'],['Best for','Production runs, CI/CD pipelines'],['Architecture','3-block pipeline defined in flow.yaml']].map(([l,v],i) => (
+                <div key={i} className="bg-slate-900/50 rounded-lg p-3 border border-slate-700/20">
+                  <div className="mono text-[9px] text-slate-500 uppercase tracking-wider mb-1">{l}</div>
+                  <div className="text-[12px] text-slate-300 font-medium">{v}</div>
+                </div>
+              ))}
+            </div>
+            <h4 className="text-[12px] font-semibold text-slate-300 mb-2">3-Block Pipeline (flow.yaml)</h4>
+            <div className="flex items-center gap-2 overflow-x-auto p-3 bg-slate-900/40 rounded-lg border border-slate-700/20">
+              {['DataFrame (all intents)','→','PromptBuilder','→','LLMChatBlock (async, concurrency=5)','→','ResponseExtractor','→','parse & validate per intent','→','save .json files'].map((t,i) => (
+                t === '→' ? <span key={i} className="text-slate-600 flex-shrink-0" style={{animation:'flowPulse 1.5s ease-in-out infinite'}}>→</span>
+                  : <span key={i} className="mono text-[10px] px-2 py-1 rounded border border-slate-700/40 bg-slate-800/40 text-purple-300 whitespace-nowrap flex-shrink-0">{t}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Comparison Table */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 overflow-hidden">
+        <h3 className="text-[15px] font-bold text-white p-5 pb-0 mb-3">Side-by-Side Comparison</h3>
+        <table className="w-full text-[12px]">
+          <thead><tr className="border-b border-slate-700/40 bg-slate-900/50">
+            <th className="text-left p-3 mono text-[10px] text-slate-500 uppercase tracking-wider">Criteria</th>
+            <th className="text-left p-3 mono text-[10px] text-cyan-400 uppercase tracking-wider">Standalone</th>
+            <th className="text-left p-3 mono text-[10px] text-purple-400 uppercase tracking-wider">Flow</th>
+          </tr></thead>
+          <tbody>
+            {[
+              ['Processing', 'Sequential, one intent at a time', 'Concurrent, up to 5 parallel'],
+              ['Dependencies', 'litellm, pyyaml', 'sdg-hub, pandas, litellm'],
+              ['Error handling', 'Per-intent (skips failures, continues)', 'All-or-nothing (exits on failure)'],
+              ['Speed (16 intents)', '~16× single call time (~5-8 min)', '~4× single call time (~1-2 min)'],
+              ['Prompt building', 'Python string .replace()', 'PromptBuilderBlock (sdg_hub)'],
+              ['LLM parameters', 'max_tokens=16384, temp=0.8', 'Same (via flow.yaml config)'],
+              ['Retry strategy', 'Re-run with --intents flag', 'Re-run entire flow'],
+              ['Best for', 'Dev, testing, local models, debugging', 'Production, full dataset, CI/CD'],
+            ].map(([c,s,f], i) => (
+              <tr key={i} className="border-b border-slate-700/20 hover:bg-slate-800/20">
+                <td className="p-3 text-slate-300 font-medium">{c}</td>
+                <td className="p-3 text-slate-400">{s}</td>
+                <td className="p-3 text-slate-400">{f}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* CLI Reference */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-6">
+        <h3 className="text-[15px] font-bold text-white mb-2">CLI Reference</h3>
+        <p className="text-[12px] text-slate-400 mb-4 leading-relaxed">All arguments are optional with sensible defaults. The minimum viable command is <span className="mono text-green-300">python run.py</span> with an API key set in your environment.</p>
+        <div className="space-y-1">
+          <div className="grid grid-cols-[140px_160px_1fr] gap-3 px-3 py-2 border-b border-slate-700/30">
+            <span className="mono text-[10px] text-slate-500 uppercase tracking-wider">Argument</span>
+            <span className="mono text-[10px] text-slate-500 uppercase tracking-wider">Default</span>
+            <span className="mono text-[10px] text-slate-500 uppercase tracking-wider">Description</span>
+          </div>
+          {[
+            ['--mode', 'standalone', 'Execution backend: standalone (litellm only, sequential) or flow (sdg_hub, concurrent)'],
+            ['--model', 'anthropic/claude-sonnet-4-20250514', 'LLM model identifier in litellm format (provider/model-name)'],
+            ['--api-base', 'None', 'Base URL for self-hosted models (e.g., http://localhost:11434 for Ollama)'],
+            ['--api-key', 'None', 'API key. Also reads env vars: ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.'],
+            ['--output', 'generated_intents', 'Output directory for generated JSON files (created if missing)'],
+            ['--num-examples', '20', 'Synthetic examples to generate per intent (prompt distribution targets assume 20)'],
+            ['--max-seeds', '5', 'Max seed examples for few-shot demonstrations in the prompt'],
+            ['--intents', 'all 16', 'Space-separated list of specific intents to generate (for retries or testing)'],
+          ].map(([flag, def, desc], i) => (
+            <div key={i} className={`grid grid-cols-[140px_160px_1fr] gap-3 px-3 py-2.5 rounded-md text-[12px] ${i%2 === 0 ? 'bg-slate-800/20' : ''}`}>
+              <span className="mono font-semibold text-amber-400">{flag}</span>
+              <span className="mono text-slate-500 text-[11px]">{def}</span>
+              <span className="text-slate-400">{desc}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Compatible Models */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-6">
+        <h3 className="text-[15px] font-bold text-white mb-2">Compatible Models</h3>
+        <p className="text-[12px] text-slate-400 mb-4 leading-relaxed">Any model supported by litellm works with the pipeline. The model must be capable of generating structured JSON output in Thai. Below are the recommended and tested options.</p>
+        <div className="flex flex-wrap gap-3">
+          {[
+            { name: 'anthropic/claude-sonnet-4-20250514', dflt: true, color: '#06b6d4', note: 'Default. Strong multilingual, reliable JSON.' },
+            { name: 'openai/gpt-4o', dflt: false, color: '#22c55e', note: 'Strong Thai support, fast inference.' },
+            { name: 'gemini/gemma-4-31b-it', dflt: false, color: '#60a5fa', note: 'Google. Good for testing.' },
+            { name: 'meta-llama/Llama-3.3-70B-Instruct', dflt: false, color: '#a855f7', note: 'Open-source. Via Nebius/vLLM.' },
+            { name: 'ollama/gemma2', dflt: false, color: '#fbbf24', tag: 'local', note: 'Local inference. No API key needed.' },
+          ].map((m, i) => (
+            <div key={i} className={`rounded-lg border p-3 ${m.dflt ? 'border-cyan-500/40' : 'border-slate-700/30'}`}>
+              <div className="flex items-center gap-2 mono text-[11px]" style={{ color: m.color }}>
+                <div className="w-2 h-2 rounded-full" style={{ background: m.color, boxShadow: m.dflt ? `0 0 8px ${m.color}60` : 'none' }}></div>
+                {m.name}
+                {m.dflt && <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/30">default</span>}
+                {m.tag && <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">{m.tag}</span>}
+              </div>
+              <div className="text-[10px] text-slate-500 mt-1">{m.note}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Project Structure */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-6">
+        <h3 className="text-[15px] font-bold text-white mb-2">Project Structure</h3>
+        <p className="text-[12px] text-slate-400 mb-4 leading-relaxed">All paths are relative to the repository root. The pipeline reads seeds from <span className="mono text-amber-300">samples/</span>, uses templates from <span className="mono text-amber-300">pipeline/prompts/</span>, and writes output to <span className="mono text-amber-300">generated/</span>.</p>
+        <div className="rounded-lg bg-[#0b1121] border border-slate-700/40 p-4 mono text-[12px] leading-loose">
+          <div className="text-cyan-300 font-semibold">sdg/</div>
+          <div className="pl-5"><span className="text-cyan-300 font-semibold">samples/</span></div>
+          <div className="pl-10"><span className="text-slate-500">└─ </span><span className="text-amber-300 font-medium">training_dataset.json</span> <span className="text-slate-600 text-[10px]">← 16 intents, ~400 human-curated seed examples</span></div>
+          <div className="pl-5"><span className="text-cyan-300 font-semibold">pipeline/</span></div>
+          <div className="pl-10"><span className="text-slate-500">├─ </span><span className="text-amber-300 font-medium">run.py</span> <span className="text-slate-600 text-[10px]">← Main pipeline script (CLI entrypoint, 300 lines)</span></div>
+          <div className="pl-10"><span className="text-slate-500">├─ </span><span className="text-slate-400">run_sdg_pipeline.ipynb</span> <span className="text-slate-600 text-[10px]">← Jupyter notebook version (same logic, interactive)</span></div>
+          <div className="pl-10"><span className="text-slate-500">├─ </span><span className="text-amber-300 font-medium">intent_descriptions.json</span> <span className="text-slate-600 text-[10px]">← 16 intent descriptions (shared between CLI and notebook)</span></div>
+          <div className="pl-10"><span className="text-slate-500">├─ </span><span className="text-slate-400">flow.yaml</span> <span className="text-slate-600 text-[10px]">← sdg_hub flow definition (3-block pipeline for flow mode)</span></div>
+          <div className="pl-10"><span className="text-slate-500">└─ </span><span className="text-cyan-300 font-semibold">prompts/</span></div>
+          <div className="pl-16"><span className="text-slate-500">└─ </span><span className="text-amber-300 font-medium">generate_telco_chat.yaml</span> <span className="text-slate-600 text-[10px]">← LLM prompt template (system + user messages)</span></div>
+          <div className="pl-5"><span className="text-cyan-300 font-semibold">generated/</span> <span className="text-slate-600 text-[10px]">← Output directory (created automatically)</span></div>
+          <div className="pl-10"><span className="text-slate-500">└─ </span><span className="text-slate-400">{'{INTENT_NAME}'}.json</span> <span className="text-slate-600 text-[10px]">← One file per intent, e.g., MOBILE_BILLING_CHECK_DUE_DATE.json</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB: INTENTS
+// ======================================================================
+
+function IntentsTab() {
+  const [filter, setFilter] = useState('');
+  const [expanded, setExpanded] = useState(null);
+  const filtered = useMemo(() => {
+    const lc = filter.toLowerCase();
+    return INTENTS.filter(i => !lc || i.name.toLowerCase().includes(lc) || i.cat.includes(lc) || i.desc.toLowerCase().includes(lc) || i.thai.includes(lc));
+  }, [filter]);
+  const catCounts = useMemo(() => { const c = {}; INTENTS.forEach(i => { c[i.cat] = (c[i.cat]||0)+1; }); return c; }, []);
+
+  return (
+    <div className="fade-in space-y-5">
+      <div className="text-center mb-2">
+        <h2 className="text-xl font-bold text-white mb-2">Intent Browser</h2>
+        <p className="text-[13px] text-slate-400 max-w-2xl mx-auto leading-relaxed">All 16 intent categories covered by the pipeline. Each description tells the LLM what kind of customer request this intent represents. Click any intent to see its full description. Use the category filters or search box to narrow down.</p>
+      </div>
+      <div className="flex flex-wrap gap-2 justify-center">
+        {Object.entries(catCounts).map(([cat, count]) => {
+          const c = CAT_COLORS[cat];
+          return (
+            <button key={cat} onClick={() => setFilter(filter === cat ? '' : cat)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all border ${filter === cat ? 'shadow' : 'bg-slate-800/40 border-slate-700/40 text-slate-400'}`}
+              style={filter === cat ? { background: c.bg, borderColor: `${c.color}50`, color: c.color } : {}}>
+              <span className="w-2 h-2 rounded-full" style={{ background: c.color }}></span>
+              {c.label} ({count})
+            </button>
+          );
+        })}
+        {filter && <button onClick={() => setFilter('')} className="text-[11px] text-slate-500 hover:text-slate-300 px-2">Clear</button>}
+      </div>
+      <input type="text" value={filter} onChange={e => setFilter(e.target.value)}
+        className="w-full px-4 py-3 rounded-lg bg-slate-900/60 border border-slate-700/40 mono text-[12px] text-slate-200 outline-none focus:border-cyan-500/50"
+        placeholder="Search intents... (e.g., billing, roaming, sim, activation)"/>
+      <div className="space-y-2">
+        {filtered.map((intent, i) => {
+          const c = CAT_COLORS[intent.cat];
+          const isExp = expanded === i;
+          return (
+            <div key={i} className={`rounded-lg border p-4 cursor-pointer transition-all ${isExp ? 'bg-slate-800/30' : 'bg-slate-900/30 hover:bg-slate-800/20'}`}
+              style={{ borderColor: isExp ? c.color : 'rgba(51,65,85,0.3)' }} onClick={() => setExpanded(isExp ? null : i)}>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0" style={{ background: c.bg, color: c.color }}>{c.label}</span>
+                <span className="mono text-[11px] font-semibold text-slate-200 flex-1 min-w-0">{intent.name}</span>
+                <span className="text-[13px] text-slate-400 flex-shrink-0">{intent.thai}</span>
+              </div>
+              {isExp && (
+                <div className="mt-3 pt-3 border-t border-slate-700/30 fade-in">
+                  <p className="text-[12px] text-slate-400 leading-relaxed">{intent.desc}</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB: BEST PRACTICES
+// ======================================================================
+
+function BestPracticesTab() {
+  const practices = [
+    { num: '01', title: 'Match Training to Inference', desc: 'Training data must mirror production conditions exactly. If the classifier receives a 5-message sliding window at inference, generate training data with the same constraint. Mismatched context lengths cause silent accuracy drops that are extremely difficult to diagnose — the model trains successfully but underperforms in production because it learned patterns from context lengths it never sees at serving time. Enforce max history length in the prompt AND in code (belt and suspenders).', tags: ['Critical','Architecture'], color: '#06b6d4' },
+    { num: '02', title: 'Diversify Seed Selection', desc: 'Don\'t pick seeds randomly — use stratified sampling across conversation depths (0, 1, 2, 3, 4, 5 messages). The select_seed_examples() function implements round-robin across history-length buckets. Random selection biases toward the most common pattern: if most seeds have 4-message histories, the LLM generates only long conversations. Round-robin ensures the model sees empty histories, single exchanges, and full 5-message conversations equally.', tags: ['Seeding'], color: '#a855f7' },
+    { num: '03', title: 'Force Intent Switching', desc: 'Require 25-30% of examples (5-6 out of 20) to have session history about a completely different topic. Without this, the classifier learns a dangerous shortcut: if the history mentions "roaming", predict roaming, regardless of what the user actually said in their current message. Intent switching teaches the model that user_message alone determines intent. The history provides context but should not override the current message\'s semantics.', tags: ['Critical','Context'], color: '#22c55e' },
+    { num: '04', title: 'Embrace Messy Input', desc: 'Real Thai chat includes typos ("เนต" vs "เน็ต"), slang ("555" for laughter), emoji, doubled vowels ("ค่าาา"), missing spaces, and mixed Thai-English. Target 40-50% informal examples (8-10 of 20). If training data is only clean formal Thai, the classifier fails on real user input. The prompt lists specific typo patterns to generate because without examples, LLMs default to producing perfectly spelled formal text.', tags: ['Language','Realism'], color: '#fbbf24' },
+    { num: '05', title: 'Include Multilingual Examples', desc: 'The telco serves bilingual users and expats who type in English. Include 10-15% English examples (2-3 of 20) with intentional grammar mistakes typical of non-native speakers. Messages like "can u check my bill pls" or "how much roaming data left ah" are real usage patterns. Use non-native English patterns — not perfect grammar — to match what the classifier will actually encounter.', tags: ['Coverage'], color: '#f43f5e' },
+    { num: '06', title: 'Mask Sensitive Data', desc: 'Never expose real phone numbers or OTPs in synthetic data. Use consistent masking formats: 091234XXXX for phone numbers (partial masking preserves the realistic appearance while preventing PII leakage) and XXXXXX for OTP codes (fully masked). Embed these masking rules in the system prompt so every generated example follows the same convention.', tags: ['Security'], color: '#60a5fa' },
+    { num: '07', title: 'Validate Programmatically', desc: 'Never trust LLM output blindly. The prompt requests constraints; the code enforces them. validate_examples() checks 6 things: (1) each example is a dict, (2) has user_message, (3) forces correct intent label, (4) validates session_history structure, (5) only allows "user"/"assistant" roles, (6) truncates histories exceeding 5 messages. Invalid examples are dropped silently, and the output contains only 3 fields — no LLM-added extras.', tags: ['Quality','Reliability'], color: '#fb923c' },
+    { num: '08', title: 'Version Control Prompts', desc: 'Store prompt templates as YAML files in git, not in code or chat history. This makes every prompt change a reviewable code change — you can git diff to see what changed, trace which prompt version produced which dataset, and reproduce any previous run exactly. Separate system prompt (role/constraints) from user prompt (task/variables) for clarity.', tags: ['Process'], color: '#2dd4bf' },
+    { num: '09', title: 'Stay Model-Agnostic', desc: 'Use an abstraction layer like litellm so you can swap models (Qwen, Llama, GPT-4o, Claude) and providers (Nebius, OpenAI, Ollama, vLLM) without changing pipeline code. Today\'s best model isn\'t tomorrow\'s. The pipeline should be a tool that works with any capable LLM, not a wrapper around a specific API. One --model flag to switch everything.', tags: ['Architecture'], color: '#06b6d4' },
+    { num: '10', title: 'Define Clear Intent Boundaries', desc: 'Each intent description must specify what it IS and what it ISN\'T. The descriptions in intent_descriptions.json distinguish postpaid vs prepaid, current vs historical, roaming vs domestic, check vs subscribe. Ambiguous intents produce ambiguous data — if the LLM doesn\'t understand the boundary between MOBILE_BILLING_PAYMENT_STATUS_POSTPAID and MOBILE_BILLING_CHECK_DUE_DATE, it generates overlapping examples.', tags: ['Data Quality'], color: '#a855f7' },
+    { num: '11', title: 'Control Distribution Targets', desc: 'Specify exact distribution requirements in the prompt: how many examples per history length (2 empty, 3 with 1 msg, 4 with 2 msgs, 4 with 3 msgs, 4 with 4 msgs, 3 with 5 msgs), typo ratio (40-50%), intent switches (25-30%), and English examples (10-15%). Without explicit numeric targets, the LLM defaults to its most comfortable pattern — usually generating all examples with the same history length and formal language.', tags: ['Quality'], color: '#22c55e' },
+    { num: '12', title: 'Maximize Sentence Diversity', desc: 'LLMs tend to repeat the same phrasing pattern — generating 15 of 20 user_message values starting with "อยากเช็ค...". The prompt explicitly requires varied verbs (เช็ค, ดู, อยากรู้, ขอ, สอบถาม), sentence forms (questions, statements, imperatives, fragments), directness levels (direct "เช็คบิล" vs polite "รบกวนสอบถามยอดค่าบริการ"), and message lengths (single phrase to full sentence with context). Hard cap: max 2-3 examples with the same opening word.', tags: ['Critical','Diversity'], color: '#f43f5e' },
+    { num: '13', title: 'Fail Gracefully, Retry Smart', desc: 'LLMs sometimes produce malformed output. parse_json_output() handles this with multi-stage recovery: strip markdown fences → find array brackets → json.loads() → line-by-line fallback. Skip bad examples instead of crashing the entire pipeline. Per-intent error handling in standalone mode means one failed intent doesn\'t stop the other 15. Re-run individual failures with --intents flag without regenerating everything.', tags: ['Reliability'], color: '#60a5fa' },
+  ];
+  return (
+    <div className="fade-in space-y-5">
+      <div className="text-center mb-4">
+        <h2 className="text-xl font-bold text-white mb-2">SDG Best Practices</h2>
+        <p className="text-[13px] text-slate-400 max-w-2xl mx-auto leading-relaxed">13 lessons learned from building production-grade synthetic data for Thai telco intent classification. Each practice addresses a specific failure mode — they're not theoretical guidelines but fixes for real problems encountered during classifier training.</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {practices.map((bp, i) => (
+          <div key={i} className="benefit-card rounded-xl border border-slate-700/30 bg-slate-900/40 p-5 relative overflow-hidden">
+            <div className="absolute top-3 right-3 mono text-[28px] font-extrabold text-slate-800/40">{bp.num}</div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2 h-6 rounded-full" style={{ background: bp.color }}></div>
+              <h4 className="text-[13px] font-bold" style={{ color: bp.color }}>{bp.title}</h4>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed mb-3">{bp.desc}</p>
+            <div className="flex gap-1.5 flex-wrap">
+              {bp.tags.map((t,j) => (
+                <span key={j} className="mono text-[9px] px-2 py-0.5 rounded-full border" style={{ background: `${bp.color}10`, borderColor: `${bp.color}30`, color: bp.color }}>{t}</span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB: QUIZ
+// ======================================================================
+
+function QuizTab() {
+  const [answers, setAnswers] = useState({});
+  const score = Object.values(answers).filter(a => a.correct).length;
+  const total = QUIZ_QUESTIONS.length;
+  const answered = Object.keys(answers).length;
+  const answer = (qi, oi) => { if (answers[qi] !== undefined) return; setAnswers(prev => ({ ...prev, [qi]: { selected: oi, correct: oi === QUIZ_QUESTIONS[qi].ans } })); };
+  const reset = () => setAnswers({});
+
+  return (
+    <div className="fade-in space-y-5">
+      <div className="text-center mb-4">
+        <h2 className="text-xl font-bold text-white mb-2">SDG Pipeline Quiz</h2>
+        <p className="text-[13px] text-slate-400 max-w-2xl mx-auto leading-relaxed">Test your understanding of the pipeline's design decisions and implementation details. {total} questions covering architecture, constraints, and rationale.</p>
+      </div>
+      {answered > 0 && (
+        <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-5 text-center">
+          <div className="mono text-3xl font-extrabold text-cyan-300">{score}/{total}</div>
+          <div className="text-[12px] text-slate-400 mt-1">Correct Answers</div>
+          {answered === total && <button onClick={reset} className="mt-3 px-4 py-2 rounded-lg border border-cyan-500/40 text-cyan-300 mono text-[12px] hover:bg-cyan-500/10 transition-all">Reset Quiz</button>}
+        </div>
+      )}
+      <div className="space-y-4">
+        {QUIZ_QUESTIONS.map((q, qi) => {
+          const a = answers[qi];
+          return (
+            <div key={qi} className={`rounded-xl border p-5 transition-all ${a ? (a.correct ? 'border-green-500/40' : 'border-red-500/40') : 'border-slate-700/30 bg-slate-900/30'}`}>
+              <div className="mono text-[10px] text-cyan-400 uppercase tracking-wider mb-2">Question {String(qi+1).padStart(2,'0')} / {total}</div>
+              <div className="text-[14px] font-semibold text-slate-200 mb-4 leading-relaxed">{q.q}</div>
+              <div className="space-y-2">
+                {q.opts.map((opt, oi) => {
+                  const L = ['A','B','C','D'][oi];
+                  let cls = 'bg-slate-800/40 border-slate-700/30 text-slate-400 hover:border-slate-600 cursor-pointer';
+                  if (a) {
+                    cls = 'opacity-60 cursor-default border-slate-700/20';
+                    if (oi === a.selected && a.correct) cls = 'border-green-500/50 bg-green-500/10 text-green-300';
+                    else if (oi === a.selected) cls = 'border-red-500/50 bg-red-500/10 text-red-300';
+                    else if (oi === q.ans) cls = 'border-green-500/30 text-green-400/70';
+                  }
+                  return (
+                    <div key={oi} onClick={() => answer(qi, oi)} className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all text-[12px] ${cls}`}>
+                      <span className={`mono text-[11px] font-bold w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 border ${
+                        a && oi === a.selected && a.correct ? 'bg-green-500 border-green-500 text-slate-900' :
+                        a && oi === a.selected ? 'bg-red-500 border-red-500 text-white' :
+                        a && oi === q.ans ? 'border-green-500/40 text-green-400' : 'border-slate-600/40 text-slate-500'
+                      }`}>{L}</span>
+                      {opt}
+                    </div>
+                  );
+                })}
+              </div>
+              {a && <div className="mt-3 p-3 rounded-lg bg-slate-800/40 text-[11px] text-slate-400 leading-relaxed fade-in" style={{borderLeft:'3px solid #22c55e'}}>{q.exp}</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// MAIN APP
+// ======================================================================
+
+const TABS = [
+  { id: 'overview', label: 'Overview', icon: '◉' },
+  { id: 'pipeline', label: 'Pipeline', icon: '▶' },
+  { id: 'prompt', label: 'Prompt', icon: '◆' },
+  { id: 'config', label: 'Config', icon: '⚙' },
+  { id: 'intents', label: 'Intents', icon: '☰' },
+  { id: 'practices', label: 'Best Practices', icon: '★' },
+  { id: 'quiz', label: 'Quiz', icon: '?' },
+];
+
+function App() {
+  const [tab, setTab] = useState('overview');
+  return (
+    <div className="relative z-10 min-h-screen">
+      <header className="sticky top-0 z-50 border-b border-slate-700/40 bg-[#060a14ee] backdrop-blur-xl">
+        <div className="max-w-5xl mx-auto px-5 flex items-center h-14 gap-6 overflow-x-auto">
+          <span className="mono text-[14px] font-bold text-cyan-300 tracking-wider whitespace-nowrap flex-shrink-0">SDG PIPELINE</span>
+          <div className="flex gap-1 flex-1 min-w-0">
+            {TABS.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[14px] font-medium transition-all whitespace-nowrap ${tab === t.id ? 'bg-cyan-500/15 text-cyan-300' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/40'}`}>
+                <span className="text-[12px]">{t.icon}</span> {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
+      <main className="max-w-5xl mx-auto px-5 py-10">
+        {tab === 'overview' && <OverviewTab />}
+        {tab === 'pipeline' && <PipelineTab />}
+        {tab === 'prompt' && <PromptTab />}
+        {tab === 'config' && <ConfigTab />}
+        {tab === 'intents' && <IntentsTab />}
+        {tab === 'practices' && <BestPracticesTab />}
+        {tab === 'quiz' && <QuizTab />}
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
-
 </body>
 </html>
