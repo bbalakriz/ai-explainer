@@ -52,7 +52,8 @@ Encoder models are typically used for classification tasks. Since vLLM defaults 
    --hf-overrides={"architectures":["RobertaForSequenceClassification"]}
    ```
 
-4. Click **Next**, review your settings and click **Deploy model**. Wait for the status to show a green **Loaded** checkmark.
+4. In the **Deployment strategy** section, select **Recreate** instead of **Rolling update**. This ensures that the old pod is terminated before the new one starts, which is safer for model deployments to avoid resource conflicts.
+5. Click **Next**, review your settings and click **Deploy model**. Wait for the status to show a green **Loaded** checkmark.
 
 ### Step 5: Verify Deployment via Endpoint
 
@@ -112,10 +113,10 @@ Decoder models are massive generative engines. Unlike the CPU-bound encoder, Qwe
    --dtype=half
    --gpu-memory-utilization=0.9
    --enforce-eager
-   --tensor-parallel-size=4
    ```
 
-3. Click **Next**, review the configurations and click **Deploy model**. Wait for the status to show **Loaded**.
+3. In the **Deployment strategy** section, select **Recreate** instead of **Rolling update**. This ensures that the old pod is terminated before the new one starts, which is safer for GPU-based deployments to avoid resource conflicts.
+4. Click **Next**, review the configurations and click **Deploy model**. Wait for the status to show **Loaded**.
 
 #### Understanding the Decoder Arguments
 
