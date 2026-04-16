@@ -1,1574 +1,1874 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>KFP Pipeline Builder — Interactive Guide</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;700&family=Instrument+Serif&display=swap" rel="stylesheet">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OpenShift AI Pipelines</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
-:root {
-  --bg: #0a0b0f;
-  --bg-card: #12131a;
-  --bg-elevated: #1a1b24;
-  --border: #2a2b38;
-  --text: #e4e4ed;
-  --text-dim: #8888a0;
-  --text-muted: #55566a;
-  --sft-blue: #4d8eff;
-  --sft-blue-dim: #4d8eff22;
-  --eval-orange: #ff8c42;
-  --eval-orange-dim: #ff8c4222;
-  --merge-green: #3dd68c;
-  --merge-green-dim: #3dd68c22;
-  --retrain-red: #ff4d6a;
-  --retrain-red-dim: #ff4d6a22;
-  --purple: #a78bfa;
-  --purple-dim: #a78bfa22;
-  --elyra-teal: #2dd4bf;
-  --elyra-teal-dim: #2dd4bf22;
-  --yellow: #fbbf24;
-  --yellow-dim: #fbbf2422;
-}
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Source+Code+Pro:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: #060a14;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'Source Code Pro', monospace; }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0c1220; }
+  ::-webkit-scrollbar-thumb { background: #2a3a5c; border-radius: 4px; }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes pulseGlow { 0%,100% { box-shadow:0 0 8px 2px rgba(59,130,246,0.15); } 50% { box-shadow:0 0 18px 4px rgba(59,130,246,0.35); } }
+  @keyframes cyanPulse { 0%,100% { box-shadow:0 0 8px 2px rgba(6,182,212,0.15); } 50% { box-shadow:0 0 18px 4px rgba(6,182,212,0.35); } }
+  @keyframes amberPulse { 0%,100% { box-shadow:0 0 8px 2px rgba(251,191,36,0.15); } 50% { box-shadow:0 0 18px 4px rgba(251,191,36,0.35); } }
+  @keyframes greenPulse { 0%,100% { box-shadow:0 0 8px 2px rgba(34,197,94,0.15); } 50% { box-shadow:0 0 18px 4px rgba(34,197,94,0.35); } }
+  @keyframes flowDash { to { stroke-dashoffset: -24; } }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-4px); } }
+
+  .fade-in { animation: fadeIn 0.35s ease-out; }
+  .glow-blue { animation: pulseGlow 2.5s ease-in-out infinite; }
+  .glow-cyan { animation: cyanPulse 2.5s ease-in-out infinite; }
+  .glow-amber { animation: amberPulse 2.5s ease-in-out infinite; }
+  .glow-green { animation: greenPulse 2.5s ease-in-out infinite; }
+  .arrow-flow { stroke-dasharray: 8 5; animation: flowDash 1s linear infinite; }
+
+  .code-line { transition: all 0.2s ease; }
+  .code-line:hover { background: rgba(59,130,246,0.08); }
+  .code-line.highlighted { background: rgba(251,191,36,0.12); border-left: 2px solid #fbbf24; }
+  .code-line.highlighted-blue { background: rgba(59,130,246,0.12); border-left: 2px solid #3b82f6; }
+  .code-line.highlighted-cyan { background: rgba(6,182,212,0.12); border-left: 2px solid #06b6d4; }
+  .code-line.highlighted-green { background: rgba(34,197,94,0.12); border-left: 2px solid #22c55e; }
+  .code-line.highlighted-purple { background: rgba(168,85,247,0.12); border-left: 2px solid #a855f7; }
+  .code-line.highlighted-rose { background: rgba(244,63,94,0.12); border-left: 2px solid #f43f5e; }
+  .code-line.highlighted-amber { background: rgba(245,158,11,0.12); border-left: 2px solid #f59e0b; }
+
+  .callout-box {
+    position: relative;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.3s ease;
+  }
+  .callout-box::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 13px;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--callout-color, #3b82f6) 0%, transparent 60%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .benefit-card {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .benefit-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, transparent 60%, var(--accent, rgba(59,130,246,0.05)));
+    pointer-events: none;
+  }
+  .benefit-card:hover { transform: translateY(-3px); }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'DM Sans', sans-serif;
-  overflow-x: hidden;
-  line-height: 1.6;
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  opacity: 0.03;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 9999;
-}
-
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-/* ─── HERO ─── */
-.hero {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  padding: 2rem;
-}
-
-.hero-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 60px 60px;
-  opacity: 0.15;
-  mask-image: radial-gradient(ellipse 70% 50% at 50% 50%, black, transparent);
-}
-
-.hero-glow {
-  position: absolute;
-  width: 600px;
-  height: 600px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--sft-blue) 0%, transparent 70%);
-  opacity: 0.06;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation: pulse-glow 6s ease-in-out infinite;
-}
-
-@keyframes pulse-glow {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.06; }
-  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.1; }
-}
-
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 100px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  margin-bottom: 2rem;
-  animation: fade-in 0.8s ease;
-}
-
-.hero-badge .dot {
-  width: 6px; height: 6px;
-  background: var(--merge-green);
-  border-radius: 50%;
-  animation: blink 2s ease-in-out infinite;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-.hero h1 {
-  font-family: 'Instrument Serif', serif;
-  font-size: clamp(3rem, 7vw, 5.5rem);
-  font-weight: 400;
-  text-align: center;
-  line-height: 1.1;
-  animation: fade-up 1s ease;
-  max-width: 800px;
-}
-
-.hero h1 em {
-  font-style: italic;
-  background: linear-gradient(135deg, var(--sft-blue), var(--eval-orange));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.hero-sub {
-  margin-top: 1.5rem;
-  color: var(--text-dim);
-  font-size: 1.1rem;
-  text-align: center;
-  max-width: 520px;
-  animation: fade-up 1s ease 0.2s both;
-}
-
-.hero-cta {
-  margin-top: 2.5rem;
-  display: flex;
-  gap: 1rem;
-  animation: fade-up 1s ease 0.4s both;
-}
-
-.hero-cta a {
-  padding: 12px 28px;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.cta-primary {
-  background: var(--sft-blue);
-  color: #fff;
-}
-.cta-primary:hover { box-shadow: 0 0 30px var(--sft-blue-dim); transform: translateY(-2px); }
-
-.cta-secondary {
-  background: var(--bg-elevated);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-.cta-secondary:hover { border-color: var(--text-dim); transform: translateY(-2px); }
-
-@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ─── SECTIONS ─── */
-section {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 6rem 2rem;
-}
-
-.section-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 3px;
-  color: var(--text-muted);
-  margin-bottom: 0.75rem;
-}
-
-.section-title {
-  font-family: 'Instrument Serif', serif;
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 400;
-  margin-bottom: 1rem;
-}
-
-.section-desc {
-  color: var(--text-dim);
-  max-width: 600px;
-  margin-bottom: 3rem;
-}
-
-.section-divider {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border), transparent);
-}
-
-/* ─── CONSTRUCTS GRID ─── */
-.constructs-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 1.25rem;
-}
-
-.construct-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.75rem;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  cursor: default;
-  position: relative;
-  overflow: hidden;
-}
-
-.construct-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--card-accent, var(--sft-blue));
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.construct-card:hover {
-  border-color: var(--card-accent, var(--sft-blue));
-  transform: translateY(-3px);
-}
-
-.construct-card:hover::before { opacity: 1; }
-
-.construct-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-  margin-bottom: 1rem;
-  background: var(--card-accent-dim, var(--sft-blue-dim));
-  border: 1px solid var(--card-accent, var(--sft-blue));
-}
-
-.construct-card h3 {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.85rem;
-  margin-bottom: 0.5rem;
-  color: var(--card-accent, var(--sft-blue));
-}
-
-.construct-card p {
-  font-size: 0.85rem;
-  color: var(--text-dim);
-  margin-bottom: 1rem;
-  line-height: 1.6;
-}
-
-.construct-snippet {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px 16px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-  line-height: 1.8;
-  overflow-x: auto;
-  white-space: pre;
-}
-
-/* Category label inside constructs */
-.construct-category {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  color: var(--text-muted);
-  margin-bottom: 0.5rem;
-  display: block;
-}
-
-/* ─── COMPARISON ─── */
-.comparison-wrapper {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  margin-bottom: 3rem;
-}
-
-@media (max-width: 768px) {
-  .comparison-wrapper { grid-template-columns: 1fr; }
-  .constructs-grid { grid-template-columns: 1fr; }
-  .branch-row { gap: 3rem; }
-}
-
-.compare-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 2rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.compare-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-}
-
-.compare-card.kfp-card::before {
-  background: linear-gradient(90deg, var(--sft-blue), var(--purple));
-}
-
-.compare-card.elyra-card::before {
-  background: linear-gradient(90deg, var(--elyra-teal), var(--merge-green));
-}
-
-.compare-card .compare-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 100px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-bottom: 1.25rem;
-}
-
-.kfp-card .compare-badge {
-  background: var(--sft-blue-dim);
-  color: var(--sft-blue);
-  border: 1px solid rgba(77,142,255,0.2);
-}
-
-.elyra-card .compare-badge {
-  background: var(--elyra-teal-dim);
-  color: var(--elyra-teal);
-  border: 1px solid rgba(45,212,191,0.2);
-}
-
-.compare-card h3 {
-  font-family: 'Instrument Serif', serif;
-  font-size: 1.6rem;
-  font-weight: 400;
-  margin-bottom: 0.5rem;
-}
-
-.compare-card .compare-desc {
-  color: var(--text-dim);
-  font-size: 0.85rem;
-  margin-bottom: 1.5rem;
-}
-
-.compare-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.compare-list li {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 0.85rem;
-  color: var(--text-dim);
-  line-height: 1.5;
-}
-
-.compare-list li .check {
-  flex-shrink: 0;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.65rem;
-  margin-top: 2px;
-}
-
-.kfp-card .check {
-  background: var(--sft-blue-dim);
-  color: var(--sft-blue);
-  border: 1px solid rgba(77,142,255,0.3);
-}
-
-.elyra-card .check {
-  background: var(--elyra-teal-dim);
-  color: var(--elyra-teal);
-  border: 1px solid rgba(45,212,191,0.3);
-}
-
-.inline-code {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  background: var(--bg);
-  padding: 1px 5px;
-  border-radius: 3px;
-}
-
-/* Advantages callout */
-.advantages-section {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 2.5rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.advantages-section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--sft-blue), var(--eval-orange), var(--merge-green));
-}
-
-.adv-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 1.25rem;
-  margin-top: 1.5rem;
-}
-
-.adv-item {
-  padding: 1.25rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  transition: all 0.3s ease;
-}
-
-.adv-item:hover {
-  border-color: var(--sft-blue);
-  transform: translateY(-2px);
-}
-
-.adv-item .adv-icon {
-  font-size: 1.3rem;
-  margin-bottom: 0.75rem;
-}
-
-.adv-item h4 {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
-  margin-bottom: 0.4rem;
-  color: var(--text);
-}
-
-.adv-item p {
-  font-size: 0.78rem;
-  color: var(--text-dim);
-  line-height: 1.5;
-}
-
-/* ─── DECISION FLOWCHART ─── */
-.decision-flow {
-  max-width: 700px;
-  margin: 0 auto;
-}
-
-.decision-node {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.5rem 2rem;
-  text-align: center;
-  position: relative;
-  margin-bottom: 0;
-  transition: all 0.3s ease;
-}
-
-.decision-node:hover { border-color: var(--text-dim); }
-
-.decision-node.question {
-  background: var(--bg-elevated);
-  border-color: var(--eval-orange);
-}
-
-.decision-node.question::before {
-  content: '?';
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--eval-orange);
-  color: var(--bg);
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.75rem;
-}
-
-.decision-node.answer-kfp {
-  border-color: var(--sft-blue);
-  background: var(--sft-blue-dim);
-}
-
-.decision-node.answer-elyra {
-  border-color: var(--elyra-teal);
-  background: var(--elyra-teal-dim);
-}
-
-.decision-node h4 { font-size: 0.9rem; margin-bottom: 0.3rem; }
-.decision-node p { font-size: 0.8rem; color: var(--text-dim); }
-
-.decision-arrows {
-  display: flex;
-  justify-content: center;
-  gap: 6rem;
-  margin: 0.5rem 0;
-  position: relative;
-}
-
-.decision-arrows::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: calc(50% - 3rem);
-  width: 6rem;
-  height: 1px;
-  background: var(--border);
-}
-
-.decision-arrow-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  padding: 3px 10px;
-  border-radius: 100px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  position: relative;
-  z-index: 1;
-}
-
-.flow-connector {
-  width: 1px;
-  height: 20px;
-  background: var(--border);
-  margin: 0 auto;
-}
-
-.decision-answers {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-/* ─── PIPELINE VISUALIZATION ─── */
-.pipeline-container {
-  position: relative;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 3rem 2rem;
-  overflow: hidden;
-}
-
-.pipeline-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--sft-blue), var(--eval-orange), var(--merge-green), transparent);
-  opacity: 0.5;
-}
-
-.view-toggle {
-  display: flex;
-  gap: 4px;
-  background: var(--bg);
-  border-radius: 10px;
-  padding: 4px;
-  margin-bottom: 2rem;
-  width: fit-content;
-}
-
-.view-toggle button {
-  padding: 8px 20px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-dim);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.view-toggle button.active {
-  background: var(--bg-elevated);
-  color: var(--text);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-
-.pipeline-visual {
-  position: relative;
-  min-height: 420px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-}
-
-.pipeline-visual.hidden { display: none; }
-
-.pipe-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  position: relative;
-}
-
-.pipe-connector {
-  width: 2px;
-  height: 40px;
-  background: var(--border);
-  position: relative;
-  overflow: visible;
-}
-
-.pipe-connector::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: linear-gradient(to bottom, var(--conn-from, var(--sft-blue)), var(--conn-to, var(--eval-orange)));
-  animation: flow-down 2s ease-in-out infinite;
-}
-
-@keyframes flow-down {
-  0% { clip-path: inset(0 0 100% 0); }
-  50% { clip-path: inset(0 0 0% 0); }
-  100% { clip-path: inset(100% 0 0 0); }
-}
-
-.pipe-node {
-  position: relative;
-  padding: 20px 32px;
-  border-radius: 12px;
-  border: 1px solid;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  min-width: 200px;
-  text-align: center;
-  z-index: 2;
-}
-
-.pipe-node:hover, .pipe-node.active {
-  transform: translateY(-4px) scale(1.02);
-}
-
-.pipe-node .node-icon { font-size: 1.5rem; margin-bottom: 6px; }
-.pipe-node .node-label { font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; }
-.pipe-node .node-sub { font-size: 0.75rem; opacity: 0.6; }
-
-.node-sft {
-  border-color: var(--sft-blue);
-  background: var(--sft-blue-dim);
-  box-shadow: 0 0 30px var(--sft-blue-dim);
-}
-.node-sft:hover, .node-sft.active { box-shadow: 0 0 50px rgba(77, 142, 255, 0.3); }
-
-.node-eval {
-  border-color: var(--eval-orange);
-  background: var(--eval-orange-dim);
-  box-shadow: 0 0 30px var(--eval-orange-dim);
-}
-.node-eval:hover, .node-eval.active { box-shadow: 0 0 50px rgba(255, 140, 66, 0.3); }
-
-.node-merge {
-  border-color: var(--merge-green);
-  background: var(--merge-green-dim);
-  box-shadow: 0 0 30px var(--merge-green-dim);
-}
-.node-merge:hover, .node-merge.active { box-shadow: 0 0 50px rgba(61, 214, 140, 0.3); }
-
-.node-retrain {
-  border-color: var(--retrain-red);
-  background: var(--retrain-red-dim);
-  box-shadow: 0 0 30px var(--retrain-red-dim);
-}
-.node-retrain:hover, .node-retrain.active { box-shadow: 0 0 50px rgba(255, 77, 106, 0.3); }
-
-.branch-row {
-  display: flex;
-  gap: 6rem;
-  align-items: flex-start;
-  position: relative;
-}
-
-.branch-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  padding: 3px 10px;
-  border-radius: 100px;
-  position: absolute;
-  top: -14px;
-  white-space: nowrap;
-}
-
-.branch-yes {
-  color: var(--merge-green);
-  background: var(--merge-green-dim);
-  left: calc(50% - 8rem);
-}
-
-.branch-no {
-  color: var(--retrain-red);
-  background: var(--retrain-red-dim);
-  right: calc(50% - 8rem);
-}
-
-.branch-arm {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-}
-
-.pipe-connector-branch {
-  width: 2px;
-  height: 30px;
-  background: var(--border);
-}
-
-.condition-diamond {
-  width: 36px;
-  height: 36px;
-  background: var(--eval-orange);
-  transform: rotate(45deg);
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0.5rem 0;
-}
-
-.condition-diamond span {
-  transform: rotate(-45deg);
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #0a0b0f;
-}
-
-.node-detail {
-  margin-top: 2rem;
-  padding: 1.5rem;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  display: none;
-  animation: fade-up 0.4s ease;
-}
-
-.node-detail.visible { display: block; }
-.node-detail h4 { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; margin-bottom: 0.5rem; }
-.node-detail p { color: var(--text-dim); font-size: 0.85rem; line-height: 1.7; }
-.node-detail code {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.78rem;
-  background: var(--bg-elevated);
-  padding: 2px 6px;
-  border-radius: 4px;
-  color: var(--eval-orange);
-}
-
-/* ─── CODE VIEW ─── */
-.pipeline-code { display: none; }
-.pipeline-code.visible { display: block; }
-
-.code-block {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.code-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  background: var(--bg-elevated);
-  border-bottom: 1px solid var(--border);
-}
-
-.code-header .filename {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
-  color: var(--text-dim);
-}
-
-.code-dots { display: flex; gap: 6px; }
-.code-dots span { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
-.code-dots span:nth-child(1) { background: #ff5f56; }
-.code-dots span:nth-child(2) { background: #ffbd2e; }
-.code-dots span:nth-child(3) { background: #27c93f; }
-
-.code-body {
-  padding: 1.5rem 2rem;
-  overflow-x: auto;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.78rem;
-  line-height: 1.9;
-  counter-reset: line;
-}
-
-.code-body .line {
-  display: block;
-  padding-left: 3rem;
-  position: relative;
-  white-space: pre;
-}
-
-.code-body .line::before {
-  counter-increment: line;
-  content: counter(line);
-  position: absolute;
-  left: 0;
-  color: var(--text-muted);
-  width: 2rem;
-  text-align: right;
-  user-select: none;
-}
-
-.kw { color: var(--purple); }
-.fn { color: var(--sft-blue); }
-.str { color: var(--merge-green); }
-.dec { color: var(--eval-orange); }
-.cmt { color: var(--text-muted); font-style: italic; }
-.typ { color: var(--elyra-teal); }
-.num { color: var(--retrain-red); }
-.op { color: var(--text-dim); }
-
-/* ─── ANIMATIONS ─── */
-.reveal {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
 </style>
 </head>
-<body>
+<body class="min-h-screen">
+<div id="root"></div>
 
-<!-- ───────── HERO ───────── -->
-<div class="hero">
-  <div class="hero-grid"></div>
-  <div class="hero-glow"></div>
-  <div class="hero-badge"><span class="dot"></span> KFP v2 Interactive Learning Guide</div>
-  <h1>Kubeflow <em>Pipelines</em></h1>
-  <p class="hero-sub">Learn the KFP v2 DSL constructs, compare with Elyra, then see it all come together in a real SFT pipeline.</p>
-  <div class="hero-cta">
-    <a class="cta-primary" href="#constructs">Learn Constructs</a>
-    <a class="cta-secondary" href="#comparison">KFP vs Elyra</a>
-  </div>
-</div>
+<script type="text/babel">
+const { useState } = React;
 
-<!-- ═══════════════════════════════════════════ -->
-<!--  SECTION 01 — KFP DSL CONSTRUCTS           -->
-<!-- ═══════════════════════════════════════════ -->
-<section id="constructs">
-  <div class="section-label reveal">01 — Building Blocks</div>
-  <h2 class="section-title reveal">KFP v2 DSL Constructs</h2>
-  <p class="section-desc reveal">Twelve core primitives from the official KFP SDK — organized by what they do. Master these and you can build any pipeline.</p>
+// ======================================================================
+// DATA: Code snippets and section content
+// ======================================================================
 
-  <!-- ── COMPONENTS ── -->
-  <div style="margin-bottom: 2.5rem;">
-    <div class="reveal" style="font-family: 'Instrument Serif', serif; font-size: 1.4rem; margin-bottom: 1rem; color: var(--text);">Components — defining pipeline steps</div>
-    <div class="constructs-grid">
-
-      <div class="construct-card reveal" style="--card-accent: var(--sft-blue); --card-accent-dim: var(--sft-blue-dim);">
-        <div class="construct-icon">&#9881;&#65039;</div>
-        <span class="construct-category">Lightweight</span>
-        <h3>@dsl.component</h3>
-        <p>A hermetic Python function — all imports must be inside the function body. The simplest way to define a step. KFP serializes it into a container at runtime.</p>
-        <div class="construct-snippet"><span class="dec">@dsl.component</span>(packages_to_install=[<span class="str">"numpy"</span>])
-<span class="kw">def</span> <span class="fn">add</span>(a: <span class="typ">int</span>, b: <span class="typ">int</span>) -> <span class="typ">int</span>:
-    <span class="kw">import</span> numpy <span class="kw">as</span> np   <span class="cmt"># imports inside!</span>
-    <span class="kw">return</span> <span class="fn">int</span>(np.add(a, b))</div>
-      </div>
-
-      <div class="construct-card reveal" style="--card-accent: var(--purple); --card-accent-dim: var(--purple-dim);">
-        <div class="construct-icon">&#128230;</div>
-        <span class="construct-category">Containerized</span>
-        <h3>@dsl.component + target_image</h3>
-        <p>Removes the hermeticity constraint. Can import from adjacent modules. Use <code class="inline-code">kfp component build</code> to bake deps into the image at build time instead of install time.</p>
-        <div class="construct-snippet"><span class="dec">@dsl.component</span>(
-    base_image=<span class="str">"python:3.11"</span>,
-    target_image=<span class="str">"gcr.io/my-proj/train:v1"</span>
+const COMPONENT_CODE = `@dsl.component(
+    base_image="python:3.11",
+    packages_to_install=["numpy", "pandas"]
 )
-<span class="kw">def</span> <span class="fn">train</span>(data_path: <span class="typ">str</span>) -> <span class="typ">float</span>:
-    <span class="kw">from</span> my_utils <span class="kw">import</span> run_training
-    <span class="kw">return</span> run_training(data_path)</div>
-      </div>
-
-      <div class="construct-card reveal" style="--card-accent: var(--eval-orange); --card-accent-dim: var(--eval-orange-dim);">
-        <div class="construct-icon">&#128203;</div>
-        <span class="construct-category">Container</span>
-        <h3>@dsl.container_component</h3>
-        <p>Run any container image with arbitrary commands. Returns a <code class="inline-code">dsl.ContainerSpec</code> — no Python function, just image + command + args.</p>
-        <div class="construct-snippet"><span class="dec">@dsl.container_component</span>
-<span class="kw">def</span> <span class="fn">run_bash</span>(msg: <span class="typ">str</span>, out: <span class="typ">dsl.OutputPath</span>(<span class="typ">str</span>)):
-    <span class="kw">return</span> dsl.ContainerSpec(
-        image=<span class="str">"alpine"</span>,
-        command=[<span class="str">"sh"</span>, <span class="str">"-c"</span>],
-        args=[<span class="str">f"echo {msg} > {out}"</span>]
-    )</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── PIPELINE DEFINITION ── -->
-  <div style="margin-bottom: 2.5rem;">
-    <div class="reveal" style="font-family: 'Instrument Serif', serif; font-size: 1.4rem; margin-bottom: 1rem; color: var(--text);">Pipeline — wiring & compiling</div>
-    <div class="constructs-grid">
-
-      <div class="construct-card reveal" style="--card-accent: var(--merge-green); --card-accent-dim: var(--merge-green-dim);">
-        <div class="construct-icon">&#128279;</div>
-        <h3>@dsl.pipeline</h3>
-        <p>Wire components into a DAG. Pass <code class="inline-code">task.output</code> or <code class="inline-code">task.outputs["key"]</code> between steps to create dependencies. Pipelines can also nest inside other pipelines.</p>
-        <div class="construct-snippet"><span class="dec">@dsl.pipeline</span>(name=<span class="str">"my-pipeline"</span>)
-<span class="kw">def</span> <span class="fn">my_pipeline</span>(param: <span class="typ">str</span> = <span class="str">"default"</span>):
-    s1 = <span class="fn">load_data</span>(path=param)
-    s2 = <span class="fn">train</span>(data=s1.output)
-    s2.<span class="fn">after</span>(s1)  <span class="cmt"># explicit ordering</span>
-    s2.<span class="fn">set_retry</span>(num_retries=<span class="num">3</span>)
-    s2.<span class="fn">set_cpu_limit</span>(<span class="str">"4"</span>)
-    s2.<span class="fn">set_memory_limit</span>(<span class="str">"16Gi"</span>)</div>
-      </div>
-
-      <div class="construct-card reveal" style="--card-accent: var(--yellow); --card-accent-dim: var(--yellow-dim);">
-        <div class="construct-icon">&#128220;</div>
-        <h3>compiler.Compiler().compile()</h3>
-        <p>Compiles your <code class="inline-code">@dsl.pipeline</code> function into a portable YAML IR (PipelineSpec protobuf). This YAML is what you submit to a KFP backend or deploy via kubectl.</p>
-        <div class="construct-snippet"><span class="kw">from</span> kfp <span class="kw">import</span> compiler
-
-compiler.Compiler().<span class="fn">compile</span>(
-    pipeline_func=my_pipeline,
-    package_path=<span class="str">"pipeline.yaml"</span>,
-)
-<span class="cmt"># Produces IR YAML → submit to KFP backend</span></div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ── DATA HANDLING ── -->
-  <div style="margin-bottom: 2.5rem;">
-    <div class="reveal" style="font-family: 'Instrument Serif', serif; font-size: 1.4rem; margin-bottom: 1rem; color: var(--text);">Data Handling — artifacts & parameters</div>
-    <div class="constructs-grid">
-
-      <div class="construct-card reveal" style="--card-accent: var(--elyra-teal); --card-accent-dim: var(--elyra-teal-dim);">
-        <div class="construct-icon">&#128193;</div>
-        <h3>Input / Output Artifacts</h3>
-        <p>Pass typed artifacts (Dataset, Model, Metrics, HTML, Markdown, ClassificationMetrics) between steps. Access via <code class="inline-code">.path</code>, <code class="inline-code">.uri</code>, and <code class="inline-code">.metadata</code>.</p>
-        <div class="construct-snippet"><span class="kw">from</span> kfp.dsl <span class="kw">import</span> <span class="typ">Input</span>, <span class="typ">Output</span>, <span class="typ">Dataset</span>, <span class="typ">Model</span>, <span class="typ">Metrics</span>
-
-<span class="dec">@dsl.component</span>
-<span class="kw">def</span> <span class="fn">train</span>(
-    data: <span class="typ">Input</span>[<span class="typ">Dataset</span>],      <span class="cmt"># read-only artifact</span>
-    model: <span class="typ">Output</span>[<span class="typ">Model</span>],     <span class="cmt"># pre-constructed, write to it</span>
+def load_dataset(
+    dataset_path: str,
+    output_data: Output[Dataset],
 ):
-    <span class="kw">with</span> <span class="fn">open</span>(data.path) <span class="kw">as</span> f: ...
-    save_model(model.path)
-    model.metadata[<span class="str">"framework"</span>] = <span class="str">"pytorch"</span></div>
+    import json
+    import pandas as pd
+
+    # All imports MUST be inside the function body
+    # This is the "hermetic" requirement
+    data = pd.read_json(dataset_path)
+    data.to_json(output_data.path, orient="records")
+    output_data.metadata["num_rows"] = len(data)`;
+
+const CONTAINERIZED_CODE = `@dsl.component(
+    base_image="pytorch/pytorch:2.1.0-cuda12.1",
+    target_image="registry.example.com/sft-train:v2"
+)
+def sft_train(
+    train_data: Input[Dataset],
+    base_model: str,
+    learning_rate: float,
+    epochs: int,
+    adapter_out: Output[Model],
+):
+    # target_image removes hermetic constraint
+    # Can import from adjacent modules
+    from my_utils import run_training
+    from peft import LoraConfig, get_peft_model
+
+    model = load_base(base_model)
+    lora = LoraConfig(r=16, lora_alpha=32)
+    model = get_peft_model(model, lora)
+    train(model, train_data.path, lr=learning_rate)
+    model.save_pretrained(adapter_out.path)`;
+
+const CONTAINER_COMP_CODE = `@dsl.container_component
+def run_bash(msg: str, out: dsl.OutputPath(str)):
+    return dsl.ContainerSpec(
+        image="alpine",
+        command=["sh", "-c"],
+        args=[f"echo {msg} > {out}"]
+    )
+
+# No Python function — just image + command + args
+# Useful for non-Python steps (bash, Go, etc.)`;
+
+const PIPELINE_CODE = `@dsl.pipeline(name="sft-eval-merge-pipeline")
+def sft_pipeline(
+    dataset_path: str = "gs://bucket/train.jsonl",
+    base_model: str  = "Qwen/Qwen2.5-32B-Instruct",
+    threshold: float = 0.85,
+):
+    # 1. Load data → Output[Dataset]
+    data_task = load_dataset(dataset_path=dataset_path)
+
+    # 2. Fine-tune → Output[Model]
+    sft_task = sft_train(
+        train_data=data_task.outputs["output_data"],
+        base_model=base_model,
+        learning_rate=2e-4,
+        epochs=3,
+    )
+    sft_task.set_cpu_limit("4")
+    sft_task.set_memory_limit("16Gi")
+    sft_task.set_gpu_limit("4")
+    sft_task.set_retry(num_retries=2, backoff_duration="60s")
+
+    # 3. Evaluate → float score
+    eval_task = evaluate(
+        adapter=sft_task.outputs["adapter_out"],
+        eval_data=data_task.outputs["output_data"],
+    )
+
+    # 4. Conditional branching (KFP v2)
+    with dsl.If(eval_task.output >= threshold):
+        merge_weights(
+            adapter=sft_task.outputs["adapter_out"],
+            base_model=base_model,
+        )
+
+    with dsl.Else():
+        retrain(
+            train_data=data_task.outputs["output_data"],
+            base_model=base_model,
+        )`;
+
+const ARTIFACTS_CODE = `from kfp.dsl import Input, Output, Dataset, Model, Metrics
+
+@dsl.component
+def evaluate(
+    adapter: Input[Model],       # read-only artifact from upstream
+    eval_data: Input[Dataset],   # read-only artifact from upstream
+    metrics_out: Output[Metrics],# pre-constructed, write to it
+) -> float:                      # small data → returned as parameter
+    score = run_eval(adapter.path, eval_data.path)
+
+    # Log metrics for KFP dashboard visualization
+    metrics_out.log_metric("eval_score", score)
+    metrics_out.log_metric("eval_loss", 1.0 - score)
+
+    # Artifact metadata (key-value pairs)
+    metrics_out.metadata["model_name"] = "qwen2.5-32b"
+    metrics_out.metadata["dataset_size"] = 5000
+
+    return score  # float → used by dsl.If downstream`;
+
+const CONTROL_FLOW_CODE = `# ── Conditional Branching ──
+with dsl.If(eval_task.output >= 0.85):
+    merge_task = merge_weights(adapter=sft.output)
+with dsl.Elif(eval_task.output >= 0.70):
+    retrain_task = retrain(data=data.output, lr=1e-5)
+with dsl.Else():
+    alert_task = alert_team(msg="Score too low")
+
+# ── Gather output from branches ──
+result = dsl.OneOf(
+    merge_task.output,
+    retrain_task.output,
+    alert_task.output,
+)
+log_result(value=result)
+
+# ── Parallel Fan-Out ──
+with dsl.ParallelFor(items=[1, 5, 10, 25], parallelism=2) as epochs:
+    t = train_model(epochs=epochs)
+pick_best(models=dsl.Collected(t.outputs["model"]))
+
+# ── Exit Handler (cleanup) ──
+with dsl.ExitHandler(exit_task=cleanup()):
+    train()  # cleanup runs even if this fails`;
+
+const COMPILE_CODE = `from kfp import compiler
+
+# Compile to portable YAML IR (Intermediate Representation)
+compiler.Compiler().compile(
+    pipeline_func=sft_pipeline,
+    package_path="sft_pipeline.yaml",
+)
+
+# Submit to KFP backend on OpenShift AI
+from kfp.client import Client
+
+client = Client(
+    host="https://ds-pipeline-dspa.apps.cluster.com",
+    existing_token=token,       # OpenShift bearer token
+    ssl_ca_cert="/var/run/secrets/ca.crt",
+)
+
+# Create a run from compiled pipeline
+run = client.create_run_from_pipeline_package(
+    pipeline_file="sft_pipeline.yaml",
+    arguments={
+        "dataset_path": "s3://bucket/train.jsonl",
+        "base_model": "Qwen/Qwen2.5-32B-Instruct",
+        "threshold": 0.85,
+    },
+    run_name="sft-run-001",
+    experiment_name="fine-tuning-experiments",
+)`;
+
+// ======================================================================
+// SECTION DATA
+// ======================================================================
+
+const CONSTRUCT_SECTIONS = [
+  {
+    id: 'lightweight',
+    title: '@dsl.component (Lightweight)',
+    subtitle: 'Hermetic Python function -- all imports inside the body',
+    icon: 'LW',
+    color: '#3b82f6',
+    lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    description: 'The simplest way to define a pipeline step. A lightweight component is a pure Python function decorated with @dsl.component. The critical rule: all imports must be inside the function body (hermetic requirement). KFP serializes the function source and reconstructs it inside a container at runtime -- if imports are outside, they will not be available.',
+    details: [
+      { label: 'Hermetic Requirement', value: 'All imports inside function body', note: 'KFP extracts the function source code and runs it in an isolated container -- top-level imports are NOT available' },
+      { label: 'base_image', value: 'python:3.11', note: 'The container image used to run this function. Must have Python installed' },
+      { label: 'packages_to_install', value: '["numpy", "pandas"]', note: 'Pip packages installed at container startup. Adds latency -- use target_image for heavy deps' },
+      { label: 'Output[Dataset]', value: 'Typed output artifact', note: 'KFP pre-creates the artifact object. Write to .path and optionally set .metadata' },
+    ]
+  },
+  {
+    id: 'containerized',
+    title: '@dsl.component + target_image',
+    subtitle: 'Pre-built container with dependencies baked in',
+    icon: 'IMG',
+    color: '#a855f7',
+    lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    description: 'When you add target_image, the hermetic constraint is removed. You can import from adjacent modules and external packages freely. Use "kfp component build" to bake all dependencies into the Docker image at build time instead of install time. This is the recommended approach for production components with heavy dependencies (PyTorch, transformers, PEFT).',
+    details: [
+      { label: 'target_image', value: 'registry.example.com/sft-train:v2', note: 'The pre-built image containing all dependencies. Built with "kfp component build"' },
+      { label: 'No Hermetic Constraint', value: 'Can import from my_utils', note: 'Adjacent module imports work because the entire codebase is baked into the image' },
+      { label: 'Build-Time vs Runtime', value: 'Deps in image, not pip install', note: 'Eliminates the startup latency of packages_to_install for heavy packages like PyTorch' },
+      { label: 'Input[Dataset]', value: 'Typed input artifact', note: 'Read-only artifact from an upstream step. Access via .path to read the data' },
+    ]
+  },
+  {
+    id: 'container',
+    title: '@dsl.container_component',
+    subtitle: 'Run any container image with arbitrary commands',
+    icon: 'CTR',
+    color: '#f59e0b',
+    lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    description: 'For non-Python steps or when you need full control over the container execution. Instead of a Python function body, you return a dsl.ContainerSpec that specifies the image, command, and arguments. This is useful for running bash scripts, Go binaries, or any containerized tool as a pipeline step.',
+    details: [
+      { label: 'ContainerSpec', value: 'image + command + args', note: 'No Python function body -- just specify what image to run and with what command' },
+      { label: 'dsl.OutputPath(str)', value: 'Path-based output', note: 'KFP provides a path where the container should write its output file' },
+      { label: 'Use Cases', value: 'Bash, Go, custom tools', note: 'Any containerized workload that does not need the Python KFP SDK' },
+      { label: 'Parameterization', value: 'Via f-string in args', note: 'Pipeline parameters and upstream outputs are injected into the args array' },
+    ]
+  },
+];
+
+const PIPELINE_SECTIONS = [
+  {
+    id: 'wiring',
+    title: 'Pipeline Wiring & DAG',
+    subtitle: 'How components connect into a directed acyclic graph',
+    icon: 'DAG',
+    color: '#22c55e',
+    lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
+    description: 'The @dsl.pipeline decorator defines the DAG (directed acyclic graph) of your pipeline. Dependencies are created implicitly when you pass task.output or task.outputs["key"] from one step to another. KFP analyzes these data dependencies to determine execution order. You can also use task.after(other_task) for explicit ordering when there is no data dependency.',
+    details: [
+      { label: 'Implicit Dependencies', value: 'task.outputs["key"]', note: 'Passing output from step A to step B creates an automatic dependency -- B waits for A' },
+      { label: 'Explicit Ordering', value: 'task.after(other_task)', note: 'Force ordering when there is no data dependency (e.g., cleanup after processing)' },
+      { label: 'Pipeline Parameters', value: 'str, float, int with defaults', note: 'Defined as function arguments. Users can override when submitting a run' },
+      { label: '@dsl.pipeline', value: 'name="sft-eval-merge"', note: 'The pipeline name appears in the KFP dashboard and is used for experiment tracking' },
+    ]
+  },
+  {
+    id: 'resources',
+    title: 'Task Resource Configuration',
+    subtitle: 'CPU, memory, GPU limits and retry policies',
+    icon: 'RES',
+    color: '#06b6d4',
+    lines: [18, 19, 20, 21],
+    description: 'Every PipelineTask (the object returned when you call a component) exposes methods to configure Kubernetes resource requests and limits, retry behavior, caching, and environment variables. These are critical for GPU-intensive ML workloads where under-provisioning causes OOM errors and over-provisioning wastes cluster resources.',
+    details: [
+      { label: 'set_cpu_limit("4")', value: '4 CPU cores', note: 'Kubernetes resource limit -- pod is throttled if it exceeds this' },
+      { label: 'set_memory_limit("16Gi")', value: '16 GiB RAM', note: 'Pod is OOM-killed if it exceeds this. Set based on model size + overhead' },
+      { label: 'set_gpu_limit("4")', value: '4 GPUs', note: 'Requests nvidia.com/gpu resources. Must match tensor-parallel-size if using vLLM' },
+      { label: 'set_retry(num_retries=2)', value: '2 retries with 60s backoff', note: 'Retries on transient failures (OOM, network, preemption). Uses exponential backoff' },
+    ]
+  },
+  {
+    id: 'conditional',
+    title: 'Conditional Branching',
+    subtitle: 'dsl.If / dsl.Else for quality gates',
+    icon: 'IF',
+    color: '#f59e0b',
+    lines: [28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38],
+    description: 'KFP v2 introduced dsl.If / dsl.Elif / dsl.Else as context managers for conditional branching. This is the key differentiator from Elyra, which cannot express any conditional logic. In our SFT pipeline, the eval score determines whether to merge weights (score >= threshold) or retrain with adjusted hyperparameters (score < threshold).',
+    details: [
+      { label: 'dsl.If(condition)', value: 'eval_task.output >= threshold', note: 'Compares the float output of the eval step against the pipeline parameter threshold' },
+      { label: 'dsl.Else()', value: 'Fallback branch', note: 'Executes when the If condition is false. Guarantees exactly one branch runs' },
+      { label: 'Quality Gate Pattern', value: 'Eval → If → Merge/Retrain', note: 'Common MLOps pattern: only promote models that meet quality thresholds' },
+      { label: 'vs Elyra', value: 'Not possible in Elyra', note: 'Elyra pipelines are strictly linear -- no branching, no loops, no conditions' },
+    ]
+  },
+];
+
+const DATA_SECTIONS = [
+  {
+    id: 'artifacts',
+    title: 'Typed Artifacts',
+    subtitle: 'Dataset, Model, Metrics -- tracked by the ML Metadata store',
+    icon: 'ART',
+    color: '#06b6d4',
+    lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+    description: 'Artifacts are typed objects that represent large data passed between pipeline steps. Unlike parameters (small scalars), artifacts are stored in object storage (S3/MinIO) and tracked by the ML Metadata (MLMD) store. KFP provides built-in types: Dataset, Model, Metrics, HTML, Markdown, and ClassificationMetrics. Each artifact has a .path (local filesystem path), .uri (storage URI), and .metadata (key-value pairs).',
+    details: [
+      { label: 'Input[Model]', value: 'Read-only artifact', note: 'Received from an upstream step. Access the local file path via artifact.path' },
+      { label: 'Output[Metrics]', value: 'Write artifact', note: 'Pre-constructed by KFP. Write data to artifact.path and set artifact.metadata' },
+      { label: 'log_metric()', value: 'Dashboard visualization', note: 'Metrics logged via log_metric() appear as charts in the KFP dashboard run details' },
+      { label: 'artifact.metadata', value: 'Key-value pairs', note: 'Arbitrary metadata stored in MLMD. Useful for lineage tracking and experiment comparison' },
+      { label: '-> float (return)', value: 'Small data as parameter', note: 'Simple return values become parameters, not artifacts. Used for dsl.If conditions' },
+    ]
+  },
+  {
+    id: 'parameters',
+    title: 'Parameters (Small Data)',
+    subtitle: 'Scalars passed as pipeline and component arguments',
+    icon: 'PRM',
+    color: '#3b82f6',
+    lines: [1, 2, 3, 4, 5, 6, 7],
+    description: 'Parameters are simple Python types (str, int, float, bool, list, dict) that pass between components as serialized values. Unlike artifacts, parameters are NOT stored in object storage -- they are embedded directly in the pipeline spec. Use parameters for configuration values, thresholds, paths, and hyperparameters. Use artifacts for large data like datasets, model weights, and evaluation reports.',
+    details: [
+      { label: 'Supported Types', value: 'str, int, float, bool, list, dict', note: 'KFP serializes these to JSON. Complex objects must use artifacts instead' },
+      { label: 'Pipeline Parameters', value: 'Function arguments with defaults', note: 'Users can override these when submitting a run via the UI or API' },
+      { label: 'task.output', value: 'Single return value', note: 'When a component returns a single value, access it via task.output' },
+      { label: 'task.outputs["key"]', value: 'Named outputs', note: 'When a component has multiple Output artifacts, access them by name' },
+    ]
+  },
+];
+
+// ======================================================================
+// SHARED COMPONENTS
+// ======================================================================
+
+function CodeViewer({ code, highlightedLines, highlightColor, label }) {
+  const lines = code.split('\n');
+  const hlColor = highlightColor || 'highlighted';
+  return (
+    <div className="rounded-xl border border-slate-700/60 bg-[#0b1121] overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/40 border-b border-slate-700/40">
+        <div className="w-2.5 h-2.5 rounded-full bg-red-500/60"></div>
+        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60"></div>
+        <div className="w-2.5 h-2.5 rounded-full bg-green-500/60"></div>
+        <span className="mono text-[10px] text-slate-500 ml-2">{label || 'Python'}</span>
       </div>
-
-      <div class="construct-card reveal" style="--card-accent: var(--sft-blue); --card-accent-dim: var(--sft-blue-dim);">
-        <div class="construct-icon">&#128196;</div>
-        <h3>Parameters (small data)</h3>
-        <p>Simple Python types (<code class="inline-code">str</code>, <code class="inline-code">int</code>, <code class="inline-code">float</code>, <code class="inline-code">bool</code>, <code class="inline-code">list</code>, <code class="inline-code">dict</code>) pass as pipeline/component parameters. Used for config values, thresholds, paths.</p>
-        <div class="construct-snippet"><span class="dec">@dsl.component</span>
-<span class="kw">def</span> <span class="fn">configure</span>(
-    lr: <span class="typ">float</span>,
-    epochs: <span class="typ">int</span>,
-    tags: <span class="typ">list</span>,
-) -> <span class="typ">str</span>:
-    <span class="kw">return</span> <span class="str">f"lr={lr}, epochs={epochs}"</span></div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ── CONTROL FLOW ── -->
-  <div style="margin-bottom: 2.5rem;">
-    <div class="reveal" style="font-family: 'Instrument Serif', serif; font-size: 1.4rem; margin-bottom: 1rem; color: var(--text);">Control Flow — branching, loops, cleanup</div>
-    <div class="constructs-grid">
-
-      <div class="construct-card reveal" style="--card-accent: var(--eval-orange); --card-accent-dim: var(--eval-orange-dim);">
-        <div class="construct-icon">&#128256;</div>
-        <h3>dsl.If / dsl.Elif / dsl.Else</h3>
-        <p>KFP v2's conditional branching. Use <code class="inline-code">with dsl.If()</code> as a context manager to gate which steps execute based on upstream outputs or pipeline params.</p>
-        <div class="construct-snippet"><span class="kw">with</span> <span class="fn">dsl.If</span>(eval_task.output >= <span class="num">0.85</span>):
-    <span class="fn">merge_weights</span>(adapter=sft.output)
-<span class="kw">with</span> <span class="fn">dsl.Elif</span>(eval_task.output >= <span class="num">0.70</span>):
-    <span class="fn">retrain</span>(data=data.output, lr=<span class="num">1e-5</span>)
-<span class="kw">with</span> <span class="fn">dsl.Else</span>():
-    <span class="fn">alert_team</span>(msg=<span class="str">"Score too low"</span>)</div>
-      </div>
-
-      <div class="construct-card reveal" style="--card-accent: var(--merge-green); --card-accent-dim: var(--merge-green-dim);">
-        <div class="construct-icon">&#128257;</div>
-        <h3>dsl.OneOf</h3>
-        <p>Gather a single output from mutually exclusive branches (If/Elif/Else) so a downstream task can consume it. Requires an <code class="inline-code">dsl.Else</code> branch to guarantee exactly one result.</p>
-        <div class="construct-snippet"><span class="kw">with</span> <span class="fn">dsl.If</span>(coin.output == <span class="str">"heads"</span>):
-    t1 = <span class="fn">handle_heads</span>()
-<span class="kw">with</span> <span class="fn">dsl.Else</span>():
-    t2 = <span class="fn">handle_tails</span>()
-
-result = <span class="fn">dsl.OneOf</span>(t1.output, t2.output)
-<span class="fn">log_result</span>(value=result)</div>
-      </div>
-
-      <div class="construct-card reveal" style="--card-accent: var(--retrain-red); --card-accent-dim: var(--retrain-red-dim);">
-        <div class="construct-icon">&#9889;</div>
-        <h3>dsl.ParallelFor + dsl.Collected</h3>
-        <p>Fan out over a list in parallel with optional <code class="inline-code">parallelism</code> cap. Use <code class="inline-code">dsl.Collected</code> to gather all outputs from the loop iterations into a list for a downstream step.</p>
-        <div class="construct-snippet"><span class="kw">with</span> <span class="fn">dsl.ParallelFor</span>(
-    items=[<span class="num">1</span>, <span class="num">5</span>, <span class="num">10</span>, <span class="num">25</span>],
-    parallelism=<span class="num">2</span>
-) <span class="kw">as</span> epochs:
-    t = <span class="fn">train_model</span>(epochs=epochs)
-
-<span class="cmt"># Gather all models from loop iterations</span>
-<span class="fn">pick_best</span>(models=<span class="fn">dsl.Collected</span>(t.outputs[<span class="str">"model"</span>]))</div>
-      </div>
-
-      <div class="construct-card reveal" style="--card-accent: var(--purple); --card-accent-dim: var(--purple-dim);">
-        <div class="construct-icon">&#128737;&#65039;</div>
-        <h3>dsl.ExitHandler + PipelineTaskFinalStatus</h3>
-        <p>Guarantee a cleanup task runs after the pipeline — even if earlier steps fail. Use <code class="inline-code">PipelineTaskFinalStatus</code> in the exit task to inspect what happened.</p>
-        <div class="construct-snippet"><span class="kw">from</span> kfp.dsl <span class="kw">import</span> PipelineTaskFinalStatus
-
-<span class="dec">@dsl.component</span>
-<span class="kw">def</span> <span class="fn">cleanup</span>(status: <span class="typ">PipelineTaskFinalStatus</span>):
-    <span class="fn">print</span>(<span class="str">f"State: {status.state}"</span>)
-    <span class="fn">print</span>(<span class="str">f"Error: {status.error_message}"</span>)
-
-<span class="kw">with</span> <span class="fn">dsl.ExitHandler</span>(exit_task=<span class="fn">cleanup</span>()):
-    <span class="fn">train</span>()  <span class="cmt"># cleanup runs even if this fails</span></div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<div class="section-divider"></div>
-
-<!-- ═══════════════════════════════════════════ -->
-<!--  SECTION 02 — KFP vs ELYRA                 -->
-<!-- ═══════════════════════════════════════════ -->
-<section id="comparison">
-  <div class="section-label reveal">02 — Choose Your Tool</div>
-  <h2 class="section-title reveal">KFP DSL vs Elyra</h2>
-  <p class="section-desc reveal">Two approaches to building ML pipelines. Different strengths for different stages of your workflow.</p>
-
-  <div class="comparison-wrapper">
-    <div class="compare-card kfp-card reveal">
-      <div class="compare-badge">KFP DSL</div>
-      <h3>Code-First Pipelines</h3>
-      <p class="compare-desc">Write pipelines as Python code with full programmatic control over every aspect of execution.</p>
-      <ul class="compare-list">
-        <li><span class="check">&#10003;</span> Full conditional branching with <code class="inline-code">dsl.If / Elif / Else</code></li>
-        <li><span class="check">&#10003;</span> Parallel fan-out with <code class="inline-code">dsl.ParallelFor</code> + <code class="inline-code">dsl.Collected</code></li>
-        <li><span class="check">&#10003;</span> Type-safe artifact passing (Dataset, Model, Metrics)</li>
-        <li><span class="check">&#10003;</span> Three component types: lightweight, containerized, container</li>
-        <li><span class="check">&#10003;</span> Version control — pipelines are .py files, diffs work</li>
-        <li><span class="check">&#10003;</span> CI/CD integration — compile YAML IR and deploy in automation</li>
-        <li><span class="check">&#10003;</span> Reusable component libraries across teams</li>
-        <li><span class="check">&#10003;</span> Task configs: retry, CPU/memory limits, caching, env vars</li>
-      </ul>
-    </div>
-
-    <div class="compare-card elyra-card reveal">
-      <div class="compare-badge">Elyra</div>
-      <h3>Visual Notebook Pipelines</h3>
-      <p class="compare-desc">Drag-and-drop notebooks in JupyterLab to compose pipelines visually — no DSL to learn.</p>
-      <ul class="compare-list">
-        <li><span class="check">&#10003;</span> Visual drag-and-drop pipeline editor in JupyterLab</li>
-        <li><span class="check">&#10003;</span> Run existing .ipynb / .py / .r files as pipeline steps</li>
-        <li><span class="check">&#10003;</span> No KFP SDK knowledge required to start</li>
-        <li><span class="check">&#10003;</span> Built into JupyterLab — no context switching</li>
-        <li><span class="check">&#10003;</span> Quick prototyping of linear workflows</li>
-        <li><span class="check">&#10003;</span> Auto-generates KFP YAML under the hood</li>
-        <li><span class="check">&#10007;</span> No conditional branching (If/Elif/Else) or loops</li>
-        <li><span class="check">&#10007;</span> Limited parameterization and no typed artifacts</li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="advantages-section reveal">
-    <div class="section-label">Why KFP DSL wins for production</div>
-    <h3 style="font-family: 'Instrument Serif', serif; font-size: 1.5rem; font-weight: 400;">Six advantages that matter at scale</h3>
-    <div class="adv-grid">
-      <div class="adv-item">
-        <div class="adv-icon">&#128274;</div>
-        <h4>Type Safety</h4>
-        <p>Typed artifacts and compile-time checks catch data mismatches before your GPU job runs.</p>
-      </div>
-      <div class="adv-item">
-        <div class="adv-icon">&#128221;</div>
-        <h4>Git-Native</h4>
-        <p>Pipelines are .py files — diffs, PRs, blame, and rollbacks all work naturally.</p>
-      </div>
-      <div class="adv-item">
-        <div class="adv-icon">&#9851;&#65039;</div>
-        <h4>Reusability</h4>
-        <p>Share components as Python packages. Import and compose across projects and teams.</p>
-      </div>
-      <div class="adv-item">
-        <div class="adv-icon">&#128256;</div>
-        <h4>Conditionals</h4>
-        <p>dsl.If / Elif / Else + dsl.OneOf — real branching, not just linear chains.</p>
-      </div>
-      <div class="adv-item">
-        <div class="adv-icon">&#9889;</div>
-        <h4>Parallel Execution</h4>
-        <p>ParallelFor with Collected — run sweeps, multi-model evals, or data shards concurrently.</p>
-      </div>
-      <div class="adv-item">
-        <div class="adv-icon">&#128640;</div>
-        <h4>CI/CD Ready</h4>
-        <p>Compile to YAML IR, validate, and deploy pipelines from your CI/CD automation.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<div class="section-divider"></div>
-
-<!-- ═══════════════════════════════════════════ -->
-<!--  SECTION 03 — DECISION GUIDE               -->
-<!-- ═══════════════════════════════════════════ -->
-<section id="decision">
-  <div class="section-label reveal">03 — Decision Guide</div>
-  <h2 class="section-title reveal">When to use what?</h2>
-  <p class="section-desc reveal">Answer two questions to find your tool.</p>
-
-  <div class="decision-flow">
-    <div class="decision-node question reveal">
-      <h4>Do you need conditional branching, loops, or typed artifacts?</h4>
-      <p>e.g., dsl.If(score >= threshold), dsl.ParallelFor, Input[Model]</p>
-    </div>
-
-    <div class="flow-connector"></div>
-
-    <div class="decision-arrows reveal">
-      <div class="decision-arrow-label" style="color: var(--merge-green);">Yes</div>
-      <div class="decision-arrow-label" style="color: var(--retrain-red);">No</div>
-    </div>
-
-    <div style="height: 8px;"></div>
-
-    <div class="decision-answers reveal">
-      <div class="decision-node answer-kfp">
-        <h4 style="color: var(--sft-blue);">Use KFP DSL</h4>
-        <p>Elyra cannot express any of these. You need code-level control.</p>
-      </div>
-      <div>
-        <div class="decision-node question" style="margin-bottom: 0;">
-          <h4>Is it a linear chain of notebooks?</h4>
-          <p>notebook A &#8594; B &#8594; C, no branching</p>
-        </div>
-
-        <div class="flow-connector"></div>
-
-        <div class="decision-arrows" style="gap: 3rem;">
-          <div class="decision-arrow-label" style="color: var(--merge-green);">Yes</div>
-          <div class="decision-arrow-label" style="color: var(--retrain-red);">No</div>
-        </div>
-
-        <div style="height: 8px;"></div>
-
-        <div class="decision-answers">
-          <div class="decision-node answer-elyra">
-            <h4 style="color: var(--elyra-teal);">Use Elyra</h4>
-            <p>Fast prototyping, visual editing in JupyterLab.</p>
-          </div>
-          <div class="decision-node answer-kfp">
-            <h4 style="color: var(--sft-blue);">Use KFP DSL</h4>
-            <p>Complex DAGs need code.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div style="height: 2rem;"></div>
-
-    <div class="decision-node reveal" style="text-align: left; margin-top: 1rem; background: var(--bg-elevated);">
-      <h4 style="margin-bottom: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--eval-orange);">Quick Reference</h4>
-      <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
-        <thead>
-          <tr style="border-bottom: 1px solid var(--border);">
-            <th style="padding: 8px 12px; text-align: left; color: var(--text-dim); font-weight: 500;">Scenario</th>
-            <th style="padding: 8px 12px; text-align: center; color: var(--sft-blue);">KFP</th>
-            <th style="padding: 8px 12px; text-align: center; color: var(--elyra-teal);">Elyra</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr style="border-bottom: 1px solid var(--border);">
-            <td style="padding: 8px 12px; color: var(--text-dim);">Quick notebook prototype</td>
-            <td style="padding: 8px 12px; text-align: center;">&#8212;</td>
-            <td style="padding: 8px 12px; text-align: center;">&#9733;</td>
-          </tr>
-          <tr style="border-bottom: 1px solid var(--border);">
-            <td style="padding: 8px 12px; color: var(--text-dim);">Production training pipeline</td>
-            <td style="padding: 8px 12px; text-align: center;">&#9733;</td>
-            <td style="padding: 8px 12px; text-align: center;">&#8212;</td>
-          </tr>
-          <tr style="border-bottom: 1px solid var(--border);">
-            <td style="padding: 8px 12px; color: var(--text-dim);">Conditional branching (If/Elif/Else)</td>
-            <td style="padding: 8px 12px; text-align: center;">&#9733;</td>
-            <td style="padding: 8px 12px; text-align: center;">&#10007;</td>
-          </tr>
-          <tr style="border-bottom: 1px solid var(--border);">
-            <td style="padding: 8px 12px; color: var(--text-dim);">Hyperparameter sweep (ParallelFor)</td>
-            <td style="padding: 8px 12px; text-align: center;">&#9733;</td>
-            <td style="padding: 8px 12px; text-align: center;">&#10007;</td>
-          </tr>
-          <tr style="border-bottom: 1px solid var(--border);">
-            <td style="padding: 8px 12px; color: var(--text-dim);">Data scientist exploration</td>
-            <td style="padding: 8px 12px; text-align: center;">&#8212;</td>
-            <td style="padding: 8px 12px; text-align: center;">&#9733;</td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 12px; color: var(--text-dim);">CI/CD automated deploy</td>
-            <td style="padding: 8px 12px; text-align: center;">&#9733;</td>
-            <td style="padding: 8px 12px; text-align: center;">&#8212;</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
-<div class="section-divider"></div>
-
-<!-- ═══════════════════════════════════════════ -->
-<!--  SECTION 04 — FULL EXAMPLE PIPELINE         -->
-<!-- ═══════════════════════════════════════════ -->
-<section id="pipeline">
-  <div class="section-label reveal">04 — Putting It All Together</div>
-  <h2 class="section-title reveal">SFT &#8594; Eval &#8594; Conditional Merge Pipeline</h2>
-  <p class="section-desc reveal">Everything you learned above — components, artifacts, dsl.If/Else — assembled into a real fine-tuning pipeline. Click any node to see details.</p>
-
-  <div class="pipeline-container reveal">
-    <div class="view-toggle">
-      <button class="active" onclick="toggleView('visual')">Visual Pipeline</button>
-      <button onclick="toggleView('code')">Code View</button>
-    </div>
-
-    <!-- VISUAL VIEW -->
-    <div class="pipeline-visual" id="pipelineVisual">
-      <div class="pipe-row">
-        <div class="pipe-node node-sft" data-node="load" onclick="showDetail('load')" style="min-width: 180px;">
-          <div class="node-icon">&#128230;</div>
-          <div class="node-label">Load Dataset</div>
-          <div class="node-sub">Output[Dataset] artifact</div>
-        </div>
-      </div>
-
-      <div class="pipe-connector" style="--conn-from: var(--sft-blue); --conn-to: var(--sft-blue);"></div>
-
-      <div class="pipe-row">
-        <div class="pipe-node node-sft" data-node="sft" onclick="showDetail('sft')">
-          <div class="node-icon">&#129504;</div>
-          <div class="node-label">SFT Training</div>
-          <div class="node-sub">LoRA fine-tuning &#8594; Output[Model]</div>
-        </div>
-      </div>
-
-      <div class="pipe-connector" style="--conn-from: var(--sft-blue); --conn-to: var(--eval-orange);"></div>
-
-      <div class="pipe-row">
-        <div class="pipe-node node-eval" data-node="eval" onclick="showDetail('eval')">
-          <div class="node-icon">&#128202;</div>
-          <div class="node-label">Evaluation</div>
-          <div class="node-sub">Returns float score for dsl.If</div>
-        </div>
-      </div>
-
-      <div class="pipe-connector" style="height: 20px; --conn-from: var(--eval-orange); --conn-to: var(--eval-orange);"></div>
-
-      <div class="pipe-row">
-        <div class="condition-diamond"><span>IF</span></div>
-      </div>
-
-      <div style="height: 8px;"></div>
-
-      <div class="pipe-row">
-        <div class="branch-row">
-          <div class="branch-label branch-yes">dsl.If(score >= 0.85)</div>
-          <div class="branch-label branch-no">dsl.Else()</div>
-
-          <div class="branch-arm">
-            <div class="pipe-connector-branch" style="background: var(--merge-green);"></div>
-            <div class="pipe-node node-merge" data-node="merge" onclick="showDetail('merge')">
-              <div class="node-icon">&#128279;</div>
-              <div class="node-label">Merge Weights</div>
-              <div class="node-sub">LoRA &#8594; Base Model</div>
+      <div className="overflow-x-auto p-0" style={{ maxHeight: '520px', overflowY: 'auto' }}>
+        {lines.map((line, i) => {
+          const lineNum = i + 1;
+          const isHL = highlightedLines && highlightedLines.includes(lineNum);
+          return (
+            <div key={i} className={`code-line flex px-2 py-[1px] ${isHL ? hlColor : ''}`}>
+              <span className="mono text-[10px] text-slate-600 w-8 text-right mr-3 select-none flex-shrink-0">{lineNum}</span>
+              <span className="mono text-[11px] whitespace-pre" style={{ color: colorizePython(line) }}>{line}</span>
             </div>
-          </div>
-
-          <div class="branch-arm">
-            <div class="pipe-connector-branch" style="background: var(--retrain-red);"></div>
-            <div class="pipe-node node-retrain" data-node="retrain" onclick="showDetail('retrain')">
-              <div class="node-icon">&#128260;</div>
-              <div class="node-label">Retrain</div>
-              <div class="node-sub">Lower LR, more epochs</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="node-detail" id="nodeDetail">
-        <h4 id="detailTitle"></h4>
-        <p id="detailContent"></p>
+          );
+        })}
       </div>
     </div>
-
-    <!-- CODE VIEW -->
-    <div class="pipeline-code" id="pipelineCode">
-      <div class="code-block">
-        <div class="code-header">
-          <div class="code-dots"><span></span><span></span><span></span></div>
-          <div class="filename">sft_pipeline.py</div>
-        </div>
-        <div class="code-body">
-<span class="line"><span class="kw">from</span> kfp <span class="kw">import</span> dsl, compiler</span>
-<span class="line"><span class="kw">from</span> kfp.dsl <span class="kw">import</span> <span class="typ">Input</span>, <span class="typ">Output</span>, <span class="typ">Dataset</span>, <span class="typ">Model</span>, <span class="typ">Metrics</span></span>
-<span class="line"></span>
-<span class="line"></span>
-<span class="line"><span class="cmt"># ── Step 1: Load & prepare the dataset ──────────────────────</span></span>
-<span class="line"><span class="cmt"># Lightweight component: hermetic, all imports inside body</span></span>
-<span class="line"><span class="dec">@dsl.component</span>(base_image=<span class="str">"python:3.11"</span>)</span>
-<span class="line"><span class="kw">def</span> <span class="fn">load_dataset</span>(</span>
-<span class="line">    dataset_path: <span class="typ">str</span>,</span>
-<span class="line">    output_data: <span class="typ">Output</span>[<span class="typ">Dataset</span>],</span>
-<span class="line">):</span>
-<span class="line">    <span class="kw">import</span> json</span>
-<span class="line">    data = fetch_and_format(dataset_path)</span>
-<span class="line">    <span class="kw">with</span> <span class="fn">open</span>(output_data.path, <span class="str">"w"</span>) <span class="kw">as</span> f:</span>
-<span class="line">        json.dump(data, f)</span>
-<span class="line"></span>
-<span class="line"></span>
-<span class="line"><span class="cmt"># ── Step 2: Supervised Fine-Tuning ──────────────────────────</span></span>
-<span class="line"><span class="dec">@dsl.component</span>(base_image=<span class="str">"pytorch/pytorch:2.1.0-cuda12.1"</span>)</span>
-<span class="line"><span class="kw">def</span> <span class="fn">sft_train</span>(</span>
-<span class="line">    train_data: <span class="typ">Input</span>[<span class="typ">Dataset</span>],</span>
-<span class="line">    base_model: <span class="typ">str</span>,</span>
-<span class="line">    learning_rate: <span class="typ">float</span>,</span>
-<span class="line">    epochs: <span class="typ">int</span>,</span>
-<span class="line">    adapter_out: <span class="typ">Output</span>[<span class="typ">Model</span>],</span>
-<span class="line">):</span>
-<span class="line">    <span class="kw">from</span> peft <span class="kw">import</span> LoraConfig, get_peft_model</span>
-<span class="line">    model = load_base(base_model)</span>
-<span class="line">    lora = LoraConfig(r=<span class="num">16</span>, lora_alpha=<span class="num">32</span>)</span>
-<span class="line">    model = get_peft_model(model, lora)</span>
-<span class="line">    train(model, train_data.path, lr=learning_rate, epochs=epochs)</span>
-<span class="line">    model.save_pretrained(adapter_out.path)</span>
-<span class="line"></span>
-<span class="line"></span>
-<span class="line"><span class="cmt"># ── Step 3: Evaluate the fine-tuned model ───────────────────</span></span>
-<span class="line"><span class="dec">@dsl.component</span>(base_image=<span class="str">"pytorch/pytorch:2.1.0-cuda12.1"</span>)</span>
-<span class="line"><span class="kw">def</span> <span class="fn">evaluate</span>(</span>
-<span class="line">    adapter: <span class="typ">Input</span>[<span class="typ">Model</span>],</span>
-<span class="line">    eval_data: <span class="typ">Input</span>[<span class="typ">Dataset</span>],</span>
-<span class="line">    metrics_out: <span class="typ">Output</span>[<span class="typ">Metrics</span>],</span>
-<span class="line">) -> <span class="typ">float</span>:</span>
-<span class="line">    score = run_eval(adapter.path, eval_data.path)</span>
-<span class="line">    metrics_out.log_metric(<span class="str">"eval_score"</span>, score)</span>
-<span class="line">    <span class="kw">return</span> score  <span class="cmt"># float output → used by dsl.If</span></span>
-<span class="line"></span>
-<span class="line"></span>
-<span class="line"><span class="cmt"># ── Step 4a: Merge adapter into base model ──────────────────</span></span>
-<span class="line"><span class="dec">@dsl.component</span>(base_image=<span class="str">"pytorch/pytorch:2.1.0-cuda12.1"</span>)</span>
-<span class="line"><span class="kw">def</span> <span class="fn">merge_weights</span>(</span>
-<span class="line">    adapter: <span class="typ">Input</span>[<span class="typ">Model</span>],</span>
-<span class="line">    base_model: <span class="typ">str</span>,</span>
-<span class="line">    merged_out: <span class="typ">Output</span>[<span class="typ">Model</span>],</span>
-<span class="line">):</span>
-<span class="line">    merged = merge_lora_into_base(adapter.path, base_model)</span>
-<span class="line">    merged.save_pretrained(merged_out.path)</span>
-<span class="line"></span>
-<span class="line"></span>
-<span class="line"><span class="cmt"># ── Step 4b: Retrain with adjusted hyperparams ─────────────</span></span>
-<span class="line"><span class="dec">@dsl.component</span>(base_image=<span class="str">"pytorch/pytorch:2.1.0-cuda12.1"</span>)</span>
-<span class="line"><span class="kw">def</span> <span class="fn">retrain</span>(</span>
-<span class="line">    train_data: <span class="typ">Input</span>[<span class="typ">Dataset</span>],</span>
-<span class="line">    base_model: <span class="typ">str</span>,</span>
-<span class="line">    adapter_out: <span class="typ">Output</span>[<span class="typ">Model</span>],</span>
-<span class="line">):</span>
-<span class="line">    model = load_base(base_model)</span>
-<span class="line">    train(model, train_data.path, lr=<span class="num">1e-5</span>, epochs=<span class="num">5</span>)</span>
-<span class="line">    model.save_pretrained(adapter_out.path)</span>
-<span class="line"></span>
-<span class="line"></span>
-<span class="line"><span class="cmt"># ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span></span>
-<span class="line"><span class="cmt">#  Pipeline: wiring it all together with</span></span>
-<span class="line"><span class="cmt">#  dsl.If / dsl.Else for conditional branching  (KFP v2)</span></span>
-<span class="line"><span class="cmt"># ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span></span>
-<span class="line"><span class="dec">@dsl.pipeline</span>(name=<span class="str">"sft-eval-merge-pipeline"</span>)</span>
-<span class="line"><span class="kw">def</span> <span class="fn">sft_pipeline</span>(</span>
-<span class="line">    dataset_path: <span class="typ">str</span> = <span class="str">"gs://bucket/train.jsonl"</span>,</span>
-<span class="line">    base_model: <span class="typ">str</span>  = <span class="str">"meta-llama/Llama-3-8B"</span>,</span>
-<span class="line">    threshold: <span class="typ">float</span> = <span class="num">0.85</span>,</span>
-<span class="line">):</span>
-<span class="line">    <span class="cmt"># 1. Load data</span></span>
-<span class="line">    data_task = <span class="fn">load_dataset</span>(dataset_path=dataset_path)</span>
-<span class="line"></span>
-<span class="line">    <span class="cmt"># 2. Fine-tune</span></span>
-<span class="line">    sft_task = <span class="fn">sft_train</span>(</span>
-<span class="line">        train_data=data_task.outputs[<span class="str">"output_data"</span>],</span>
-<span class="line">        base_model=base_model,</span>
-<span class="line">        learning_rate=<span class="num">2e-4</span>,</span>
-<span class="line">        epochs=<span class="num">3</span>,</span>
-<span class="line">    )</span>
-<span class="line"></span>
-<span class="line">    <span class="cmt"># 3. Evaluate</span></span>
-<span class="line">    eval_task = <span class="fn">evaluate</span>(</span>
-<span class="line">        adapter=sft_task.outputs[<span class="str">"adapter_out"</span>],</span>
-<span class="line">        eval_data=data_task.outputs[<span class="str">"output_data"</span>],</span>
-<span class="line">    )</span>
-<span class="line"></span>
-<span class="line">    <span class="cmt"># 4. Conditional: dsl.If / dsl.Else (KFP v2 syntax)</span></span>
-<span class="line">    <span class="kw">with</span> <span class="fn">dsl.If</span>(eval_task.output >= threshold):</span>
-<span class="line">        <span class="fn">merge_weights</span>(</span>
-<span class="line">            adapter=sft_task.outputs[<span class="str">"adapter_out"</span>],</span>
-<span class="line">            base_model=base_model,</span>
-<span class="line">        )</span>
-<span class="line"></span>
-<span class="line">    <span class="kw">with</span> <span class="fn">dsl.Else</span>():</span>
-<span class="line">        <span class="fn">retrain</span>(</span>
-<span class="line">            train_data=data_task.outputs[<span class="str">"output_data"</span>],</span>
-<span class="line">            base_model=base_model,</span>
-<span class="line">        )</span>
-<span class="line"></span>
-<span class="line"></span>
-<span class="line"><span class="cmt"># ── Compile to YAML IR ──────────────────────────────────────</span></span>
-<span class="line">compiler.Compiler().<span class="fn">compile</span>(</span>
-<span class="line">    pipeline_func=sft_pipeline,</span>
-<span class="line">    package_path=<span class="str">"sft_pipeline.yaml"</span>,</span>
-<span class="line">)</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<script>
-// ─── View Toggle ───
-function toggleView(view) {
-  const visual = document.getElementById('pipelineVisual');
-  const code = document.getElementById('pipelineCode');
-  const buttons = document.querySelectorAll('.view-toggle button');
-  buttons.forEach(b => b.classList.remove('active'));
-  if (view === 'visual') {
-    visual.classList.remove('hidden');
-    code.classList.remove('visible');
-    buttons[0].classList.add('active');
-  } else {
-    visual.classList.add('hidden');
-    code.classList.add('visible');
-    buttons[1].classList.add('active');
-  }
+  );
 }
 
-// ─── Node Details ───
-const nodeDetails = {
-  load: {
-    title: 'Load Dataset',
-    content: 'A <code>@dsl.component</code> (lightweight) that downloads and preprocesses training data. Uses <code>Output[Dataset]</code> to write a typed artifact. Downstream steps consume it via <code>Input[Dataset]</code>. All imports are inside the function body (hermetic requirement).'
-  },
-  sft: {
-    title: 'SFT Training (Supervised Fine-Tuning)',
-    content: 'Takes <code>Input[Dataset]</code> from load_dataset and produces <code>Output[Model]</code> (LoRA adapter weights). The dependency is implicit — KFP knows sft_train must wait for load_dataset because it consumes its output artifact. Uses a GPU-enabled base image.'
-  },
-  eval: {
-    title: 'Evaluation',
-    content: 'Takes <code>Input[Model]</code> (adapter) and <code>Input[Dataset]</code> (eval set). Returns a <code>float</code> score — this is the key: the returned value becomes <code>eval_task.output</code> which is used by <code>dsl.If(eval_task.output >= threshold)</code> for conditional branching. Also logs metrics via <code>Output[Metrics]</code>.'
-  },
-  merge: {
-    title: 'Merge Weights  (dsl.If branch)',
-    content: 'Only executes when <code>dsl.If(eval_task.output >= threshold)</code> is true. Merges LoRA adapter weights into the base model to create a standalone model. Takes <code>Input[Model]</code> and writes <code>Output[Model]</code>. This is KFP v2\'s replacement for the old <code>dsl.Condition</code>.'
-  },
-  retrain: {
-    title: 'Retrain  (dsl.Else branch)',
-    content: 'Only executes when the <code>dsl.Else()</code> branch is entered — i.e., when the eval score is below threshold. Retrains with adjusted hyperparameters (lower learning rate, more epochs). Together with the merge step, this shows the KFP v2 <code>dsl.If / dsl.Else</code> pattern.'
-  }
-};
-
-function showDetail(nodeId) {
-  const detail = document.getElementById('nodeDetail');
-  const title = document.getElementById('detailTitle');
-  const content = document.getElementById('detailContent');
-  document.querySelectorAll('.pipe-node').forEach(n => n.classList.remove('active'));
-  document.querySelector(`[data-node="${nodeId}"]`).classList.add('active');
-  const info = nodeDetails[nodeId];
-  title.innerHTML = info.title;
-  content.innerHTML = info.content;
-  detail.classList.add('visible');
+function colorizePython(line) {
+  const trimmed = line.trim();
+  if (trimmed.startsWith('#')) return '#64748b';
+  if (trimmed.startsWith('@')) return '#fbbf24';
+  if (trimmed.startsWith('def ')) return '#60a5fa';
+  if (trimmed.startsWith('from ') || trimmed.startsWith('import ')) return '#c084fc';
+  if (trimmed.startsWith('with ')) return '#c084fc';
+  if (trimmed.startsWith('return ')) return '#c084fc';
+  if (/^\s*(with\s+)?dsl\.(If|Elif|Else|OneOf|ParallelFor|ExitHandler|Collected)/.test(line)) return '#fbbf24';
+  if (/^\s*\w+_task\s*=\s*\w+/.test(line) || /^\s*\w+\s*=\s*\w+\(/.test(line)) return '#60a5fa';
+  if (/^\s*\w+\.set_/.test(line) || /^\s*\w+\.add_/.test(line)) return '#67e8f9';
+  if (/^\s*(Input|Output|Dataset|Model|Metrics)/.test(line)) return '#67e8f9';
+  if (/^\s*\)/.test(trimmed) || /^\s*\]/.test(trimmed)) return '#94a3b8';
+  if (/"[^"]*"/.test(line) || /'[^']*'/.test(line)) return '#86efac';
+  if (/:\s*(str|int|float|bool|list|dict)/.test(line)) return '#67e8f9';
+  return '#cbd5e1';
 }
 
-// ─── Scroll Reveal ───
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) entry.target.classList.add('visible');
-  });
-}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+function DetailCard({ detail, color }) {
+  return (
+    <div className="flex gap-3 items-start py-2 px-3 rounded-lg bg-slate-800/30 border border-slate-700/30">
+      <div className="w-1 h-full rounded-full flex-shrink-0 self-stretch" style={{ background: color, minHeight: '24px' }}></div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="mono text-[11px] font-semibold text-slate-200">{detail.label}</span>
+          <span className="mono text-[10px] text-slate-400 break-all">{detail.value}</span>
+        </div>
+        <div className="text-[10px] text-slate-500 mt-0.5">{detail.note}</div>
+      </div>
+    </div>
+  );
+}
 
-// ─── Smooth scroll ───
-document.querySelectorAll('a[href^="#"]').forEach(link => {
-  link.addEventListener('click', e => {
-    e.preventDefault();
-    const target = document.querySelector(link.getAttribute('href'));
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-});
+function SectionBadge({ icon, color, size }) {
+  const sz = size || 36;
+  return (
+    <div className="flex items-center justify-center rounded-lg mono text-[10px] font-bold flex-shrink-0"
+      style={{ width: sz, height: sz, background: `${color}20`, color: color, border: `1px solid ${color}40` }}>
+      {icon}
+    </div>
+  );
+}
+
+function SectionSelector({ sections, activeSection, setActiveSection }) {
+  return (
+    <div className="flex gap-2 mb-5 flex-wrap justify-center">
+      {sections.map(s => (
+        <button key={s.id} onClick={() => setActiveSection(s.id)}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium transition-all border ${
+            s.id === activeSection
+              ? 'shadow-lg'
+              : 'bg-slate-800/40 border-slate-700/40 text-slate-400 hover:bg-slate-700/40'
+          }`}
+          style={s.id === activeSection ? {
+            background: `${s.color}15`,
+            borderColor: `${s.color}50`,
+            color: s.color,
+            boxShadow: `0 0 12px 2px ${s.color}20`
+          } : {}}>
+          <SectionBadge icon={s.icon} color={s.color} size={24}/>
+          {s.title}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function DeepDiveLayout({ sections, activeSection, setActiveSection, code, highlightColor, codeLabel, children }) {
+  const section = sections.find(s => s.id === activeSection) || sections[0];
+  return (
+    <div className="fade-in">
+      <SectionSelector sections={sections} activeSection={activeSection} setActiveSection={setActiveSection}/>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div>
+          <CodeViewer code={code} highlightedLines={section.lines} highlightColor={highlightColor} label={codeLabel}/>
+        </div>
+        <div className="fade-in" key={activeSection}>
+          <div className="callout-box bg-slate-800/30 border border-slate-700/40" style={{ '--callout-color': section.color }}>
+            <div className="flex items-center gap-3 mb-3">
+              <SectionBadge icon={section.icon} color={section.color}/>
+              <div>
+                <h3 className="text-base font-bold" style={{ color: section.color }}>{section.title}</h3>
+                <p className="text-[10px] text-slate-400">{section.subtitle}</p>
+              </div>
+            </div>
+            <p className="text-[12px] text-slate-300 leading-relaxed mb-4">{section.description}</p>
+            <div className="space-y-2">
+              {section.details.map((d, i) => (
+                <DetailCard key={i} detail={d} color={section.color}/>
+              ))}
+            </div>
+          </div>
+          {children && children(activeSection)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB 1: OVERVIEW
+// ======================================================================
+
+function OverviewTab() {
+  return (
+    <div className="fade-in space-y-8">
+      <div className="text-center mb-2">
+        <h2 className="text-xl font-bold text-white mb-2">What is Kubeflow Pipelines?</h2>
+        <p className="text-sm text-slate-400 max-w-2xl mx-auto">
+          KFP is a platform for building and deploying <span className="text-blue-300 font-semibold">portable, scalable ML workflows</span> as
+          <span className="text-green-300 font-semibold"> directed acyclic graphs (DAGs)</span> on Kubernetes.
+          Each step runs in its own container, making pipelines reproducible and auditable.
+        </p>
+      </div>
+
+      {/* Architecture Diagram */}
+      <div className="relative rounded-2xl border border-slate-700/50 bg-slate-900/30 p-6 overflow-hidden">
+        <svg width="100%" height="460" viewBox="0 0 960 460" className="mx-auto block" style={{ maxWidth: '960px' }}>
+          <defs>
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(59,130,246,0.06)" strokeWidth="0.5"/>
+            </pattern>
+            <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#3b82f6"/>
+            </marker>
+            <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#22c55e"/>
+            </marker>
+            <marker id="arrowAmber" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#fbbf24"/>
+            </marker>
+            <marker id="arrowCyan" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#06b6d4"/>
+            </marker>
+            <marker id="arrowPurple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#a855f7"/>
+            </marker>
+            <marker id="arrowRose" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#f43f5e"/>
+            </marker>
+          </defs>
+          <rect width="960" height="460" fill="url(#grid)"/>
+
+          <text x="480" y="28" textAnchor="middle" className="text-[11px] font-bold" fill="#64748b">KFP Pipeline Execution Architecture on OpenShift AI</text>
+
+          {/* Developer */}
+          <rect x="20" y="55" width="180" height="90" rx="14" fill="#0d1424" stroke="#3b82f640" strokeWidth="1.5"/>
+          <text x="110" y="80" textAnchor="middle" className="text-[12px] font-bold" fill="#60a5fa">Developer</text>
+          <text x="110" y="98" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Writes pipeline in Python</text>
+          <rect x="35" y="110" width="150" height="18" rx="4" fill="#3b82f610" stroke="#3b82f630" strokeWidth="1"/>
+          <text x="110" y="123" textAnchor="middle" className="mono text-[9px]" fill="#60a5fa">@dsl.pipeline + @dsl.component</text>
+
+          {/* Arrow: Dev -> Compile */}
+          <line x1="200" y1="100" x2="280" y2="100" stroke="#3b82f6" strokeWidth="2" markerEnd="url(#arrowBlue)" className="arrow-flow"/>
+
+          {/* Compiler */}
+          <rect x="285" y="55" width="180" height="90" rx="14" fill="#1a1408" stroke="#fbbf2460" strokeWidth="2"/>
+          <text x="375" y="80" textAnchor="middle" className="mono text-[11px] font-bold" fill="#fbbf24">compiler.Compiler()</text>
+          <text x="375" y="98" textAnchor="middle" className="text-[10px]" fill="#d4a94a">Python -> YAML IR</text>
+          <line x1="300" y1="106" x2="450" y2="106" stroke="#fbbf2420" strokeWidth="1"/>
+          <text x="375" y="122" textAnchor="middle" className="mono text-[9px]" fill="#94a3b8">PipelineSpec protobuf</text>
+          <text x="375" y="136" textAnchor="middle" className="mono text-[9px]" fill="#fde68a">sft_pipeline.yaml</text>
+
+          {/* Arrow: Compile -> Submit */}
+          <line x1="465" y1="100" x2="545" y2="100" stroke="#fbbf24" strokeWidth="2" markerEnd="url(#arrowAmber)" className="arrow-flow"/>
+          <rect x="485" y="83" width="50" height="18" rx="9" fill="#1a1408" stroke="#fbbf2440" strokeWidth="1"/>
+          <text x="510" y="95" textAnchor="middle" className="mono text-[8px] font-semibold" fill="#fbbf24">YAML</text>
+
+          {/* KFP Backend */}
+          <rect x="550" y="45" width="180" height="110" rx="14" fill="#081a10" stroke="#22c55e60" strokeWidth="2"/>
+          <text x="640" y="70" textAnchor="middle" className="mono text-[11px] font-bold" fill="#22c55e">KFP Backend</text>
+          <text x="640" y="88" textAnchor="middle" className="text-[10px]" fill="#6ee7b7">Data Science Pipelines</text>
+          <line x1="565" y1="95" x2="715" y2="95" stroke="#22c55e20" strokeWidth="1"/>
+          <text x="640" y="112" textAnchor="middle" className="mono text-[9px]" fill="#94a3b8">Pipeline orchestrator</text>
+          <text x="640" y="126" textAnchor="middle" className="mono text-[9px]" fill="#94a3b8">ML Metadata store</text>
+          <text x="640" y="140" textAnchor="middle" className="mono text-[9px]" fill="#86efac">Argo Workflow engine</text>
+
+          {/* Arrow: Backend -> Orchestrate */}
+          <line x1="640" y1="155" x2="640" y2="195" stroke="#22c55e" strokeWidth="2" markerEnd="url(#arrowGreen)" className="arrow-flow"/>
+
+          {/* OpenShift Cluster */}
+          <rect x="40" y="210" width="880" height="230" rx="16" fill="#0a0f14" stroke="#334155" strokeWidth="1.5" strokeDasharray="6 3"/>
+          <text x="80" y="236" className="text-[11px] font-semibold" fill="#64748b">OpenShift Cluster -- Pipeline Pods</text>
+
+          {/* Pipeline Steps */}
+          <rect x="80" y="255" width="180" height="60" rx="12" fill="#0d1424" stroke="#3b82f650" strokeWidth="1.5"/>
+          <text x="170" y="280" textAnchor="middle" className="mono text-[10px] font-bold" fill="#60a5fa">Step 1: Load Data</text>
+          <text x="170" y="300" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Output[Dataset] artifact</text>
+
+          <line x1="260" y1="285" x2="310" y2="285" stroke="#3b82f6" strokeWidth="1.5" markerEnd="url(#arrowBlue)" className="arrow-flow"/>
+
+          <rect x="315" y="255" width="180" height="60" rx="12" fill="#0d0520" stroke="#a855f750" strokeWidth="1.5"/>
+          <text x="405" y="280" textAnchor="middle" className="mono text-[10px] font-bold" fill="#c084fc">Step 2: SFT Train</text>
+          <text x="405" y="300" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Input[Dataset] -> Output[Model]</text>
+
+          <line x1="495" y1="285" x2="545" y2="285" stroke="#a855f7" strokeWidth="1.5" markerEnd="url(#arrowPurple)" className="arrow-flow"/>
+
+          <rect x="550" y="255" width="180" height="60" rx="12" fill="#1a1408" stroke="#fbbf2450" strokeWidth="1.5"/>
+          <text x="640" y="280" textAnchor="middle" className="mono text-[10px] font-bold" fill="#fbbf24">Step 3: Evaluate</text>
+          <text x="640" y="300" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Input[Model] -> float score</text>
+
+          {/* Conditional diamond */}
+          <rect x="612" y="332" width="56" height="28" rx="6" fill="#f59e0b15" stroke="#f59e0b50" strokeWidth="1.5"/>
+          <text x="640" y="351" textAnchor="middle" className="mono text-[9px] font-bold" fill="#f59e0b">dsl.If</text>
+          <line x1="640" y1="315" x2="640" y2="332" stroke="#f59e0b" strokeWidth="1.5" markerEnd="url(#arrowAmber)"/>
+
+          {/* Merge branch */}
+          <line x1="612" y1="346" x2="410" y2="380" stroke="#22c55e" strokeWidth="1.5" markerEnd="url(#arrowGreen)" strokeDasharray="4 4"/>
+          <rect x="310" y="370" width="180" height="50" rx="10" fill="#081a10" stroke="#22c55e40" strokeWidth="1.5"/>
+          <text x="400" y="392" textAnchor="middle" className="mono text-[10px] font-bold" fill="#22c55e">Merge Weights</text>
+          <text x="400" y="408" textAnchor="middle" className="text-[9px]" fill="#94a3b8">score >= 0.85</text>
+
+          {/* Retrain branch */}
+          <line x1="668" y1="346" x2="820" y2="380" stroke="#f43f5e" strokeWidth="1.5" markerEnd="url(#arrowRose)" strokeDasharray="4 4"/>
+          <rect x="730" y="370" width="180" height="50" rx="10" fill="#0d0a18" stroke="#f43f5e40" strokeWidth="1.5"/>
+          <text x="820" y="392" textAnchor="middle" className="mono text-[10px] font-bold" fill="#f43f5e">Retrain</text>
+          <text x="820" y="408" textAnchor="middle" className="text-[9px]" fill="#94a3b8">score &lt; 0.85</text>
+
+          {/* Object Storage */}
+          <rect x="780" y="50" width="160" height="80" rx="12" fill="#0d1424" stroke="#06b6d440" strokeWidth="1.5"/>
+          <text x="860" y="78" textAnchor="middle" className="mono text-[10px] font-bold" fill="#06b6d4">Object Storage</text>
+          <text x="860" y="96" textAnchor="middle" className="text-[9px]" fill="#94a3b8">S3 / MinIO</text>
+          <text x="860" y="112" textAnchor="middle" className="text-[8px]" fill="#64748b">Artifacts, model weights</text>
+
+          {/* Arrow: Backend -> Storage */}
+          <line x1="730" y1="85" x2="775" y2="85" stroke="#06b6d4" strokeWidth="1.5" markerEnd="url(#arrowCyan)" className="arrow-flow"/>
+        </svg>
+      </div>
+
+      {/* Three pillars */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="rounded-xl border border-blue-500/20 bg-blue-950/5 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <SectionBadge icon="DSL" color="#3b82f6" size={40}/>
+            <div>
+              <h3 className="text-sm font-bold text-blue-300">KFP v2 DSL</h3>
+              <p className="text-[10px] text-slate-400">Python SDK for defining pipelines</p>
+            </div>
+          </div>
+          <ul className="space-y-2 text-[11px] text-slate-300">
+            <li className="flex items-start gap-2">
+              <span className="text-blue-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-blue-200">@dsl.component</strong> -- define steps as decorated Python functions</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-blue-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-blue-200">@dsl.pipeline</strong> -- wire components into a DAG</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-blue-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-blue-200">Typed artifacts</strong> -- Dataset, Model, Metrics with lineage</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-blue-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-blue-200">Control flow</strong> -- If/Else, ParallelFor, ExitHandler</span>
+            </li>
+          </ul>
+        </div>
+
+        <div className="rounded-xl border border-amber-500/20 bg-amber-950/5 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <SectionBadge icon="IR" color="#fbbf24" size={40}/>
+            <div>
+              <h3 className="text-sm font-bold text-amber-300">YAML IR (Compiled)</h3>
+              <p className="text-[10px] text-slate-400">Portable pipeline specification</p>
+            </div>
+          </div>
+          <ul className="space-y-2 text-[11px] text-slate-300">
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-amber-200">PipelineSpec protobuf</strong> -- serialized as YAML</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-amber-200">Portable</strong> -- same YAML runs on any KFP backend</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-amber-200">Versionable</strong> -- commit to Git for CI/CD</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-amber-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-amber-200">Inspectable</strong> -- review pipeline structure before running</span>
+            </li>
+          </ul>
+        </div>
+
+        <div className="rounded-xl border border-green-500/20 bg-green-950/5 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <SectionBadge icon="DSP" color="#22c55e" size={40}/>
+            <div>
+              <h3 className="text-sm font-bold text-green-300">Data Science Pipelines</h3>
+              <p className="text-[10px] text-slate-400">KFP backend on OpenShift AI</p>
+            </div>
+          </div>
+          <ul className="space-y-2 text-[11px] text-slate-300">
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-green-200">Argo Workflows</strong> -- orchestrates pod execution on OpenShift</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-green-200">ML Metadata</strong> -- tracks artifacts, parameters, lineage</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-green-200">MinIO/S3</strong> -- stores artifacts between steps</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5 flex-shrink-0">&#9656;</span>
+              <span><strong className="text-green-200">Dashboard</strong> -- visualize runs, compare experiments</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* How it works flow */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-5">
+        <h3 className="text-sm font-semibold text-slate-200 mb-3">How KFP Works -- Step by Step</h3>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-[11px]">
+          {[
+            { icon: '1', label: 'Define', desc: 'Write @dsl.component functions and wire them in a @dsl.pipeline', color: '#3b82f6' },
+            { icon: '2', label: 'Compile', desc: 'compiler.Compiler().compile() converts Python to portable YAML IR', color: '#fbbf24' },
+            { icon: '3', label: 'Submit', desc: 'Upload YAML to KFP backend via API or OpenShift AI dashboard', color: '#22c55e' },
+            { icon: '4', label: 'Orchestrate', desc: 'Argo Workflows creates pods for each step, manages data flow', color: '#06b6d4' },
+            { icon: '5', label: 'Track', desc: 'ML Metadata stores artifacts, parameters, and lineage for every run', color: '#a855f7' },
+          ].map((step, i) => (
+            <div key={i} className="text-center p-3 rounded-lg bg-slate-800/30 border border-slate-700/20">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-2 mono text-sm font-bold"
+                style={{ background: `${step.color}20`, color: step.color, border: `1px solid ${step.color}40` }}>
+                {step.icon}
+              </div>
+              <div className="font-semibold mb-1" style={{ color: step.color }}>{step.label}</div>
+              <div className="text-slate-400">{step.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Key concepts */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-5">
+        <h3 className="text-sm font-semibold text-slate-200 mb-2">Key Concepts to Understand</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px]">
+          <div className="rounded-lg bg-slate-800/30 p-3 border border-slate-700/20">
+            <div className="text-blue-300 font-semibold mb-1">Hermetic Components</div>
+            <div className="text-slate-400">Lightweight @dsl.component functions must have all imports inside the function body. KFP serializes the function source into a container -- top-level imports are not available at runtime.</div>
+          </div>
+          <div className="rounded-lg bg-slate-800/30 p-3 border border-slate-700/20">
+            <div className="text-amber-300 font-semibold mb-1">Artifacts vs Parameters</div>
+            <div className="text-slate-400">Large data (datasets, models) flows as typed artifacts stored in S3. Small data (thresholds, paths) passes as parameters embedded in the pipeline spec. This distinction drives how KFP manages data between steps.</div>
+          </div>
+          <div className="rounded-lg bg-slate-800/30 p-3 border border-slate-700/20">
+            <div className="text-green-300 font-semibold mb-1">Implicit vs Explicit Dependencies</div>
+            <div className="text-slate-400">Passing task.output from step A to step B creates an implicit dependency. Use task.after(other) for explicit ordering when there is no data flow between steps.</div>
+          </div>
+          <div className="rounded-lg bg-slate-800/30 p-3 border border-slate-700/20">
+            <div className="text-purple-300 font-semibold mb-1">Compile-Time vs Run-Time</div>
+            <div className="text-slate-400">Pipeline parameters and DAG structure are fixed at compile time. Runtime values (artifact contents, conditional results) are resolved during execution by the Argo workflow engine.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB 2: DSL CONSTRUCTS
+// ======================================================================
+
+function ConstructsTab() {
+  const [category, setCategory] = useState('components');
+  const [activeSection, setActiveSection] = useState('lightweight');
+
+  const categories = [
+    { id: 'components', label: 'Components', icon: 'CMP', color: '#3b82f6', defaultSection: 'lightweight' },
+    { id: 'pipeline', label: 'Pipeline & Config', icon: 'DAG', color: '#22c55e', defaultSection: 'wiring' },
+    { id: 'data', label: 'Data Handling', icon: 'ART', color: '#06b6d4', defaultSection: 'artifacts' },
+    { id: 'control', label: 'Control Flow', icon: 'IF', color: '#f59e0b', defaultSection: 'control' },
+  ];
+
+  const handleCategoryChange = (newCategory) => {
+    const cat = categories.find(c => c.id === newCategory);
+    setCategory(newCategory);
+    setActiveSection(cat.defaultSection);
+  };
+
+  const getCode = () => {
+    if (category === 'components') {
+      if (activeSection === 'containerized') return CONTAINERIZED_CODE;
+      if (activeSection === 'container') return CONTAINER_COMP_CODE;
+      return COMPONENT_CODE;
+    }
+    if (category === 'pipeline') return PIPELINE_CODE;
+    if (category === 'data') return ARTIFACTS_CODE;
+    if (category === 'control') return CONTROL_FLOW_CODE;
+    return COMPONENT_CODE;
+  };
+
+  const getSections = () => {
+    if (category === 'components') return CONSTRUCT_SECTIONS;
+    if (category === 'pipeline') return PIPELINE_SECTIONS;
+    if (category === 'data') return DATA_SECTIONS;
+    return [{
+      id: 'control',
+      title: 'Control Flow Constructs',
+      subtitle: 'Branching, loops, cleanup, and output gathering',
+      icon: 'IF',
+      color: '#f59e0b',
+      lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+      description: 'KFP v2 provides four control flow constructs that let you build complex, real-world ML pipelines. dsl.If/Elif/Else gates which steps execute based on upstream outputs. dsl.OneOf gathers a single output from mutually exclusive branches. dsl.ParallelFor fans out over a list with optional parallelism cap. dsl.ExitHandler guarantees a cleanup task runs even if earlier steps fail.',
+      details: [
+        { label: 'dsl.If / Elif / Else', value: 'Conditional branching', note: 'Context managers that gate step execution. The condition must be a simple comparison on a parameter or upstream output' },
+        { label: 'dsl.OneOf', value: 'Gather from branches', note: 'Collects a single output from mutually exclusive If/Elif/Else branches. Requires an Else branch to guarantee exactly one result' },
+        { label: 'dsl.ParallelFor', value: 'Fan-out over list', note: 'Runs the same step for each item in a list. Use parallelism= to cap concurrent pods. dsl.Collected gathers outputs from all iterations' },
+        { label: 'dsl.ExitHandler', value: 'Guaranteed cleanup', note: 'The exit_task runs after the pipeline completes -- even on failure. Use PipelineTaskFinalStatus to inspect what happened' },
+      ]
+    }];
+  };
+
+  const getHighlightColor = () => {
+    if (category === 'components') return 'highlighted-blue';
+    if (category === 'pipeline') return 'highlighted-green';
+    if (category === 'data') return 'highlighted-cyan';
+    return 'highlighted-amber';
+  };
+
+  return (
+    <div className="fade-in">
+      <div className="text-center mb-5">
+        <h2 className="text-xl font-bold text-white mb-1">KFP v2 DSL Constructs</h2>
+        <p className="text-sm text-slate-400">The building blocks for any ML pipeline -- click each category to explore</p>
+      </div>
+
+      {/* Category selector */}
+      <div className="flex gap-2 mb-6 justify-center flex-wrap">
+        {categories.map(c => (
+          <button key={c.id} onClick={() => handleCategoryChange(c.id)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-medium transition-all border ${
+              c.id === category
+                ? 'shadow-lg'
+                : 'bg-slate-800/30 border-slate-700/30 text-slate-400 hover:bg-slate-700/30'
+            }`}
+            style={c.id === category ? {
+              background: `${c.color}15`,
+              borderColor: `${c.color}50`,
+              color: c.color,
+              boxShadow: `0 0 16px 3px ${c.color}20`
+            } : {}}>
+            <SectionBadge icon={c.icon} color={c.color} size={24}/>
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      <DeepDiveLayout
+        sections={getSections()}
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+        code={getCode()}
+        highlightColor={getHighlightColor()}
+        codeLabel="Python"
+      >
+        {(active) => (
+          <>
+            {active === 'lightweight' && (
+              <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+                <div className="text-[10px] font-semibold text-slate-300 mb-3">Hermetic Component Lifecycle</div>
+                <svg width="100%" height="100" viewBox="0 0 480 100">
+                  <defs>
+                    <marker id="arrowB2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                      <polygon points="0 0, 8 3, 0 6" fill="#3b82f6"/>
+                    </marker>
+                  </defs>
+                  <rect x="10" y="15" width="120" height="70" rx="10" fill="#0d1424" stroke="#3b82f640" strokeWidth="1.5"/>
+                  <text x="70" y="40" textAnchor="middle" className="mono text-[10px] font-bold" fill="#60a5fa">Python Fn</text>
+                  <text x="70" y="55" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Source code</text>
+                  <text x="70" y="70" textAnchor="middle" className="mono text-[8px]" fill="#64748b">serialized</text>
+
+                  <line x1="130" y1="50" x2="180" y2="50" stroke="#3b82f6" strokeWidth="1.5" markerEnd="url(#arrowB2)" className="arrow-flow"/>
+
+                  <rect x="180" y="15" width="120" height="70" rx="10" fill="#1a1408" stroke="#fbbf2440" strokeWidth="1.5"/>
+                  <text x="240" y="40" textAnchor="middle" className="mono text-[10px] font-bold" fill="#fbbf24">YAML IR</text>
+                  <text x="240" y="55" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Compiled spec</text>
+                  <text x="240" y="70" textAnchor="middle" className="mono text-[8px]" fill="#64748b">+ pip install</text>
+
+                  <line x1="300" y1="50" x2="350" y2="50" stroke="#fbbf24" strokeWidth="1.5" markerEnd="url(#arrowAmber)" className="arrow-flow"/>
+
+                  <rect x="350" y="15" width="120" height="70" rx="10" fill="#081a10" stroke="#22c55e30" strokeWidth="1.5"/>
+                  <text x="410" y="40" textAnchor="middle" className="mono text-[10px] font-bold" fill="#22c55e">Container</text>
+                  <text x="410" y="55" textAnchor="middle" className="text-[9px]" fill="#94a3b8">base_image +</text>
+                  <text x="410" y="70" textAnchor="middle" className="mono text-[8px]" fill="#64748b">fn source injected</text>
+                </svg>
+                <div className="text-[9px] text-slate-500 mt-2 text-center">
+                  KFP extracts the function source, bundles it into the YAML IR, and reconstructs it inside the container at runtime
+                </div>
+              </div>
+            )}
+            {active === 'containerized' && (
+              <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+                <div className="text-[10px] font-semibold text-slate-300 mb-3">Lightweight vs Containerized</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-blue-500/20 bg-blue-950/10 p-3">
+                    <div className="text-[10px] font-bold text-blue-300 mb-1">Lightweight</div>
+                    <div className="text-[9px] text-slate-400 space-y-1">
+                      <div>&#x2713; Quick to iterate</div>
+                      <div>&#x2713; No Docker build needed</div>
+                      <div>&#10007; All imports inside body</div>
+                      <div>&#10007; pip install at startup</div>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-purple-500/20 bg-purple-950/10 p-3">
+                    <div className="text-[10px] font-bold text-purple-300 mb-1">Containerized (target_image)</div>
+                    <div className="text-[9px] text-slate-400 space-y-1">
+                      <div>&#x2713; Normal Python imports</div>
+                      <div>&#x2713; Fast startup (no pip install)</div>
+                      <div>&#x2713; Share code across components</div>
+                      <div>&#10007; Requires Docker build step</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {active === 'wiring' && (
+              <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+                <div className="text-[10px] font-semibold text-slate-300 mb-3">DAG Dependency Resolution</div>
+                <svg width="100%" height="110" viewBox="0 0 480 110">
+                  <rect x="10" y="15" width="100" height="40" rx="8" fill="#3b82f610" stroke="#3b82f640" strokeWidth="1.5"/>
+                  <text x="60" y="40" textAnchor="middle" className="mono text-[9px] font-bold" fill="#60a5fa">load_data</text>
+
+                  <line x1="110" y1="35" x2="150" y2="35" stroke="#3b82f6" strokeWidth="1.5" markerEnd="url(#arrowBlue)" className="arrow-flow"/>
+                  <text x="130" y="28" textAnchor="middle" className="mono text-[7px]" fill="#3b82f6">.output</text>
+
+                  <rect x="150" y="15" width="100" height="40" rx="8" fill="#a855f710" stroke="#a855f740" strokeWidth="1.5"/>
+                  <text x="200" y="40" textAnchor="middle" className="mono text-[9px] font-bold" fill="#c084fc">sft_train</text>
+
+                  <line x1="250" y1="35" x2="290" y2="35" stroke="#a855f7" strokeWidth="1.5" markerEnd="url(#arrowPurple)" className="arrow-flow"/>
+
+                  <rect x="290" y="15" width="100" height="40" rx="8" fill="#fbbf2410" stroke="#fbbf2440" strokeWidth="1.5"/>
+                  <text x="340" y="40" textAnchor="middle" className="mono text-[9px] font-bold" fill="#fbbf24">evaluate</text>
+
+                  <line x1="340" y1="55" x2="280" y2="80" stroke="#22c55e" strokeWidth="1" strokeDasharray="4 4"/>
+                  <line x1="340" y1="55" x2="400" y2="80" stroke="#f43f5e" strokeWidth="1" strokeDasharray="4 4"/>
+
+                  <rect x="220" y="72" width="80" height="30" rx="6" fill="#22c55e10" stroke="#22c55e30" strokeWidth="1"/>
+                  <text x="260" y="92" textAnchor="middle" className="mono text-[8px]" fill="#22c55e">merge</text>
+
+                  <rect x="370" y="72" width="80" height="30" rx="6" fill="#f43f5e10" stroke="#f43f5e30" strokeWidth="1"/>
+                  <text x="410" y="92" textAnchor="middle" className="mono text-[8px]" fill="#f43f5e">retrain</text>
+                </svg>
+              </div>
+            )}
+            {active === 'resources' && (
+              <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+                <div className="text-[10px] font-semibold text-slate-300 mb-3">PipelineTask Configuration Methods</div>
+                <div className="space-y-1.5">
+                  {[
+                    { method: 'set_cpu_limit("4")', desc: 'Kubernetes CPU limit (cores)', color: '#3b82f6' },
+                    { method: 'set_memory_limit("16Gi")', desc: 'Kubernetes memory limit', color: '#3b82f6' },
+                    { method: 'set_gpu_limit("4")', desc: 'nvidia.com/gpu requests', color: '#22c55e' },
+                    { method: 'set_retry(num_retries=2)', desc: 'Retry on failure with backoff', color: '#f59e0b' },
+                    { method: 'set_caching_options(True)', desc: 'Cache outputs for identical inputs', color: '#06b6d4' },
+                    { method: 'set_env_variable("KEY", "val")', desc: 'Inject env vars into the container', color: '#a855f7' },
+                    { method: 'add_node_selector_constraint("key", "val")', desc: 'Schedule on specific node type', color: '#f43f5e' },
+                  ].map((m, i) => (
+                    <div key={i} className="flex items-center gap-2 py-1 px-2 rounded bg-slate-900/40 border border-slate-700/20">
+                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: m.color }}></div>
+                      <span className="mono text-[9px] text-slate-200 flex-shrink-0">{m.method}</span>
+                      <span className="text-[8px] text-slate-500">{m.desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {active === 'artifacts' && (
+              <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+                <div className="text-[10px] font-semibold text-slate-300 mb-3">Built-in Artifact Types</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { type: 'Dataset', desc: 'Training/eval data', color: '#3b82f6' },
+                    { type: 'Model', desc: 'Model weights/adapters', color: '#22c55e' },
+                    { type: 'Metrics', desc: 'Evaluation scores', color: '#f59e0b' },
+                    { type: 'HTML', desc: 'Rendered reports', color: '#a855f7' },
+                    { type: 'Markdown', desc: 'Text reports', color: '#06b6d4' },
+                    { type: 'ClassificationMetrics', desc: 'Confusion matrix', color: '#f43f5e' },
+                  ].map((a, i) => (
+                    <div key={i} className="rounded-lg bg-slate-900/40 border border-slate-700/20 p-2">
+                      <div className="mono text-[10px] font-semibold" style={{ color: a.color }}>{a.type}</div>
+                      <div className="text-[8px] text-slate-500">{a.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {active === 'control' && (
+              <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+                <div className="text-[10px] font-semibold text-slate-300 mb-3">Control Flow Summary</div>
+                <div className="space-y-2">
+                  {[
+                    { construct: 'dsl.If / Elif / Else', pattern: 'Quality gate', example: 'If score >= 0.85 then merge, else retrain', color: '#f59e0b' },
+                    { construct: 'dsl.OneOf', pattern: 'Gather from branches', example: 'Collect one output from If/Else branches', color: '#22c55e' },
+                    { construct: 'dsl.ParallelFor', pattern: 'Fan-out', example: 'Sweep over [1, 5, 10, 25] epochs in parallel', color: '#f43f5e' },
+                    { construct: 'dsl.ExitHandler', pattern: 'Cleanup', example: 'Send notification even if pipeline fails', color: '#a855f7' },
+                  ].map((c, i) => (
+                    <div key={i} className="flex gap-3 items-start py-2 px-3 rounded-lg bg-slate-800/30 border border-slate-700/30">
+                      <div className="w-1 h-full rounded-full flex-shrink-0 self-stretch" style={{ background: c.color, minHeight: '24px' }}></div>
+                      <div className="flex-1 min-w-0">
+                        <div className="mono text-[10px] font-semibold" style={{ color: c.color }}>{c.construct}</div>
+                        <div className="text-[9px] text-slate-400">{c.pattern}: {c.example}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </DeepDiveLayout>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB 3: KFP VS ELYRA
+// ======================================================================
+
+function ComparisonTab() {
+  return (
+    <div className="fade-in space-y-6">
+      <div className="text-center mb-2">
+        <h2 className="text-xl font-bold text-white mb-2">KFP DSL vs Elyra</h2>
+        <p className="text-sm text-slate-400 max-w-2xl mx-auto">
+          Two approaches to building ML pipelines on OpenShift AI. Different strengths for different stages of your workflow.
+        </p>
+      </div>
+
+      {/* Side-by-side comparison */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-blue-500/20 bg-blue-950/5 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <SectionBadge icon="KFP" color="#3b82f6" size={40}/>
+            <div>
+              <h3 className="text-base font-bold text-blue-300">KFP DSL</h3>
+              <p className="text-[11px] text-slate-400">Code-First Pipelines</p>
+            </div>
+          </div>
+          <p className="text-[12px] text-slate-300 leading-relaxed mb-4">
+            Write pipelines as Python code with full programmatic control over every aspect of execution. The pipeline definition is a Python function, giving you IDE autocomplete, type checking, and version control.
+          </p>
+          <ul className="space-y-2 text-[11px] text-slate-300">
+            {[
+              'Full conditional branching with dsl.If / Elif / Else',
+              'Parallel fan-out with dsl.ParallelFor + dsl.Collected',
+              'Type-safe artifact passing (Dataset, Model, Metrics)',
+              'Three component types: lightweight, containerized, container',
+              'Version control -- pipelines are .py files, diffs work',
+              'CI/CD integration -- compile YAML IR and deploy in automation',
+              'Reusable component libraries across teams',
+              'Task configs: retry, CPU/memory/GPU limits, caching, env vars',
+            ].map((item, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <span className="text-blue-400 mt-0.5 flex-shrink-0">&#10003;</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="rounded-2xl border border-purple-500/20 bg-purple-950/5 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <SectionBadge icon="ELY" color="#a855f7" size={40}/>
+            <div>
+              <h3 className="text-base font-bold text-purple-300">Elyra</h3>
+              <p className="text-[11px] text-slate-400">Visual Notebook Pipelines</p>
+            </div>
+          </div>
+          <p className="text-[12px] text-slate-300 leading-relaxed mb-4">
+            Drag-and-drop notebooks in JupyterLab to compose pipelines visually. No DSL to learn. Elyra auto-generates KFP YAML under the hood, making it perfect for quick prototyping.
+          </p>
+          <ul className="space-y-2 text-[11px] text-slate-300">
+            {[
+              { text: 'Visual drag-and-drop pipeline editor in JupyterLab', ok: true },
+              { text: 'Run existing .ipynb / .py / .r files as pipeline steps', ok: true },
+              { text: 'No KFP SDK knowledge required to start', ok: true },
+              { text: 'Built into JupyterLab -- no context switching', ok: true },
+              { text: 'Quick prototyping of linear workflows', ok: true },
+              { text: 'Auto-generates KFP YAML under the hood', ok: true },
+              { text: 'No conditional branching (If/Elif/Else) or loops', ok: false },
+              { text: 'Limited parameterization and no typed artifacts', ok: false },
+            ].map((item, i) => (
+              <li key={i} className="flex items-start gap-2">
+                <span className={`mt-0.5 flex-shrink-0 ${item.ok ? 'text-purple-400' : 'text-slate-600'}`}>
+                  {item.ok ? '\u2713' : '\u2717'}
+                </span>
+                <span className={item.ok ? '' : 'text-slate-500'}>{item.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {/* Why KFP wins for production */}
+      <div className="rounded-2xl border border-slate-700/40 bg-slate-800/15 p-6">
+        <h3 className="text-base font-bold text-white mb-1">Why KFP DSL Wins for Production</h3>
+        <p className="text-[11px] text-slate-400 mb-4">Six advantages that matter at scale</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {[
+            { icon: 'TS', title: 'Type Safety', desc: 'Typed artifacts and compile-time checks catch data mismatches before your GPU job runs', color: '#3b82f6' },
+            { icon: 'GIT', title: 'Git-Native', desc: 'Pipelines are .py files -- diffs, PRs, blame, and rollbacks all work naturally', color: '#22c55e' },
+            { icon: 'LIB', title: 'Reusability', desc: 'Share components as Python packages. Import and compose across projects and teams', color: '#a855f7' },
+            { icon: 'IF', title: 'Conditionals', desc: 'dsl.If/Elif/Else + dsl.OneOf -- real branching logic, not just linear chains', color: '#f59e0b' },
+            { icon: 'PAR', title: 'Parallel Execution', desc: 'ParallelFor with Collected -- run sweeps, multi-model evals, or data shards concurrently', color: '#f43f5e' },
+            { icon: 'CI', title: 'CI/CD Ready', desc: 'Compile to YAML IR, validate, and deploy pipelines from your CI/CD automation', color: '#06b6d4' },
+          ].map((adv, i) => (
+            <div key={i} className="rounded-xl border border-slate-700/30 bg-slate-900/20 p-4 benefit-card">
+              <SectionBadge icon={adv.icon} color={adv.color} size={32}/>
+              <div className="text-[11px] font-semibold text-slate-200 mt-2 mb-1">{adv.title}</div>
+              <div className="text-[10px] text-slate-400 leading-relaxed">{adv.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Decision guide */}
+      <div className="rounded-2xl border border-slate-700/40 bg-slate-800/15 p-6">
+        <h3 className="text-base font-bold text-white mb-1">Decision Guide: When to Use What?</h3>
+        <p className="text-[11px] text-slate-400 mb-4">Answer two questions to find your tool</p>
+
+        <div className="space-y-3 mb-4">
+          <div className="rounded-xl border border-amber-500/20 bg-amber-950/5 p-4 text-center">
+            <div className="text-[12px] font-semibold text-amber-300 mb-1">Do you need conditional branching, loops, or typed artifacts?</div>
+            <div className="text-[10px] text-slate-400">e.g., dsl.If(score >= threshold), dsl.ParallelFor, Input[Model]</div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-blue-500/20 bg-blue-950/10 p-3 text-center">
+              <div className="text-[10px] font-semibold text-green-400 mb-1">Yes</div>
+              <div className="text-[11px] font-bold text-blue-300">Use KFP DSL</div>
+              <div className="text-[9px] text-slate-500">Elyra cannot express these</div>
+            </div>
+            <div className="rounded-xl border border-slate-700/30 bg-slate-800/20 p-3 text-center">
+              <div className="text-[10px] font-semibold text-rose-400 mb-1">No -- is it a linear chain of notebooks?</div>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div className="rounded-lg border border-purple-500/20 bg-purple-950/10 p-2">
+                  <div className="text-[10px] font-bold text-purple-300">Elyra</div>
+                  <div className="text-[8px] text-slate-500">Visual, fast</div>
+                </div>
+                <div className="rounded-lg border border-blue-500/20 bg-blue-950/10 p-2">
+                  <div className="text-[10px] font-bold text-blue-300">KFP DSL</div>
+                  <div className="text-[8px] text-slate-500">Complex DAGs</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick reference table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-[11px] border-collapse">
+            <thead>
+              <tr className="border-b border-slate-700/50">
+                <th className="py-2.5 px-4 text-left text-slate-500 font-medium">Scenario</th>
+                <th className="py-2.5 px-4 text-center text-blue-400 font-medium">KFP</th>
+                <th className="py-2.5 px-4 text-center text-purple-400 font-medium">Elyra</th>
+              </tr>
+            </thead>
+            <tbody className="text-slate-300">
+              {[
+                ['Quick notebook prototype', '--', '\u2605'],
+                ['Production training pipeline', '\u2605', '--'],
+                ['Conditional branching (If/Elif/Else)', '\u2605', '\u2717'],
+                ['Hyperparameter sweep (ParallelFor)', '\u2605', '\u2717'],
+                ['Data scientist exploration', '--', '\u2605'],
+                ['CI/CD automated deploy', '\u2605', '--'],
+                ['Typed artifact lineage tracking', '\u2605', '\u2717'],
+                ['GPU resource management', '\u2605', 'Limited'],
+              ].map(([scenario, kfp, elyra], i) => (
+                <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors">
+                  <td className="py-2 px-4 text-slate-400">{scenario}</td>
+                  <td className="py-2 px-4 text-center">{kfp}</td>
+                  <td className="py-2 px-4 text-center">{elyra}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB 4: FULL PIPELINE EXAMPLE
+// ======================================================================
+
+function PipelineTab() {
+  const [view, setView] = useState('visual');
+  const [activeNode, setActiveNode] = useState(null);
+
+  const nodeDetails = {
+    load: {
+      title: 'Load Dataset',
+      color: '#3b82f6',
+      content: 'A @dsl.component (lightweight) that downloads and preprocesses training data. Uses Output[Dataset] to write a typed artifact that is stored in S3/MinIO and tracked by ML Metadata. Downstream steps consume it via Input[Dataset]. All imports must be inside the function body (hermetic requirement).',
+      constructs: ['@dsl.component', 'Output[Dataset]', 'base_image']
+    },
+    sft: {
+      title: 'SFT Training (Supervised Fine-Tuning)',
+      color: '#a855f7',
+      content: 'Takes Input[Dataset] from load_dataset and produces Output[Model] (LoRA adapter weights). The dependency is implicit -- KFP knows sft_train must wait for load_dataset because it consumes its output artifact. Uses a GPU-enabled base image (pytorch/pytorch:2.1.0-cuda12.1) with resource limits set via set_gpu_limit("4").',
+      constructs: ['Input[Dataset]', 'Output[Model]', 'set_gpu_limit', 'set_retry']
+    },
+    eval: {
+      title: 'Evaluation',
+      color: '#fbbf24',
+      content: 'Takes Input[Model] (adapter) and Input[Dataset] (eval set). Returns a float score -- this is the key: the returned value becomes eval_task.output which is used by dsl.If(eval_task.output >= threshold) for conditional branching. Also logs metrics via Output[Metrics] which appear as charts in the KFP dashboard.',
+      constructs: ['Input[Model]', 'Output[Metrics]', '-> float', 'log_metric']
+    },
+    merge: {
+      title: 'Merge Weights (dsl.If branch)',
+      color: '#22c55e',
+      content: 'Only executes when dsl.If(eval_task.output >= threshold) is true. Merges LoRA adapter weights into the base model to create a standalone model that can be deployed via KServe. Takes Input[Model] (adapter) and writes Output[Model] (merged weights to PVC).',
+      constructs: ['dsl.If(condition)', 'Input[Model]', 'Output[Model]']
+    },
+    retrain: {
+      title: 'Retrain (dsl.Else branch)',
+      color: '#f43f5e',
+      content: 'Only executes when the dsl.Else() branch is entered -- i.e., when the eval score is below threshold. Retrains with adjusted hyperparameters (lower learning rate, more epochs). Together with merge, this demonstrates the KFP v2 dsl.If/dsl.Else quality gate pattern.',
+      constructs: ['dsl.Else()', 'Input[Dataset]', 'Output[Model]']
+    },
+  };
+
+  const activeDetail = activeNode ? nodeDetails[activeNode] : null;
+
+  return (
+    <div className="fade-in">
+      <div className="text-center mb-5">
+        <h2 className="text-xl font-bold text-white mb-1">SFT &#8594; Eval &#8594; Conditional Merge Pipeline</h2>
+        <p className="text-sm text-slate-400">Everything assembled into a real fine-tuning pipeline -- click nodes to explore</p>
+      </div>
+
+      {/* View toggle */}
+      <div className="flex gap-2 mb-5 justify-center">
+        {[
+          { id: 'visual', label: 'Visual Pipeline', icon: 'DAG' },
+          { id: 'code', label: 'Code View', icon: 'PY' },
+        ].map(v => (
+          <button key={v.id} onClick={() => setView(v.id)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-medium transition-all border ${
+              v.id === view
+                ? 'bg-green-600/20 border-green-500/40 text-green-300 shadow-lg shadow-green-500/10'
+                : 'bg-slate-800/30 border-slate-700/30 text-slate-400 hover:bg-slate-700/30'
+            }`}>
+            <SectionBadge icon={v.icon} color={v.id === view ? '#22c55e' : '#64748b'} size={22}/>
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'visual' ? (
+        <div className="rounded-2xl border border-slate-700/50 bg-slate-900/30 p-6 overflow-hidden">
+          <svg width="100%" height="400" viewBox="0 0 700 400" className="mx-auto block" style={{ maxWidth: '700px' }}>
+            <defs>
+              <pattern id="grid2" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(59,130,246,0.04)" strokeWidth="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="700" height="400" fill="url(#grid2)"/>
+
+            {/* Load Dataset */}
+            <g style={{ cursor: 'pointer' }} onClick={() => setActiveNode('load')}>
+              <rect x="260" y="15" width="180" height="55" rx="12" fill={activeNode === 'load' ? '#3b82f620' : '#0d1424'} stroke="#3b82f650" strokeWidth={activeNode === 'load' ? 2.5 : 1.5}/>
+              <text x="350" y="38" textAnchor="middle" className="mono text-[11px] font-bold" fill="#60a5fa">Load Dataset</text>
+              <text x="350" y="56" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Output[Dataset] artifact</text>
+            </g>
+
+            {/* Connector */}
+            <line x1="350" y1="70" x2="350" y2="100" stroke="#3b82f6" strokeWidth="2" className="arrow-flow"/>
+
+            {/* SFT Train */}
+            <g style={{ cursor: 'pointer' }} onClick={() => setActiveNode('sft')}>
+              <rect x="260" y="100" width="180" height="55" rx="12" fill={activeNode === 'sft' ? '#a855f720' : '#0d0520'} stroke="#a855f750" strokeWidth={activeNode === 'sft' ? 2.5 : 1.5}/>
+              <text x="350" y="123" textAnchor="middle" className="mono text-[11px] font-bold" fill="#c084fc">SFT Training</text>
+              <text x="350" y="141" textAnchor="middle" className="text-[9px]" fill="#94a3b8">LoRA fine-tuning -> Output[Model]</text>
+            </g>
+
+            {/* Connector */}
+            <line x1="350" y1="155" x2="350" y2="185" stroke="#a855f7" strokeWidth="2" className="arrow-flow"/>
+
+            {/* Evaluate */}
+            <g style={{ cursor: 'pointer' }} onClick={() => setActiveNode('eval')}>
+              <rect x="260" y="185" width="180" height="55" rx="12" fill={activeNode === 'eval' ? '#fbbf2420' : '#1a1408'} stroke="#fbbf2450" strokeWidth={activeNode === 'eval' ? 2.5 : 1.5}/>
+              <text x="350" y="208" textAnchor="middle" className="mono text-[11px] font-bold" fill="#fbbf24">Evaluation</text>
+              <text x="350" y="226" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Returns float score for dsl.If</text>
+            </g>
+
+            {/* Condition diamond */}
+            <line x1="350" y1="240" x2="350" y2="265" stroke="#f59e0b" strokeWidth="2"/>
+            <rect x="320" y="260" width="60" height="28" rx="6" fill="#f59e0b15" stroke="#f59e0b60" strokeWidth="2"/>
+            <text x="350" y="278" textAnchor="middle" className="mono text-[9px] font-bold" fill="#f59e0b">IF</text>
+
+            {/* Branch lines */}
+            <line x1="320" y1="274" x2="180" y2="320" stroke="#22c55e" strokeWidth="2" strokeDasharray="6 3"/>
+            <text x="240" y="290" textAnchor="middle" className="mono text-[8px] font-semibold" fill="#22c55e">score >= 0.85</text>
+
+            <line x1="380" y1="274" x2="520" y2="320" stroke="#f43f5e" strokeWidth="2" strokeDasharray="6 3"/>
+            <text x="465" y="290" textAnchor="middle" className="mono text-[8px] font-semibold" fill="#f43f5e">dsl.Else()</text>
+
+            {/* Merge */}
+            <g style={{ cursor: 'pointer' }} onClick={() => setActiveNode('merge')}>
+              <rect x="90" y="320" width="180" height="55" rx="12" fill={activeNode === 'merge' ? '#22c55e20' : '#081a10'} stroke="#22c55e50" strokeWidth={activeNode === 'merge' ? 2.5 : 1.5}/>
+              <text x="180" y="343" textAnchor="middle" className="mono text-[11px] font-bold" fill="#22c55e">Merge Weights</text>
+              <text x="180" y="361" textAnchor="middle" className="text-[9px]" fill="#94a3b8">LoRA -> Base Model -> PVC</text>
+            </g>
+
+            {/* Retrain */}
+            <g style={{ cursor: 'pointer' }} onClick={() => setActiveNode('retrain')}>
+              <rect x="430" y="320" width="180" height="55" rx="12" fill={activeNode === 'retrain' ? '#f43f5e20' : '#0d0a18'} stroke="#f43f5e50" strokeWidth={activeNode === 'retrain' ? 2.5 : 1.5}/>
+              <text x="520" y="343" textAnchor="middle" className="mono text-[11px] font-bold" fill="#f43f5e">Retrain</text>
+              <text x="520" y="361" textAnchor="middle" className="text-[9px]" fill="#94a3b8">Lower LR, more epochs</text>
+            </g>
+          </svg>
+
+          {/* Node detail */}
+          {activeDetail && (
+            <div className="mt-4 fade-in rounded-xl border bg-slate-800/30 p-4" style={{ borderColor: `${activeDetail.color}40` }}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center mono text-[10px] font-bold"
+                  style={{ background: `${activeDetail.color}20`, color: activeDetail.color, border: `1px solid ${activeDetail.color}40` }}>
+                  {activeNode.toUpperCase().slice(0, 3)}
+                </div>
+                <div>
+                  <h3 className="text-[13px] font-bold" style={{ color: activeDetail.color }}>{activeDetail.title}</h3>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed mb-3">{activeDetail.content}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {activeDetail.constructs.map((c, i) => (
+                  <span key={i} className="mono text-[9px] px-2 py-0.5 rounded-full border"
+                    style={{ color: activeDetail.color, borderColor: `${activeDetail.color}40`, background: `${activeDetail.color}10` }}>
+                    {c}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <CodeViewer code={PIPELINE_CODE} label="sft_pipeline.py"/>
+      )}
+
+      {/* Pipeline patterns callout */}
+      <div className="mt-6 rounded-xl border border-slate-700/40 bg-slate-800/20 p-5">
+        <h3 className="text-sm font-semibold text-slate-200 mb-3">Key Patterns in This Pipeline</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            { title: 'Implicit Dependencies', desc: 'Passing data_task.outputs["output_data"] to sft_train creates an automatic wait. KFP resolves the execution order from data flow.', color: '#3b82f6' },
+            { title: 'Quality Gate Pattern', desc: 'Evaluate -> dsl.If(score >= threshold) -> Merge/Retrain. This is the standard MLOps pattern for promoting models to production.', color: '#f59e0b' },
+            { title: 'Resource Pinning', desc: 'set_gpu_limit("4") ensures the SFT step gets 4 NVIDIA GPUs. Must match the tensor-parallel-size if using distributed training.', color: '#22c55e' },
+            { title: 'Retry with Backoff', desc: 'set_retry(num_retries=2, backoff_duration="60s") handles transient GPU OOM or network failures without manual re-runs.', color: '#a855f7' },
+          ].map((pattern, i) => (
+            <div key={i} className="rounded-lg border border-slate-700/30 bg-slate-900/20 p-3">
+              <div className="text-[11px] font-semibold mb-1" style={{ color: pattern.color }}>{pattern.title}</div>
+              <div className="text-[10px] text-slate-400">{pattern.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB 5: TASK CONFIGURATION
+// ======================================================================
+
+function ConfigTab() {
+  const [activeConfig, setActiveConfig] = useState('resources');
+
+  const configs = [
+    {
+      id: 'resources',
+      title: 'Resource Limits',
+      subtitle: 'CPU, memory, and GPU allocation for pipeline steps',
+      icon: 'RES',
+      color: '#3b82f6',
+      items: [
+        {
+          method: 'set_cpu_limit("4")',
+          desc: 'Sets the Kubernetes CPU resource limit. The pod is CPU-throttled if it exceeds this. For training steps, match the number of data-loading workers.',
+          example: 'sft_task.set_cpu_limit("4")\nsft_task.set_cpu_request("2")  # guaranteed minimum',
+        },
+        {
+          method: 'set_memory_limit("16Gi")',
+          desc: 'Sets the Kubernetes memory limit. The pod is OOM-killed if it exceeds this. Set based on: model size (FP16 weights) + optimizer states + batch data + KV-cache overhead.',
+          example: 'sft_task.set_memory_limit("16Gi")\nsft_task.set_memory_request("8Gi")',
+        },
+        {
+          method: 'set_gpu_limit("4")',
+          desc: 'Requests nvidia.com/gpu resources. Must match tensor-parallel-size if using distributed inference/training. The Kubernetes scheduler finds nodes with sufficient free GPUs.',
+          example: 'sft_task.set_gpu_limit("4")  # 4x NVIDIA GPUs',
+        },
+        {
+          method: 'set_accelerator_type("nvidia.com/gpu")',
+          desc: 'Specifies the accelerator type for GPU scheduling. Usually "nvidia.com/gpu" but can be "amd.com/gpu" or custom resource names for TPUs.',
+          example: 'sft_task.set_accelerator_type("nvidia.com/gpu")',
+        },
+      ]
+    },
+    {
+      id: 'retry',
+      title: 'Retry & Error Handling',
+      subtitle: 'Handling transient failures in ML workloads',
+      icon: 'RTY',
+      color: '#f59e0b',
+      items: [
+        {
+          method: 'set_retry(num_retries=2, backoff_duration="60s", backoff_factor=2.0)',
+          desc: 'Retries a step on failure with exponential backoff. Critical for GPU workloads that may hit transient OOM, preemption, or network errors. The backoff_factor multiplies the duration on each retry (60s -> 120s -> 240s).',
+          example: 'sft_task.set_retry(\n    num_retries=3,\n    backoff_duration="60s",\n    backoff_factor=2.0,\n)',
+        },
+        {
+          method: 'dsl.ExitHandler(exit_task=cleanup())',
+          desc: 'Guarantees a cleanup task runs after the pipeline completes -- even if earlier steps fail. Use PipelineTaskFinalStatus to inspect what happened and send notifications.',
+          example: 'with dsl.ExitHandler(exit_task=notify()):\n    train()\n    evaluate()',
+        },
+      ]
+    },
+    {
+      id: 'caching',
+      title: 'Caching',
+      subtitle: 'Skip re-execution when inputs have not changed',
+      icon: 'CHE',
+      color: '#22c55e',
+      items: [
+        {
+          method: 'set_caching_options(enable_caching=True)',
+          desc: 'When enabled (default), KFP checks if the step has been run before with identical inputs. If so, it reuses the cached outputs instead of re-executing the step. This dramatically speeds up iterative development.',
+          example: 'data_task.set_caching_options(True)\n# Re-running pipeline skips data loading\n# if dataset_path has not changed',
+        },
+        {
+          method: 'Disabling cache for non-deterministic steps',
+          desc: 'Disable caching for steps with side effects or non-deterministic behavior (random seeds, API calls, time-dependent logic). Training steps should generally have caching disabled since you want fresh runs.',
+          example: 'sft_task.set_caching_options(False)\n# Always re-run training even if\n# inputs are identical',
+        },
+      ]
+    },
+    {
+      id: 'env',
+      title: 'Environment & Scheduling',
+      subtitle: 'Env vars, node selection, and tolerations',
+      icon: 'ENV',
+      color: '#a855f7',
+      items: [
+        {
+          method: 'set_env_variable("HF_HOME", "/tmp/hf_home")',
+          desc: 'Injects environment variables into the container. Essential for configuring HuggingFace cache directories, API tokens, CUDA settings, and training framework options.',
+          example: 'sft_task.set_env_variable("HF_HOME", "/tmp/hf")\nsft_task.set_env_variable("NCCL_DEBUG", "INFO")\nsft_task.set_env_variable("CUDA_VISIBLE_DEVICES", "0,1,2,3")',
+        },
+        {
+          method: 'add_node_selector_constraint("nvidia.com/gpu.present", "true")',
+          desc: 'Constrains scheduling to nodes with specific labels. Ensures GPU workloads land on GPU-equipped nodes and prevents accidental scheduling on CPU-only nodes.',
+          example: 'sft_task.add_node_selector_constraint(\n    "nvidia.com/gpu.present", "true"\n)',
+        },
+        {
+          method: 'add_toleration(key, operator, value, effect)',
+          desc: 'Allows the pod to be scheduled on nodes with matching taints. GPU nodes are often tainted with NoSchedule to repel non-GPU workloads.',
+          example: 'sft_task.add_toleration(\n    key="nvidia.com/gpu",\n    operator="Exists",\n    effect="NoSchedule",\n)',
+        },
+      ]
+    },
+  ];
+
+  const activeConf = configs.find(c => c.id === activeConfig);
+
+  return (
+    <div className="fade-in">
+      <div className="text-center mb-5">
+        <h2 className="text-xl font-bold text-white mb-1">Task Configuration Deep Dive</h2>
+        <p className="text-sm text-slate-400">Every PipelineTask exposes methods to configure resources, retry, caching, and scheduling</p>
+      </div>
+
+      {/* Config selector */}
+      <div className="flex gap-2 mb-5 justify-center flex-wrap">
+        {configs.map(c => (
+          <button key={c.id} onClick={() => setActiveConfig(c.id)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-medium transition-all border ${
+              c.id === activeConfig
+                ? 'shadow-lg'
+                : 'bg-slate-800/40 border-slate-700/40 text-slate-400 hover:bg-slate-700/40'
+            }`}
+            style={c.id === activeConfig ? {
+              background: `${c.color}15`,
+              borderColor: `${c.color}50`,
+              color: c.color,
+              boxShadow: `0 0 12px 2px ${c.color}20`
+            } : {}}>
+            <SectionBadge icon={c.icon} color={c.color} size={24}/>
+            {c.title}
+          </button>
+        ))}
+      </div>
+
+      <div className="fade-in" key={activeConfig}>
+        <div className="callout-box bg-slate-800/30 border border-slate-700/40 mb-4" style={{ '--callout-color': activeConf.color }}>
+          <div className="flex items-center gap-3 mb-3">
+            <SectionBadge icon={activeConf.icon} color={activeConf.color}/>
+            <div>
+              <h3 className="text-base font-bold" style={{ color: activeConf.color }}>{activeConf.title}</h3>
+              <p className="text-[10px] text-slate-400">{activeConf.subtitle}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {activeConf.items.map((item, i) => (
+            <div key={i} className="rounded-xl border border-slate-700/40 bg-slate-800/20 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: activeConf.color }}></div>
+                <span className="mono text-[11px] font-semibold text-slate-200">{item.method}</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed mb-3">{item.desc}</p>
+              <div className="rounded-lg border border-slate-700/60 bg-[#0b1121] overflow-hidden">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/40 border-b border-slate-700/40">
+                  <div className="w-2 h-2 rounded-full bg-red-500/60"></div>
+                  <div className="w-2 h-2 rounded-full bg-yellow-500/60"></div>
+                  <div className="w-2 h-2 rounded-full bg-green-500/60"></div>
+                  <span className="mono text-[9px] text-slate-500 ml-1">example</span>
+                </div>
+                <div className="p-3 overflow-x-auto">
+                  <pre className="mono text-[10px] text-slate-300 whitespace-pre leading-relaxed">{item.example}</pre>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// TAB 6: COMPILATION & EXECUTION
+// ======================================================================
+
+function ExecutionTab() {
+  const [activeStep, setActiveStep] = useState(0);
+
+  const steps = [
+    {
+      num: 1,
+      title: 'Compile Pipeline to YAML IR',
+      icon: 'CMP',
+      color: '#fbbf24',
+      desc: 'The compiler converts your @dsl.pipeline Python function into a portable YAML Intermediate Representation (IR). This YAML encodes the entire DAG structure, component specifications, parameters, artifacts, and control flow logic. The IR is based on the PipelineSpec protobuf format and can run on any KFP-compatible backend.',
+      command: `from kfp import compiler
+
+compiler.Compiler().compile(
+    pipeline_func=sft_pipeline,
+    package_path="sft_pipeline.yaml",
+)
+
+# The output sft_pipeline.yaml contains:
+# - PipelineSpec: DAG structure, parameter definitions
+# - ComponentSpec: Each component's container, commands, I/O
+# - PlatformSpec: Kubernetes-specific configs (resources, labels)`,
+    },
+    {
+      num: 2,
+      title: 'Submit to Data Science Pipelines',
+      icon: 'SUB',
+      color: '#22c55e',
+      desc: 'Submit the compiled YAML to the KFP backend running on OpenShift AI (Data Science Pipelines). You can submit via the Python client, the OpenShift AI dashboard UI, or the REST API. The backend validates the pipeline spec, stores it, and creates a run.',
+      command: `from kfp.client import Client
+
+# Connect to Data Science Pipelines on OpenShift AI
+client = Client(
+    host="https://ds-pipeline-dspa.apps.cluster.com",
+    existing_token=os.environ["OPENSHIFT_TOKEN"],
+)
+
+# Submit a run with parameter overrides
+run = client.create_run_from_pipeline_package(
+    pipeline_file="sft_pipeline.yaml",
+    arguments={
+        "dataset_path": "s3://bucket/train.jsonl",
+        "base_model": "Qwen/Qwen2.5-32B-Instruct",
+        "threshold": 0.85,
+    },
+    run_name="sft-run-001",
+    experiment_name="fine-tuning-experiments",
+)`,
+    },
+    {
+      num: 3,
+      title: 'Pipeline Execution on OpenShift',
+      icon: 'RUN',
+      color: '#3b82f6',
+      desc: 'The Argo Workflow engine creates a Kubernetes pod for each pipeline step. Each pod runs the component\'s container image, injects parameters, mounts artifact volumes, and executes the component function. Pods are scheduled on appropriate nodes (GPU nodes for training steps, CPU nodes for data loading).',
+      command: `# Monitor pipeline execution via oc CLI
+oc get pods -n <project> -l pipeline/runid=<run-id>
+
+# Check pod status
+oc describe pod <pod-name> -n <project>
+
+# View logs for a specific step
+oc logs <pod-name> -c main -n <project>
+
+# Check artifact storage
+aws s3 ls s3://mlpipeline/artifacts/<run-id>/`,
+    },
+    {
+      num: 4,
+      title: 'Monitor in KFP Dashboard',
+      icon: 'MON',
+      color: '#06b6d4',
+      desc: 'The OpenShift AI dashboard provides a visual representation of your pipeline run. Each node shows its status (pending, running, succeeded, failed). Click on a node to see its logs, input/output parameters, artifacts, and metrics. The Metrics tab shows charts from log_metric() calls.',
+      command: null,
+    },
+    {
+      num: 5,
+      title: 'Debug Common Issues',
+      icon: 'DBG',
+      color: '#f43f5e',
+      desc: 'Common pipeline failures and how to diagnose them. Most issues fall into: OOM (increase memory/GPU limits), image pull errors (check registry credentials), permission errors (check ServiceAccount RBAC), and data access errors (verify S3 credentials and PVC mounts).',
+      command: `# ── Common debugging commands ──
+
+# OOM? Check resource usage
+oc top pod <pod-name> -n <project>
+
+# Image pull error? Check credentials
+oc get events -n <project> --field-selector reason=Failed
+
+# Permission error? Check ServiceAccount
+oc get sa pipeline -n <project> -o yaml
+
+# Data access error? Verify S3/PVC
+oc exec <pod-name> -- ls /mnt/models/
+oc exec <pod-name> -- aws s3 ls s3://bucket/`,
+    },
+  ];
+
+  const step = steps[activeStep];
+
+  return (
+    <div className="fade-in">
+      <div className="text-center mb-5">
+        <h2 className="text-xl font-bold text-white mb-1">Compilation & Execution</h2>
+        <p className="text-sm text-slate-400">From Python code to running pods on OpenShift AI</p>
+      </div>
+
+      {/* Step timeline */}
+      <div className="relative mb-6">
+        <div className="absolute top-6 left-0 right-0 h-0.5 bg-slate-800 z-0"></div>
+        <div className="absolute top-6 left-0 h-0.5 bg-gradient-to-r from-amber-500/60 to-green-500/60 z-0 transition-all duration-500"
+          style={{ width: `${(activeStep / (steps.length - 1)) * 100}%` }}></div>
+
+        <div className="relative z-10 flex justify-between">
+          {steps.map((s, i) => (
+            <button key={i} onClick={() => setActiveStep(i)}
+              className={`flex flex-col items-center transition-all ${i <= activeStep ? '' : 'opacity-40'}`}
+              style={{ width: `${100 / steps.length}%` }}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mono text-[10px] font-bold border-2 transition-all ${
+                i === activeStep ? 'scale-110' : i < activeStep ? 'scale-100' : 'scale-90'
+              }`}
+                style={{
+                  background: i <= activeStep ? `${s.color}20` : '#0f172a',
+                  borderColor: i <= activeStep ? `${s.color}80` : '#334155',
+                  color: i <= activeStep ? s.color : '#64748b',
+                  boxShadow: i === activeStep ? `0 0 16px 4px ${s.color}30` : 'none'
+                }}>
+                {s.icon}
+              </div>
+              <span className={`text-[9px] mt-1.5 text-center leading-tight max-w-[80px] ${
+                i === activeStep ? 'font-semibold' : ''
+              }`}
+                style={{ color: i <= activeStep ? s.color : '#64748b' }}>
+                {s.title}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Step detail */}
+      <div className="rounded-2xl border border-slate-700/40 bg-slate-800/20 p-6 fade-in" key={activeStep}>
+        <div className="flex items-start gap-4 mb-4">
+          <div className="w-14 h-14 rounded-xl flex items-center justify-center mono text-sm font-bold flex-shrink-0"
+            style={{ background: `${step.color}15`, border: `2px solid ${step.color}50`, color: step.color }}>
+            {step.num}
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white mb-1">{step.title}</h3>
+            <p className="text-[12px] text-slate-400 leading-relaxed">{step.desc}</p>
+          </div>
+        </div>
+
+        {step.command && (
+          <div className="rounded-xl border border-slate-700/60 bg-[#0b1121] overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/40 border-b border-slate-700/40">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500/60"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60"></div>
+              <div className="w-2.5 h-2.5 rounded-full bg-green-500/60"></div>
+              <span className="mono text-[10px] text-slate-500 ml-2">terminal</span>
+            </div>
+            <div className="p-4 overflow-x-auto">
+              <pre className="mono text-[11px] text-slate-300 whitespace-pre leading-relaxed">{step.command}</pre>
+            </div>
+          </div>
+        )}
+
+        {activeStep === 3 && (
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+            {[
+              { status: 'Pending', color: '#f59e0b', desc: 'Pod being created, image pulling', icon: '\u25EF' },
+              { status: 'Running', color: '#3b82f6', desc: 'Step is executing', icon: '\u25D4' },
+              { status: 'Succeeded', color: '#22c55e', desc: 'Step completed successfully', icon: '\u2713' },
+              { status: 'Failed', color: '#f43f5e', desc: 'Step failed -- check logs', icon: '\u2717' },
+            ].map((s, i) => (
+              <div key={i} className="rounded-lg border p-3 text-center" style={{ borderColor: `${s.color}30`, background: `${s.color}05` }}>
+                <div className="text-lg mb-1" style={{ color: s.color }}>{s.icon}</div>
+                <div className="text-[11px] font-semibold mb-0.5" style={{ color: s.color }}>{s.status}</div>
+                <div className="text-[9px] text-slate-500">{s.desc}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Navigation */}
+      <div className="flex justify-between mt-4">
+        <button onClick={() => setActiveStep(Math.max(0, activeStep - 1))}
+          disabled={activeStep === 0}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeStep === 0 ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+          }`}>
+          &#8592; Previous
+        </button>
+        <span className="mono text-[10px] text-slate-500 self-center">Step {activeStep + 1} / {steps.length}</span>
+        <button onClick={() => setActiveStep(Math.min(steps.length - 1, activeStep + 1))}
+          disabled={activeStep === steps.length - 1}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            activeStep === steps.length - 1 ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/20'
+          }`}>
+          Next &#8594;
+        </button>
+      </div>
+
+      {/* Common pitfalls */}
+      <div className="mt-6 rounded-2xl border border-slate-700/40 bg-slate-800/15 p-5">
+        <h3 className="text-sm font-bold text-white mb-3">Common Pitfalls & Solutions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {[
+            { pitfall: 'ImportError in lightweight component', solution: 'All imports must be inside the function body. Move "import pandas" inside the @dsl.component function.', color: '#f43f5e' },
+            { pitfall: 'OOM killed during training', solution: 'Increase set_memory_limit() and set_gpu_limit(). Check if --max-model-len is too large for available VRAM.', color: '#f59e0b' },
+            { pitfall: 'Artifact not found error', solution: 'Verify the S3/MinIO credentials in the Data Connection. Check that the pipeline ServiceAccount has access.', color: '#3b82f6' },
+            { pitfall: 'Pipeline compiles but pods stay Pending', solution: 'Check if GPU nodes have capacity. Verify nodeSelector matches available node labels. Check for resource quota limits.', color: '#a855f7' },
+            { pitfall: 'Caching returns stale results', solution: 'Disable caching for non-deterministic steps with set_caching_options(False). Caching uses input hash -- same inputs = same cache key.', color: '#22c55e' },
+            { pitfall: 'dsl.If condition type error', solution: 'The condition must compare a parameter or simple return value (int, float, str, bool). Cannot compare artifacts directly.', color: '#06b6d4' },
+          ].map((item, i) => (
+            <div key={i} className="rounded-lg border border-slate-700/30 bg-slate-900/20 p-3">
+              <div className="text-[11px] font-semibold mb-1" style={{ color: item.color }}>{item.pitfall}</div>
+              <div className="text-[10px] text-slate-400">{item.solution}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================================
+// MAIN APP
+// ======================================================================
+
+const TABS = [
+  { id: 'overview', label: 'Overview', icon: 'ARCH' },
+  { id: 'constructs', label: 'DSL Constructs', icon: 'DSL' },
+  { id: 'comparison', label: 'KFP vs Elyra', icon: 'VS' },
+  { id: 'pipeline', label: 'Pipeline Example', icon: 'DAG' },
+  { id: 'config', label: 'Task Configuration', icon: 'CFG' },
+  { id: 'execution', label: 'Compile & Execute', icon: 'RUN' },
+];
+
+function App() {
+  const [activeTab, setActiveTab] = useState('overview');
+
+  return (
+    <div className="relative z-10 max-w-6xl mx-auto px-4 py-6">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <div className="h-px flex-1 max-w-[80px] bg-gradient-to-r from-transparent to-blue-500/40"></div>
+          <span className="mono text-[10px] text-blue-400/60 tracking-[0.2em] uppercase">OpenShift AI Pipelines</span>
+          <div className="h-px flex-1 max-w-[80px] bg-gradient-to-l from-transparent to-blue-500/40"></div>
+        </div>
+        <h1 className="text-3xl font-extrabold text-white mb-2" style={{ letterSpacing: '-0.02em' }}>
+          OpenShift AI <span className="text-blue-300">Pipelines</span>
+        </h1>
+        <p className="text-sm text-slate-400 max-w-xl mx-auto">
+          Learn the AI Pipelines (KFP v2) DSL constructs, compare with Elyra, then see it all come together in a real SFT pipeline on OpenShift AI
+        </p>
+      </div>
+
+      {/* Tab navigation */}
+      <div className="flex gap-1.5 mb-6 justify-center flex-wrap">
+        {TABS.map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-medium transition-all border ${
+              tab.id === activeTab
+                ? 'bg-blue-600/20 border-blue-500/40 text-blue-300 shadow-lg shadow-blue-500/10'
+                : 'bg-slate-800/30 border-slate-700/30 text-slate-400 hover:bg-slate-700/30 hover:text-slate-300'
+            }`}>
+            <span className={`mono text-[10px] font-bold px-1.5 py-0.5 rounded ${
+              tab.id === activeTab ? 'bg-blue-500/20 text-blue-300' : 'bg-slate-700/30 text-slate-500'
+            }`}>{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="min-h-[500px]">
+        {activeTab === 'overview' && <OverviewTab />}
+        {activeTab === 'constructs' && <ConstructsTab />}
+        {activeTab === 'comparison' && <ComparisonTab />}
+        {activeTab === 'pipeline' && <PipelineTab />}
+        {activeTab === 'config' && <ConfigTab />}
+        {activeTab === 'execution' && <ExecutionTab />}
+      </div>
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
 </body>
 </html>
