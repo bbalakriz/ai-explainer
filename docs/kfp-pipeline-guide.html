@@ -281,7 +281,7 @@ const CONSTRUCT_SECTIONS = [
     subtitle: 'Hermetic Python function -- all imports inside the body',
     icon: 'LW',
     color: '#3b82f6',
-    lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
     description: 'The simplest way to define a pipeline step. A lightweight component is a pure Python function decorated with @dsl.component. The critical rule: all imports must be inside the function body (hermetic requirement). KFP serializes the function source and reconstructs it inside a container at runtime -- if imports are outside, they will not be available.',
     details: [
       { label: 'Hermetic Requirement', value: 'All imports inside function body', note: 'KFP extracts the function source code and runs it in an isolated container -- top-level imports are NOT available' },
@@ -296,7 +296,7 @@ const CONSTRUCT_SECTIONS = [
     subtitle: 'Pre-built container with dependencies baked in',
     icon: 'IMG',
     color: '#a855f7',
-    lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
     description: 'When you add target_image, the hermetic constraint is removed. You can import from adjacent modules and external packages freely. Use "kfp component build" to bake all dependencies into the Docker image at build time instead of install time. This is the recommended approach for production components with heavy dependencies (PyTorch, transformers, PEFT).',
     details: [
       { label: 'target_image', value: 'registry.example.com/sft-train:v2', note: 'The pre-built image containing all dependencies. Built with "kfp component build"' },
@@ -329,7 +329,7 @@ const PIPELINE_SECTIONS = [
     subtitle: 'How components connect into a directed acyclic graph',
     icon: 'DAG',
     color: '#22c55e',
-    lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
+    lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22, 23, 24, 25, 26],
     description: 'The @dsl.pipeline decorator defines the DAG (directed acyclic graph) of your pipeline. Dependencies are created implicitly when you pass task.output or task.outputs["key"] from one step to another. KFP analyzes these data dependencies to determine execution order. You can also use task.after(other_task) for explicit ordering when there is no data dependency.',
     details: [
       { label: 'Implicit Dependencies', value: 'task.outputs["key"]', note: 'Passing output from step A to step B creates an automatic dependency -- B waits for A' },
@@ -344,7 +344,7 @@ const PIPELINE_SECTIONS = [
     subtitle: 'CPU, memory, GPU limits and retry policies',
     icon: 'RES',
     color: '#06b6d4',
-    lines: [18, 19, 20, 21],
+    lines: [17, 18, 19, 20],
     description: 'Every PipelineTask (the object returned when you call a component) exposes methods to configure Kubernetes resource requests and limits, retry behavior, caching, and environment variables. These are critical for GPU-intensive ML workloads where under-provisioning causes OOM errors and over-provisioning wastes cluster resources.',
     details: [
       { label: 'set_cpu_limit("4")', value: '4 CPU cores', note: 'Kubernetes resource limit -- pod is throttled if it exceeds this' },
@@ -359,7 +359,7 @@ const PIPELINE_SECTIONS = [
     subtitle: 'dsl.If / dsl.Else for quality gates',
     icon: 'IF',
     color: '#f59e0b',
-    lines: [28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38],
+    lines: [28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
     description: 'KFP v2 introduced dsl.If / dsl.Elif / dsl.Else as context managers for conditional branching. This is the key differentiator from Elyra, which cannot express any conditional logic. In our SFT pipeline, the eval score determines whether to merge weights (score >= threshold) or retrain with adjusted hyperparameters (score < threshold).',
     details: [
       { label: 'dsl.If(condition)', value: 'eval_task.output >= threshold', note: 'Compares the float output of the eval step against the pipeline parameter threshold' },
@@ -393,7 +393,7 @@ const DATA_SECTIONS = [
     subtitle: 'Scalars passed as pipeline and component arguments',
     icon: 'PRM',
     color: '#3b82f6',
-    lines: [1, 2, 3, 4, 5, 6, 7],
+    lines: [2, 3, 4, 5, 6, 8, 13, 14, 15],
     description: 'Parameters are simple Python types (str, int, float, bool, list, dict) that pass between components as serialized values. Unlike artifacts, parameters are NOT stored in object storage -- they are embedded directly in the pipeline spec. Use parameters for configuration values, thresholds, paths, and hyperparameters. Use artifacts for large data like datasets, model weights, and evaluation reports.',
     details: [
       { label: 'Supported Types', value: 'str, int, float, bool, list, dict', note: 'KFP serializes these to JSON. Complex objects must use artifacts instead' },
@@ -828,7 +828,10 @@ function ConstructsTab() {
       return COMPONENT_CODE;
     }
     if (category === 'pipeline') return PIPELINE_CODE;
-    if (category === 'data') return ARTIFACTS_CODE;
+    if (category === 'data') {
+      if (activeSection === 'parameters') return PIPELINE_CODE;
+      return ARTIFACTS_CODE;
+    }
     if (category === 'control') return CONTROL_FLOW_CODE;
     return COMPONENT_CODE;
   };
