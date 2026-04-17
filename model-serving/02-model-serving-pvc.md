@@ -133,9 +133,31 @@ Monitor the job: `oc get jobs` and `oc logs job/model-downloader`
 Once the job completes successfully, verify the model files are in the PVC:
 
 ```bash
-# Create a debug pod to check the PVC contents
-oc run debug-pod --image=registry.redhat.io/ubi9/ubi-minimal --rm -it -- bash
-# Inside the pod:
+# spin up a temporary pod that mounts the PVC and list the contents
+oc run debug-pod --image=registry.redhat.io/ubi9/ubi-minimal --rm -it \
+  --overrides='{
+    "spec": {
+      "containers": [{
+        "name": "debug-pod",
+        "image": "registry.redhat.io/ubi9/ubi-minimal",
+        "command": ["bash"],
+        "stdin": true,
+        "tty": true,
+        "volumeMounts": [{
+          "name": "model-vol",
+          "mountPath": "/mnt/models"
+        }]
+      }],
+      "volumes": [{
+        "name": "model-vol",
+        "persistentVolumeClaim": {
+          "claimName": "models-storage-pvc"
+        }
+      }]
+    }
+  }' -- bash
+
+# inside the pod
 ls -la /mnt/models/
 ```
 
