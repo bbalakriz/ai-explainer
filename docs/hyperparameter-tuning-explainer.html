@@ -804,16 +804,16 @@ callbacks=[lineage_callback, <span class="changed">EarlyStoppingCallback(early_s
 <section class="section" id="s-decoder">
 <div class="container">
   <h2 class="section-title">Decoder Model: qwen2.5-3b-instruct</h2>
-  <p class="section-desc">A parallel tuning plan for the <strong>decoder-based</strong> generative model. Five focused cycles, each isolating a tightly coupled pair of hyperparameters.</p>
+  <p class="section-desc">A progressive tuning plan for the <strong>decoder-based</strong> generative model. Two cycles deliberately break training to teach critical lessons, then three cycles systematically improve performance.</p>
 
-  <div class="tag fade-in" style="display:block;text-align:center;margin-bottom:40px">qwen2.5-3b-instruct + LoRA &middot; Decoder SFT &middot; 5 Cycles</div>
+  <div class="tag fade-in" style="display:block;text-align:center;margin-bottom:40px">qwen2.5-3b-instruct + LoRA &middot; Decoder SFT &middot; 2 Deteriorate + 3 Improve</div>
 
   <!-- CYCLE 1 -->
   <div class="phase-bar" style="background:rgba(188,140,255,.06);border-color:rgba(188,140,255,.15);margin-top:0">
     <div class="phase-num" style="background:var(--purple-bg);color:var(--purple)">C1</div>
     <div>
-      <h3 style="color:var(--purple)">Cycle 1: Learning Rate &amp; Warmup</h3>
-      <p>Aggressive LR with zero warmup &mdash; test whether the decoder converges faster without a ramp-up phase.</p>
+      <h3 style="color:var(--purple)">Cycle 1: The Speed Test <span style="opacity:.5;font-size:.85em">(Deteriorate)</span></h3>
+      <p>Aggressive LR with zero warmup &mdash; what happens when you remove the safety net and floor the accelerator?</p>
     </div>
   </div>
 
@@ -821,7 +821,7 @@ callbacks=[lineage_callback, <span class="changed">EarlyStoppingCallback(early_s
     <div class="iter-header" onclick="toggleIter('dec-iter1')">
       <div class="iter-num" style="background:var(--purple-bg);color:var(--purple)">1</div>
       <div class="iter-info">
-        <h3>Learning Rate &amp; Warmup</h3>
+        <h3>The Speed Test</h3>
         <span class="strategy cat-lr">LEARNING RATE</span>
       </div>
       <span class="iter-arrow">&#9660;</span>
@@ -832,24 +832,24 @@ callbacks=[lineage_callback, <span class="changed">EarlyStoppingCallback(early_s
         <tbody>
           <tr>
             <td><code>learning_rate</code></td>
-            <td class="val-old">2e-4</td>
+            <td class="val-old">1e-4</td>
             <td class="val-new">5e-4</td>
-            <td style="font-size:.82rem">LoRA on a 3B decoder has enough parameters to tolerate a higher LR. 2.5&times; increase to test faster convergence.</td>
+            <td style="font-size:.82rem">5&times; increase in learning rate. Pushing the optimizer to take dangerously large steps through the loss landscape from step 1.</td>
           </tr>
           <tr>
             <td><code>warmup_ratio</code></td>
-            <td class="val-old">0.1</td>
+            <td class="val-old">0.15</td>
             <td class="val-new">0.0</td>
-            <td style="font-size:.82rem">Skip warmup entirely. With cosine scheduling, the LR already starts high and decays naturally. Zero warmup means the model begins learning at full speed from step 1.</td>
+            <td style="font-size:.82rem">Remove the warmup ramp entirely. The model hits the full 5e-4 learning rate on the very first training step with no gradual increase.</td>
           </tr>
         </tbody>
       </table>
-      <div class="rationale"><strong>Why this combination?</strong> For decoder models with LoRA, the warmup phase can waste precious steps on a small dataset. By jumping straight to the higher LR and letting cosine decay handle the annealing, we maximize learning in the limited training budget. If gradient norms stay stable, warmup was unnecessary overhead.</div>
-      <div class="code-block"><span class="comment"># TrainingArguments changes:</span>
-learning_rate=<span class="changed">5e-4</span>,     <span class="comment"># was 2e-4</span>
-warmup_ratio=<span class="changed">0.0</span>,      <span class="comment"># was 0.1</span></div>
-      <div class="expect warn"><strong>Exploding Gradients.</strong> By removing the gentle warmup and aggressively increasing the speed, you will &ldquo;fry&rdquo; the attention layers on Epoch 1. The training loss will plateau or shoot to <code>NaN</code>, and the model will mode-collapse &mdash; guessing the same intent every time.</div>
-      <div class="decision"><strong>Takeaway:</strong> Warmup exists for a reason. Decoder attention layers are sensitive to initial gradient magnitude. Without a ramp-up phase, the 5e-4 LR sends catastrophically large updates through the transformer on step 1, destroying the pretrained representations before learning can begin.</div>
+      <div class="rationale"><strong>Why this combination?</strong> This deliberately breaks training to teach a critical lesson. By removing the gentle warmup ramp and simultaneously cranking the learning rate to 5&times; baseline, you send catastrophically large gradient updates through the attention layers from step 1. The model never gets a chance to &ldquo;warm up&rdquo; &mdash; it&rsquo;s thrown into the deep end at full speed.</div>
+      <div class="code-block"><span class="comment"># SFTConfig changes:</span>
+learning_rate=<span class="changed">5e-4</span>,     <span class="comment"># was 1e-4</span>
+warmup_ratio=<span class="changed">0.0</span>,      <span class="comment"># was 0.15</span></div>
+      <div class="expect warn"><strong>Exploding Gradients.</strong> By removing the gentle warmup and aggressively increasing the speed, learners will &ldquo;fry&rdquo; the attention layers on Epoch 1. The model will mode-collapse, proving that LLMs cannot be brute-forced.</div>
+      <div class="decision"><strong>The Lesson:</strong> Warmup exists for a reason. Decoder attention layers are exquisitely sensitive to initial gradient magnitude. Without a ramp-up phase, the 5e-4 LR sends catastrophically large updates through the transformer on step 1, destroying the pretrained representations before learning can begin. The training loss will plateau or shoot to <code>NaN</code>, and the model will mode-collapse &mdash; guessing the same intent every time.</div>
     </div></div>
   </div>
 
@@ -857,8 +857,8 @@ warmup_ratio=<span class="changed">0.0</span>,      <span class="comment"># was 
   <div class="phase-bar" style="background:rgba(61,219,217,.06);border-color:rgba(61,219,217,.15)">
     <div class="phase-num" style="background:var(--cyan-bg);color:var(--cyan)">C2</div>
     <div>
-      <h3 style="color:var(--cyan)">Cycle 2: LoRA Rank &amp; Alpha</h3>
-      <p>Quadruple the adaptation capacity &mdash; decoder models may need more expressiveness for generative tasks.</p>
+      <h3 style="color:var(--cyan)">Cycle 2: The VRAM Squeeze <span style="opacity:.5;font-size:.85em">(Deteriorate)</span></h3>
+      <p>Increase batch size to process multiple texts simultaneously &mdash; can the GPU handle it?</p>
     </div>
   </div>
 
@@ -866,7 +866,146 @@ warmup_ratio=<span class="changed">0.0</span>,      <span class="comment"># was 
     <div class="iter-header" onclick="toggleIter('dec-iter2')">
       <div class="iter-num" style="background:var(--cyan-bg);color:var(--cyan)">2</div>
       <div class="iter-info">
-        <h3>LoRA Rank &amp; Alpha</h3>
+        <h3>The VRAM Squeeze</h3>
+        <span class="strategy cat-arch">BATCH ARCHITECTURE</span>
+      </div>
+      <span class="iter-arrow">&#9660;</span>
+    </div>
+    <div class="iter-body"><div class="iter-content">
+      <table class="change-table">
+        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>per_device_train_batch_size</code></td>
+            <td class="val-old">1</td>
+            <td class="val-new">4</td>
+            <td style="font-size:.82rem">4&times; increase in per-device batch. Forces the GPU to hold activations for 4 sequences simultaneously instead of 1, quadrupling peak memory usage.</td>
+          </tr>
+          <tr>
+            <td><code>gradient_accumulation_steps</code></td>
+            <td class="val-old">16</td>
+            <td class="val-new">4</td>
+            <td style="font-size:.82rem">Reduce accumulation from 16 to 4. Effective batch size = 4 &times; 4 = 16 (unchanged), but the memory profile is completely different.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="rationale"><strong>Why this combination?</strong> The baseline uses batch_size=1 with 16 accumulation steps &mdash; a deliberate design choice for the memory-constrained 3B model on a T4 GPU. This cycle naively assumes that &ldquo;bigger batch = faster training&rdquo; by processing 4 examples per forward pass. While the effective batch size stays at 16, the per-step memory requirement explodes because activations for 4 sequences must be held in VRAM simultaneously.</div>
+      <div class="formula-box">
+        Effective batch size = per_device_batch &times; grad_accum = 4 &times; 4 = <span class="result">16 (unchanged)</span>
+      </div>
+      <div class="code-block"><span class="comment"># SFTConfig changes:</span>
+per_device_train_batch_size=<span class="changed">4</span>,      <span class="comment"># was 1</span>
+gradient_accumulation_steps=<span class="changed">4</span>,     <span class="comment"># was 16</span>
+<span class="comment"># effective batch = 4 * 4 = 16 (unchanged)</span></div>
+      <div class="expect warn"><strong>Out of Memory (OOM).</strong> By processing 4 texts simultaneously, the pipeline will fatally crash with a CUDA memory error. The 3B decoder model&rsquo;s activations at batch_size=4 exceed what the T4&rsquo;s 15.6 GB VRAM can hold.</div>
+      <div class="decision"><strong>The Lesson:</strong> <code>gradient_accumulation_steps</code> is the mathematical magic trick used to simulate large batch sizes on constrained hardware. Instead of fitting 4 samples in one forward pass (OOM), you process 1 sample at a time and accumulate the gradients over 16 steps &mdash; mathematically equivalent, but memory-feasible. Always calculate your memory budget before changing batch sizes on large models.</div>
+    </div></div>
+  </div>
+
+  <!-- CYCLE 3 -->
+  <div class="phase-bar" style="background:rgba(240,136,62,.06);border-color:rgba(240,136,62,.15)">
+    <div class="phase-num" style="background:var(--orange-bg);color:var(--orange)">C3</div>
+    <div>
+      <h3 style="color:var(--orange)">Cycle 3: The Generalization Boost <span style="opacity:.5;font-size:.85em">(Improve)</span></h3>
+      <p>Add microscopic noise to word embeddings during training &mdash; a regularization trick that prevents memorization.</p>
+    </div>
+  </div>
+
+  <div class="iter-card" id="dec-iter3">
+    <div class="iter-header" onclick="toggleIter('dec-iter3')">
+      <div class="iter-num" style="background:var(--orange-bg);color:var(--orange)">3</div>
+      <div class="iter-info">
+        <h3>The Generalization Boost</h3>
+        <span class="strategy cat-reg">REGULARIZATION</span>
+      </div>
+      <span class="iter-arrow">&#9660;</span>
+    </div>
+    <div class="iter-body"><div class="iter-content">
+      <table class="change-table">
+        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>neftune_noise_alpha</code></td>
+            <td class="val-old">not set</td>
+            <td class="val-new">5.0</td>
+            <td style="font-size:.82rem">Enable NEFTune (Noisy Embeddings Fine-Tuning). Adds uniform random noise scaled by &alpha;=5.0 to the input embedding vectors during each training forward pass. The noise is removed at inference time.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="rationale"><strong>Why NEFTune?</strong> With only 372 training examples, the model can easily memorize exact phrases rather than learning the underlying meaning. NEFTune adds microscopic mathematical noise to the model&rsquo;s word embeddings during training, which acts as a data augmentation at the representation level. It prevents the model from blindly memorizing exact training phrases and forces it to learn the semantic meaning of the words instead. The noise magnitude (&alpha;=5.0) is scaled by sequence length, so longer sequences get proportionally more perturbation.</div>
+      <div class="code-block"><span class="comment"># SFTConfig changes:</span>
+neftune_noise_alpha=<span class="changed">5.0</span>,  <span class="comment"># new parameter (was not set)</span></div>
+      <div class="expect"><strong>Improved Generalization.</strong> This usually yields a solid 1&ndash;2% F1 boost on rare, edge-case intents. The model becomes more robust to paraphrasing and minor wording variations because it was trained on slightly &ldquo;fuzzy&rdquo; embeddings rather than exact token representations.</div>
+      <div class="decision"><strong>The Lesson:</strong> NEFTune regularization is one of the cheapest improvements you can make to any SFT pipeline. A single line of config prevents the model from blindly memorizing exact training phrases, forcing it to learn the meaning of the words. On small datasets especially, this technique smooths the embedding space and yields measurable improvements on tail-distribution intents that the model would otherwise misclassify.</div>
+    </div></div>
+  </div>
+
+  <!-- CYCLE 4 -->
+  <div class="phase-bar" style="background:rgba(247,120,186,.06);border-color:rgba(247,120,186,.15)">
+    <div class="phase-num" style="background:var(--pink-bg);color:var(--pink)">C4</div>
+    <div>
+      <h3 style="color:var(--pink)">Cycle 4: The Deep Search <span style="opacity:.5;font-size:.85em">(Improve)</span></h3>
+      <p>Lower the speed, extend the training, and use LR restarts to explore more of the loss landscape.</p>
+    </div>
+  </div>
+
+  <div class="iter-card" id="dec-iter4">
+    <div class="iter-header" onclick="toggleIter('dec-iter4')">
+      <div class="iter-num" style="background:var(--pink-bg);color:var(--pink)">4</div>
+      <div class="iter-info">
+        <h3>The Deep Search</h3>
+        <span class="strategy cat-lr">LEARNING RATE</span>
+      </div>
+      <span class="iter-arrow">&#9660;</span>
+    </div>
+    <div class="iter-body"><div class="iter-content">
+      <table class="change-table">
+        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>learning_rate</code></td>
+            <td class="val-old">1e-4</td>
+            <td class="val-new">5e-5</td>
+            <td style="font-size:.82rem">Halve the learning rate. Smaller steps through the loss landscape mean the optimizer is less likely to overshoot good minima.</td>
+          </tr>
+          <tr>
+            <td><code>num_train_epochs</code></td>
+            <td class="val-old">8</td>
+            <td class="val-new">12</td>
+            <td style="font-size:.82rem">50% more epochs. The slower learning rate needs more passes through the data to compensate for smaller per-step updates.</td>
+          </tr>
+          <tr>
+            <td><code>lr_scheduler_type</code></td>
+            <td class="val-old">cosine</td>
+            <td class="val-new">cosine_with_restarts</td>
+            <td style="font-size:.82rem">Instead of a single smooth decay, the LR periodically bumps back up, allowing the optimizer to escape local minima and explore new regions of the loss landscape.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="rationale"><strong>Why this combination?</strong> Standard cosine scheduling decays the learning rate smoothly to near-zero, which means the model commits to whatever minimum it found early on. With <code>cosine_with_restarts</code>, the optimizer occasionally bumps the learning rate back up to jump out of mathematical &ldquo;valleys.&rdquo; Combined with a lower base LR and extended training, this allows the model to safely comb through the data for hidden linguistic patterns without the risk of overshooting or overfitting.</div>
+      <div class="code-block"><span class="comment"># SFTConfig changes:</span>
+learning_rate=<span class="changed">5e-5</span>,                 <span class="comment"># was 1e-4</span>
+num_train_epochs=<span class="changed">12</span>,                <span class="comment"># was 8</span>
+lr_scheduler_type=<span class="changed">"cosine_with_restarts"</span>,  <span class="comment"># was "cosine"</span></div>
+      <div class="expect"><strong>Improved Precision.</strong> The restarts allow the optimizer to escape shallow local minima that standard cosine decay would commit to. Combined with the conservative learning rate, the model finds deeper, more robust minima. Expect small but consistent gains on the hardest-to-classify intents.</div>
+      <div class="decision"><strong>The Lesson:</strong> Advanced scheduling is a powerful knob. By dropping the speed, extending the epochs, and using &ldquo;restarts,&rdquo; the optimizer periodically re-energizes to jump out of mathematical valleys. It allows the model to safely comb through the data for hidden linguistic patterns without overfitting. This is particularly effective on small datasets where the loss surface has many shallow traps.</div>
+    </div></div>
+  </div>
+
+  <!-- CYCLE 5 -->
+  <div class="phase-bar" style="background:rgba(63,185,80,.06);border-color:rgba(63,185,80,.15)">
+    <div class="phase-num" style="background:var(--green-bg);color:var(--green)">C5</div>
+    <div>
+      <h3 style="color:var(--green)">Cycle 5: The Vocabulary Mastery <span style="opacity:.5;font-size:.85em">(Improve)</span></h3>
+      <p>Expand LoRA capacity and unfreeze the model&rsquo;s vocabulary layers to learn domain-specific terminology.</p>
+    </div>
+  </div>
+
+  <div class="iter-card" id="dec-iter5">
+    <div class="iter-header" onclick="toggleIter('dec-iter5')">
+      <div class="iter-num" style="background:var(--green-bg);color:var(--green)">5</div>
+      <div class="iter-info">
+        <h3>The Vocabulary Mastery</h3>
         <span class="strategy cat-lora">LORA ARCHITECTURE</span>
       </div>
       <span class="iter-arrow">&#9660;</span>
@@ -878,161 +1017,32 @@ warmup_ratio=<span class="changed">0.0</span>,      <span class="comment"># was 
           <tr>
             <td><code>r</code></td>
             <td class="val-old">16</td>
-            <td class="val-new">64</td>
-            <td style="font-size:.82rem">4&times; increase in rank. A 3B model has far more internal dimensions to adapt &mdash; higher rank lets LoRA capture richer task-specific representations.</td>
+            <td class="val-new">32</td>
+            <td style="font-size:.82rem">Double the LoRA rank. Gives the adapter matrices more dimensions to capture task-specific patterns, particularly important when also unfreezing vocabulary layers.</td>
           </tr>
           <tr>
             <td><code>lora_alpha</code></td>
             <td class="val-old">32</td>
-            <td class="val-new">128</td>
-            <td style="font-size:.82rem">Maintain alpha/r = 2 ratio for consistent effective scaling.</td>
+            <td class="val-new">64</td>
+            <td style="font-size:.82rem">Maintain the alpha/r = 2 ratio for consistent effective scaling of the adapter updates.</td>
+          </tr>
+          <tr>
+            <td><code>modules_to_save</code></td>
+            <td class="val-old">not set</td>
+            <td class="val-new">["lm_head", "embed_tokens"]</td>
+            <td style="font-size:.82rem">Explicitly unfreeze the base model&rsquo;s vocabulary embeddings (<code>embed_tokens</code>) and output projection (<code>lm_head</code>). These layers are normally frozen during LoRA training &mdash; unfreezing them lets the model adapt its token representations to domain vocabulary.</td>
           </tr>
         </tbody>
       </table>
-      <div class="rationale"><strong>Why r=64?</strong> Decoder models used for generative SFT need to learn more complex output distributions than a classifier. The baseline r=16 may be too constrained &mdash; r=64 gives the adapters 64-dimensional matrices, dramatically increasing the "budget" for task adaptation. The tradeoff: ~4&times; more trainable parameters, so watch for overfitting.</div>
+      <div class="rationale"><strong>Why unfreeze the head?</strong> Telecom data uses heavy slang, abbreviations, and domain-specific vocabulary (e.g., Thai telco terms, plan names, technical shorthand). Standard LoRA only adapts the attention and MLP projections but keeps the token embedding and output layers frozen. By adding <code>modules_to_save=["lm_head", "embed_tokens"]</code>, you let the model learn your specific enterprise terminology at the vocabulary level. The slightly expanded LoRA rank (32) gives the adapter layers enough capacity to work in concert with these newly trainable vocabulary layers.</div>
       <div class="code-block">peft_config = LoraConfig(
-    r=<span class="changed">64</span>,              <span class="comment"># was 16</span>
-    lora_alpha=<span class="changed">128</span>,       <span class="comment"># was 32 (keep ratio 2x)</span>
+    r=<span class="changed">32</span>,              <span class="comment"># was 16</span>
+    lora_alpha=<span class="changed">64</span>,       <span class="comment"># was 32 (keep ratio 2x)</span>
+    modules_to_save=<span class="changed">["lm_head", "embed_tokens"]</span>,  <span class="comment"># new (was not set)</span>
     ...
 )</div>
-      <div class="expect warn"><strong>Diminishing Returns.</strong> You will give the adapter a massive &ldquo;brain upgrade.&rdquo; The adapter file size jumps from ~20MB to ~80MB, and VRAM usage spikes noticeably. However, accuracy barely moves from ~95%, proving that text classification doesn&rsquo;t require high-rank matrices.</div>
-      <div class="decision"><strong>Takeaway:</strong> More parameters &ne; better performance. For a structured classification task, r=16 already captures enough task-specific signal. The 4&times; increase in trainable parameters adds cost (memory, storage, inference latency) with no meaningful accuracy gain. Always match model capacity to task complexity.</div>
-    </div></div>
-  </div>
-
-  <!-- CYCLE 3 -->
-  <div class="phase-bar" style="background:rgba(240,136,62,.06);border-color:rgba(240,136,62,.15)">
-    <div class="phase-num" style="background:var(--orange-bg);color:var(--orange)">C3</div>
-    <div>
-      <h3 style="color:var(--orange)">Cycle 3: Epochs &amp; Dropout</h3>
-      <p>Train for longer with zero LoRA dropout &mdash; test whether the model benefits from more passes and full adapter utilization.</p>
-    </div>
-  </div>
-
-  <div class="iter-card" id="dec-iter3">
-    <div class="iter-header" onclick="toggleIter('dec-iter3')">
-      <div class="iter-num" style="background:var(--orange-bg);color:var(--orange)">3</div>
-      <div class="iter-info">
-        <h3>Epochs &amp; Dropout</h3>
-        <span class="strategy cat-reg">REGULARIZATION</span>
-      </div>
-      <span class="iter-arrow">&#9660;</span>
-    </div>
-    <div class="iter-body"><div class="iter-content">
-      <table class="change-table">
-        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><code>num_train_epochs</code></td>
-            <td class="val-old">5</td>
-            <td class="val-new">15</td>
-            <td style="font-size:.82rem">3&times; more epochs. With higher rank LoRA from Cycle 2, the model has more parameters to converge &mdash; it may need more passes through the data to fully utilize them.</td>
-          </tr>
-          <tr>
-            <td><code>lora_dropout</code></td>
-            <td class="val-old">0.05</td>
-            <td class="val-new">0.0</td>
-            <td style="font-size:.82rem">Remove dropout entirely. With a 3B decoder using high-rank LoRA, the adapters are already a small fraction of total params. Dropout may be unnecessarily limiting the adapter's learning capacity.</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="rationale"><strong>Why zero dropout with more epochs?</strong> This is a counterintuitive but valid approach for decoder SFT: the pretrained 3B model already has strong regularization from pretraining, and the LoRA adapters represent a tiny fraction of total parameters. Removing dropout lets every adapter neuron contribute every step, while the extended training (15 epochs) gives the model more time to learn with this full capacity. If overfitting appears, use early stopping from Cycle 3 onwards.</div>
-      <div class="code-block"><span class="comment"># TrainingArguments:</span>
-num_train_epochs=<span class="changed">15</span>,    <span class="comment"># was 5</span>
-
-<span class="comment"># LoRA config:</span>
-lora_dropout=<span class="changed">0.0</span>,       <span class="comment"># was 0.05</span></div>
-      <div class="expect warn"><strong>The U-Curve.</strong> By turning off dropout (anti-memorization) and forcing the model to read the data 15 times, you will watch <code>train_loss</code> drop to near zero &mdash; but <code>eval_loss</code> will start curving back upward around Epoch 10. The model is memorizing the training data and losing its ability to generalize.</div>
-      <div class="decision"><strong>Takeaway:</strong> This is the textbook overfitting U-curve in action. Dropout is not optional decoration &mdash; it forces the model to learn redundant, robust features instead of brittle memorized patterns. Combined with excessive epochs, you get a model that aces the training set but fails on anything new. The divergence point between train and eval loss is exactly where you should have stopped.</div>
-    </div></div>
-  </div>
-
-  <!-- CYCLE 4 -->
-  <div class="phase-bar" style="background:rgba(247,120,186,.06);border-color:rgba(247,120,186,.15)">
-    <div class="phase-num" style="background:var(--pink-bg);color:var(--pink)">C4</div>
-    <div>
-      <h3 style="color:var(--pink)">Cycle 4: Batch Sizing</h3>
-      <p>Smaller per-device batch with higher gradient accumulation &mdash; more update steps per epoch for smoother learning.</p>
-    </div>
-  </div>
-
-  <div class="iter-card" id="dec-iter4">
-    <div class="iter-header" onclick="toggleIter('dec-iter4')">
-      <div class="iter-num" style="background:var(--pink-bg);color:var(--pink)">4</div>
-      <div class="iter-info">
-        <h3>Batch Sizing</h3>
-        <span class="strategy cat-arch">BATCH ARCHITECTURE</span>
-      </div>
-      <span class="iter-arrow">&#9660;</span>
-    </div>
-    <div class="iter-body"><div class="iter-content">
-      <table class="change-table">
-        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><code>per_device_train_batch_size</code></td>
-            <td class="val-old">16</td>
-            <td class="val-new">4</td>
-            <td style="font-size:.82rem">4&times; smaller per-device batch. This means each forward pass processes fewer examples, reducing memory pressure and allowing longer sequences if needed.</td>
-          </tr>
-          <tr>
-            <td><code>gradient_accumulation_steps</code></td>
-            <td class="val-old">1</td>
-            <td class="val-new">4</td>
-            <td style="font-size:.82rem">Accumulate gradients over 4 micro-batches. Effective batch size = 4 &times; 4 = 16 (unchanged), but with 4&times; more update steps per epoch.</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="rationale"><strong>Why this configuration?</strong> A 3B decoder model is memory-hungry. Reducing per-device batch to 4 frees significant GPU memory, enabling you to potentially increase max_seq_length or avoid OOM issues. Meanwhile, gradient_accumulation_steps=4 preserves the effective batch size at 16, so gradient quality is maintained. The bonus: 4&times; more optimizer steps per epoch, giving the LR scheduler much finer control.</div>
-      <div class="formula-box">
-        Effective batch size = per_device_batch &times; grad_accum = 4 &times; 4 = <span class="result">16 (unchanged)</span>
-      </div>
-      <div class="code-block"><span class="comment"># TrainingArguments:</span>
-per_device_train_batch_size=<span class="changed">4</span>,      <span class="comment"># was 16</span>
-gradient_accumulation_steps=<span class="changed">4</span>,     <span class="comment"># was 1</span>
-<span class="comment"># effective batch = 4 * 4 = 16 (unchanged)</span></div>
-      <div class="expect warn"><strong>Out of Memory (OOM).</strong> By trying to process 4 texts simultaneously on a single 16GB T4 GPU, the pipeline will fatally crash with a <code>CUDA Out of Memory</code> error. The 3B decoder model&rsquo;s activations at batch_size=4 exceed what the T4&rsquo;s VRAM can hold.</div>
-      <div class="decision"><strong>Takeaway:</strong> <code>gradient_accumulation</code> is the mathematical magic trick used to simulate large batch sizes when hardware is constrained. Instead of fitting 4 samples in one forward pass (OOM), you process 1 sample at a time and accumulate the gradients over 4 steps &mdash; mathematically equivalent, but memory-feasible. always calculate your memory budget before changing batch sizes on large models.</div>
-    </div></div>
-  </div>
-
-  <!-- CYCLE 5 -->
-  <div class="phase-bar" style="background:rgba(63,185,80,.06);border-color:rgba(63,185,80,.15)">
-    <div class="phase-num" style="background:var(--green-bg);color:var(--green)">C5</div>
-    <div>
-      <h3 style="color:var(--green)">Cycle 5: Target Modules</h3>
-      <p>Refine which attention projections receive LoRA adapters for the decoder architecture.</p>
-    </div>
-  </div>
-
-  <div class="iter-card" id="dec-iter5">
-    <div class="iter-header" onclick="toggleIter('dec-iter5')">
-      <div class="iter-num" style="background:var(--green-bg);color:var(--green)">5</div>
-      <div class="iter-info">
-        <h3>Target Modules</h3>
-        <span class="strategy cat-lora">LORA ARCHITECTURE</span>
-      </div>
-      <span class="iter-arrow">&#9660;</span>
-    </div>
-    <div class="iter-body"><div class="iter-content">
-      <table class="change-table">
-        <thead><tr><th>Parameter</th><th>Baseline</th><th>This Run</th><th>Why</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><code>target_modules</code></td>
-            <td class="val-old">default / all linear</td>
-            <td class="val-new">["q_proj", "v_proj"]</td>
-            <td style="font-size:.82rem">Focus LoRA adapters exclusively on the query and value projections in the attention layers. This is the classic LoRA configuration from the original paper.</td>
-          </tr>
-        </tbody>
-      </table>
-      <div class="rationale"><strong>Why q_proj + v_proj only?</strong> The original LoRA paper (Hu et al., 2021) found that adapting query and value projections captures the most task-relevant attention patterns with the fewest trainable parameters. For Qwen2.5's architecture, <code>q_proj</code> controls "what to attend to" and <code>v_proj</code> controls "what information to extract." Omitting <code>k_proj</code>, <code>o_proj</code>, and MLP layers reduces trainable params significantly, acting as a natural regularizer for small datasets.</div>
-      <div class="code-block">peft_config = LoraConfig(
-    target_modules=<span class="changed">["q_proj", "v_proj"]</span>,  <span class="comment"># focused on attention Q/V only</span>
-    ...
-)</div>
-      <div class="expect warn"><strong>Encoders vs. Decoders.</strong> By reverting the adapter to only <code>q_proj</code> and <code>v_proj</code> (the standard BERT/encoder configuration), the model will successfully train &mdash; but accuracy will plummet back to ~50-60%.</div>
-      <div class="decision"><strong>Takeaway:</strong> A 3B generative decoder requires LoRA attachments on <strong>all linear layers</strong> to forcefully override its conversational pre-training. Unlike encoders (which are pretrained for understanding), decoders are pretrained for generation &mdash; adapting only 2 of many projection layers isn&rsquo;t enough to redirect the model&rsquo;s deeply ingrained autoregressive behavior toward classification. This is the fundamental architectural difference between encoder and decoder fine-tuning.</div>
+      <div class="expect"><strong>Domain Vocabulary Precision.</strong> By slightly expanding the LoRA rank and explicitly unfreezing the base model&rsquo;s vocabulary embeddings, the model learns your specific enterprise terminology perfectly. This polishes off the final false-negatives on intents that use domain-specific language the pretrained model never saw.</div>
+      <div class="decision"><strong>The Lesson:</strong> Unfreezing the head is the final frontier of LoRA fine-tuning. Standard LoRA assumes the pretrained vocabulary representations are good enough &mdash; and for general language, they are. But for domain-specific data with specialized terminology, the frozen <code>embed_tokens</code> layer becomes a bottleneck. The model knows <em>how</em> to classify but lacks the vocabulary to <em>read</em> the input accurately. Unfreezing these layers lets it close that gap, polishing off the final false-negatives on domain-heavy intents.</div>
     </div></div>
   </div>
 
@@ -1064,7 +1074,7 @@ gradient_accumulation_steps=<span class="changed">4</span>,     <span class="com
       <tr style="background:rgba(88,166,255,.04)">
         <td style="font-weight:700;color:var(--accent)">0</td>
         <td>Baseline</td>
-        <td style="font-size:.78rem">lr=2e-4, warmup=0.1, r=16, alpha=32, dropout=0.05, batch=16, accum=1, epochs=5</td>
+        <td style="font-size:.78rem">lr=1e-4, warmup=0.15, r=16, alpha=32, dropout=0.05, batch=1, accum=16, epochs=8</td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
@@ -1074,7 +1084,7 @@ gradient_accumulation_steps=<span class="changed">4</span>,     <span class="com
       </tr>
       <tr>
         <td style="font-weight:700;color:var(--purple)">1</td>
-        <td>LR &amp; Warmup</td>
+        <td>Speed Test</td>
         <td style="font-size:.78rem">lr=<strong style="color:var(--green)">5e-4</strong>, warmup=<strong style="color:var(--green)">0.0</strong></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
@@ -1085,8 +1095,8 @@ gradient_accumulation_steps=<span class="changed">4</span>,     <span class="com
       </tr>
       <tr>
         <td style="font-weight:700;color:var(--cyan)">2</td>
-        <td>Rank &amp; Alpha</td>
-        <td style="font-size:.78rem">r=<strong style="color:var(--green)">64</strong>, alpha=<strong style="color:var(--green)">128</strong></td>
+        <td>VRAM Squeeze</td>
+        <td style="font-size:.78rem">batch=<strong style="color:var(--green)">4</strong>, accum=<strong style="color:var(--green)">4</strong></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
@@ -1096,8 +1106,8 @@ gradient_accumulation_steps=<span class="changed">4</span>,     <span class="com
       </tr>
       <tr>
         <td style="font-weight:700;color:var(--orange)">3</td>
-        <td>Epochs &amp; Dropout</td>
-        <td style="font-size:.78rem">epochs=<strong style="color:var(--green)">15</strong>, dropout=<strong style="color:var(--green)">0.0</strong></td>
+        <td>Generalization Boost</td>
+        <td style="font-size:.78rem">neftune_noise_alpha=<strong style="color:var(--green)">5.0</strong></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
@@ -1107,8 +1117,8 @@ gradient_accumulation_steps=<span class="changed">4</span>,     <span class="com
       </tr>
       <tr>
         <td style="font-weight:700;color:var(--pink)">4</td>
-        <td>Batch Sizing</td>
-        <td style="font-size:.78rem">batch=<strong style="color:var(--green)">4</strong>, accum=<strong style="color:var(--green)">4</strong></td>
+        <td>Deep Search</td>
+        <td style="font-size:.78rem">lr=<strong style="color:var(--green)">5e-5</strong>, epochs=<strong style="color:var(--green)">12</strong>, sched=<strong style="color:var(--green)">cosine_with_restarts</strong></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
@@ -1118,8 +1128,8 @@ gradient_accumulation_steps=<span class="changed">4</span>,     <span class="com
       </tr>
       <tr style="background:rgba(63,185,80,.06)">
         <td style="font-weight:700;color:var(--green)">5</td>
-        <td>Target Modules</td>
-        <td style="font-size:.78rem">target=<strong style="color:var(--green)">["q_proj","v_proj"]</strong></td>
+        <td>Vocab Mastery</td>
+        <td style="font-size:.78rem">r=<strong style="color:var(--green)">32</strong>, alpha=<strong style="color:var(--green)">64</strong>, modules_to_save=<strong style="color:var(--green)">["lm_head","embed_tokens"]</strong></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
         <td><input type="text" style="width:60px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:4px;border-radius:4px;font-family:'Source Code Pro',monospace;font-size:.8rem"></td>
