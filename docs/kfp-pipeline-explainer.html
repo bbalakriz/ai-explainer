@@ -287,7 +287,8 @@ const CONSTRUCT_SECTIONS = [
       { label: 'Hermetic Requirement', value: 'All imports inside function body', note: 'KFP extracts the function source code and runs it in an isolated container -- top-level imports are NOT available' },
       { label: 'base_image', value: 'python:3.11', note: 'The container image used to run this function. Must have Python installed' },
       { label: 'packages_to_install', value: '["numpy", "pandas"]', note: 'Pip packages installed at container startup. Adds latency -- use target_image for heavy deps' },
-      { label: 'Output[Dataset]', value: 'Typed output artifact', note: 'KFP pre-creates the artifact object. Write to .path and optionally set .metadata' },
+      { label: 'Return types', value: '-> str, -> int, -> float, -> dict, or no return', note: 'Simple Python types are returned directly. KFP serializes them and passes to downstream steps automatically' },
+      { label: 'Output[Artifact]', value: 'from kfp.dsl import Output, Input, Dataset, Model', note: 'For passing large files (datasets, models) between steps. Component A declares "out: Output[Dataset]" and writes to out.path. Downstream component B declares "inp: Input[Dataset]" and reads from inp.path. KFP wires them via the artifact store (S3/GCS/PVC) and tracks lineage in the UI. Use -> str for small values instead' },
     ]
   },
   {
@@ -378,7 +379,7 @@ const DATA_SECTIONS = [
     icon: 'ART',
     color: '#06b6d4',
     lines: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
-    description: 'Artifacts are typed objects that represent large data passed between pipeline steps. Unlike parameters (small scalars), artifacts are stored in object storage (S3/MinIO) and tracked by the ML Metadata (MLMD) store. KFP provides built-in types: Dataset, Model, Metrics, HTML, Markdown, and ClassificationMetrics. Each artifact has a .path (local filesystem path), .uri (storage URI), and .metadata (key-value pairs).',
+    description: 'Artifacts are typed objects that represent large data passed between pipeline steps. Unlike parameters (small scalars), artifacts are stored in object storage (S3) and tracked by the ML Metadata (MLMD) store. KFP provides built-in types: Dataset, Model, Metrics, HTML, Markdown, and ClassificationMetrics. Each artifact has a .path (local filesystem path), .uri (storage URI), and .metadata (key-value pairs).',
     details: [
       { label: 'Input[Model]', value: 'Read-only artifact', note: 'Received from an upstream step. Access the local file path via artifact.path' },
       { label: 'Output[Metrics]', value: 'Write artifact', note: 'Pre-constructed by KFP. Write data to artifact.path and set artifact.metadata' },
@@ -656,7 +657,7 @@ function OverviewTab() {
           {/* Object Storage */}
           <rect x="780" y="50" width="160" height="80" rx="12" fill="#0d1424" stroke="#06b6d440" strokeWidth="1.5"/>
           <text x="860" y="78" textAnchor="middle" className="mono text-[10px] font-bold" fill="#06b6d4">Object Storage</text>
-          <text x="860" y="96" textAnchor="middle" className="text-[9px]" fill="#94a3b8">S3 / MinIO</text>
+          <text x="860" y="96" textAnchor="middle" className="text-[9px]" fill="#94a3b8">S3</text>
           <text x="860" y="112" textAnchor="middle" className="text-[8px]" fill="#64748b">Artifacts, model weights</text>
 
           {/* Arrow: Backend -> Storage */}
@@ -741,7 +742,7 @@ function OverviewTab() {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-green-400 mt-0.5 flex-shrink-0">&#9656;</span>
-              <span><strong className="text-green-200">MinIO/S3</strong> -- stores artifacts between steps</span>
+              <span><strong className="text-green-200">S3</strong> -- stores artifacts between steps</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-green-400 mt-0.5 flex-shrink-0">&#9656;</span>
@@ -1239,7 +1240,7 @@ function PipelineTab() {
     load: {
       title: 'Load Dataset',
       color: '#3b82f6',
-      content: 'A @dsl.component (lightweight) that downloads and preprocesses training data. Uses Output[Dataset] to write a typed artifact that is stored in S3/MinIO and tracked by ML Metadata. Downstream steps consume it via Input[Dataset]. All imports must be inside the function body (hermetic requirement).',
+      content: 'A @dsl.component (lightweight) that downloads and preprocesses training data. Uses Output[Dataset] to write a typed artifact that is stored in S3 and tracked by ML Metadata. Downstream steps consume it via Input[Dataset]. All imports must be inside the function body (hermetic requirement).',
       constructs: ['@dsl.component', 'Output[Dataset]', 'base_image']
     },
     sft: {
@@ -1791,7 +1792,7 @@ oc exec <pod-name> -- aws s3 ls s3://bucket/`,
           {[
             { pitfall: 'ImportError in lightweight component', solution: 'All imports must be inside the function body. Move "import pandas" inside the @dsl.component function.', color: '#f43f5e' },
             { pitfall: 'OOM killed during training', solution: 'Increase set_memory_limit() and set_gpu_limit(). Check if --max-model-len is too large for available VRAM.', color: '#f59e0b' },
-            { pitfall: 'Artifact not found error', solution: 'Verify the S3/MinIO credentials in the Data Connection. Check that the pipeline ServiceAccount has access.', color: '#3b82f6' },
+            { pitfall: 'Artifact not found error', solution: 'Verify the S3 credentials in the Data Connection. Check that the pipeline ServiceAccount has access.', color: '#3b82f6' },
             { pitfall: 'Pipeline compiles but pods stay Pending', solution: 'Check if GPU nodes have capacity. Verify nodeSelector matches available node labels. Check for resource quota limits.', color: '#a855f7' },
             { pitfall: 'Caching returns stale results', solution: 'Disable caching for non-deterministic steps with set_caching_options(False). Caching uses input hash -- same inputs = same cache key.', color: '#22c55e' },
             { pitfall: 'dsl.If condition type error', solution: 'The condition must compare a parameter or simple return value (int, float, str, bool). Cannot compare artifacts directly.', color: '#06b6d4' },
