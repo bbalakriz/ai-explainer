@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Encoder vs Decoder SFT — Fine-Tuning Explainer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Source+Code+Pro:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: #060a14;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'Source Code Pro', monospace; }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0c1220; }
+  ::-webkit-scrollbar-thumb { background: #2a3a5c; border-radius: 4px; }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes pulseGlow { 0%,100% { box-shadow:0 0 8px 2px rgba(59,130,246,0.15); } 50% { box-shadow:0 0 18px 4px rgba(59,130,246,0.35); } }
+  @keyframes cyanPulse { 0%,100% { box-shadow:0 0 8px 2px rgba(6,182,212,0.15); } 50% { box-shadow:0 0 18px 4px rgba(6,182,212,0.35); } }
+  @keyframes amberPulse { 0%,100% { box-shadow:0 0 8px 2px rgba(251,191,36,0.15); } 50% { box-shadow:0 0 18px 4px rgba(251,191,36,0.35); } }
+  @keyframes greenPulse { 0%,100% { box-shadow:0 0 8px 2px rgba(34,197,94,0.15); } 50% { box-shadow:0 0 18px 4px rgba(34,197,94,0.35); } }
+  @keyframes rosePulse { 0%,100% { box-shadow:0 0 8px 2px rgba(244,63,94,0.15); } 50% { box-shadow:0 0 18px 4px rgba(244,63,94,0.35); } }
+  @keyframes flowDash { to { stroke-dashoffset: -24; } }
+  @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-4px); } }
+
+  .fade-in { animation: fadeIn 0.35s ease-out; }
+  .glow-blue { animation: pulseGlow 2.5s ease-in-out infinite; }
+  .glow-cyan { animation: cyanPulse 2.5s ease-in-out infinite; }
+  .glow-amber { animation: amberPulse 2.5s ease-in-out infinite; }
+  .glow-green { animation: greenPulse 2.5s ease-in-out infinite; }
+  .glow-rose { animation: rosePulse 2.5s ease-in-out infinite; }
+  .arrow-flow { stroke-dasharray: 8 5; animation: flowDash 1s linear infinite; }
+
+  .callout-box {
+    position: relative;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.3s ease;
+  }
+  .callout-box::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 13px;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--callout-color, #3b82f6) 0%, transparent 60%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .benefit-card {
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .benefit-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, transparent 60%, var(--accent, rgba(59,130,246,0.05)));
+    pointer-events: none;
+  }
+  .benefit-card:hover { transform: translateY(-3px); }
+
+  .comparison-row:hover { background: rgba(59,130,246,0.05); }
+</style>
+</head>
+<body class="min-h-screen">
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState } = React;
+
+// ======================================================================
+// SHARED COMPONENTS
+// ======================================================================
+
+function StatCard({ value, label, color = '#3b82f6', icon }) {
+  return (
+    <div className="rounded-xl border border-slate-700/40 bg-slate-900/40 p-4 text-center" style={{ borderTopColor: color, borderTopWidth: '2px' }}>
+      {icon && <div className="text-lg mb-1">{icon}</div>}
+      <div className="text-xl font-bold text-white mb-0.5" style={{ color }}>{value}</div>
+      <div className="text-[11px] text-slate-400">{label}</div>
+    </div>
+  );
+}
+
+function CompareCard({ title, children, color = '#3b82f6', badge }) {
+  return (
+    <div className="rounded-xl border border-slate-700/40 bg-slate-900/30 overflow-hidden">
+      <div className="px-4 py-3 border-b border-slate-700/30 flex items-center gap-2" style={{ borderLeftWidth: '3px', borderLeftColor: color }}>
+        <span className="mono text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: color + '20', color }}>{badge}</span>
+        <span className="text-sm font-semibold text-white">{title}</span>
+      </div>
+      <div className="p-4">{children}</div>
+    </div>
+  );
+}
+
+function DetailItem({ label, value, note, color = '#3b82f6' }) {
+  return (
+    <div className="flex gap-3 items-start">
+      <div className="w-1 rounded-full self-stretch mt-1" style={{ background: color, minHeight: '20px' }}></div>
+      <div>
+        <div className="text-[11px] text-slate-500 uppercase tracking-wide">{label}</div>
+        <div className="mono text-[13px] text-white font-medium">{value}</div>
+        {note && <div className="text-[11px] text-slate-400 mt-0.5">{note}</div>}
+      </div>
+    </div>
+  );
+}
+
+function SectionHeading({ number, title, subtitle }) {
+  return (
+    <div className="mb-4">
+      <div className="flex items-center gap-3 mb-1">
+        <span className="mono text-[10px] font-bold px-2 py-1 rounded-lg bg-blue-500/15 text-blue-400 border border-blue-500/20">{number}</span>
+        <h2 className="text-lg font-bold text-white">{title}</h2>
+      </div>
+      {subtitle && <p className="text-sm text-slate-400 ml-10">{subtitle}</p>}
+    </div>
+  );
+}
+
+function CodeSnippet({ children }) {
+  return <code className="mono text-[12px] px-1.5 py-0.5 rounded bg-slate-800/80 text-cyan-300 border border-slate-700/40">{children}</code>;
+}
+
+
+// ======================================================================
+// TAB 1: OVERVIEW
+// ======================================================================
+
+function OverviewTab() {
+  return (
+    <div className="fade-in space-y-8">
+      <div className="text-center mb-2">
+        <h2 className="text-xl font-bold text-white mb-2">Encoder vs Decoder SFT at a Glance</h2>
+        <p className="text-sm text-slate-400 max-w-2xl mx-auto">
+          Both approaches fine-tune a model for <span className="text-cyan-300 font-semibold">Thai telco intent classification</span> (16 intents) using
+          LoRA adapters on the same dataset with an 80/10/10 split.
+          Both use the same MLflow lineage tracking pattern, cosine LR scheduler, and the same data columns.
+        </p>
+      </div>
+
+      {/* Key Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard value="Encoder" label="PhayaThaiBERT (278M)" color="#f43f5e" />
+        <StatCard value="Decoder" label="Qwen 2.5-3B-Instruct (3B)" color="#fbbf24" />
+        <StatCard value="1.19M" label="Encoder trainable (0.43% of 278M)" color="#22c55e" />
+        <StatCard value="~32M" label="Decoder trainable (~1% of 3B, est.)" color="#3b82f6" />
+      </div>
+
+      {/* Architecture Diagram */}
+      <div className="relative rounded-2xl border border-slate-700/50 bg-slate-900/30 p-6 overflow-hidden">
+        <svg width="100%" height="520" viewBox="0 0 960 520" className="mx-auto block" style={{ maxWidth: '960px' }}>
+          <defs>
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(59,130,246,0.06)" strokeWidth="0.5"/>
+            </pattern>
+            <marker id="arrowRose" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#f43f5e"/>
+            </marker>
+            <marker id="arrowAmber" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#fbbf24"/>
+            </marker>
+            <marker id="arrowCyan" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#06b6d4"/>
+            </marker>
+            <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#22c55e"/>
+            </marker>
+          </defs>
+          <rect width="960" height="520" fill="url(#grid)"/>
+
+          {/* Title */}
+          <text x="480" y="28" textAnchor="middle" className="text-[11px] font-bold" fill="#64748b">Same Dataset, Two Approaches to Intent Classification</text>
+
+          {/* Dataset (center top) */}
+          <rect x="350" y="50" width="260" height="75" rx="14" fill="#0d1424" stroke="#06b6d440" strokeWidth="1.5"/>
+          <text x="480" y="72" textAnchor="middle" className="text-[12px] font-bold" fill="#22d3ee">Shared Dataset </text>
+          <text x="480" y="89" textAnchor="middle" className="mono text-[9px]" fill="#94a3b8">user_message + intent + session_history</text>
+          <text x="480" y="105" textAnchor="middle" className="mono text-[9px]" fill="#64748b">80/10/10 split &bull; 16 Thai telco intents</text>
+
+          {/* Arrow down-left to Encoder */}
+          <path d="M 420 125 L 240 170" stroke="#f43f5e" strokeWidth="2" markerEnd="url(#arrowRose)" className="arrow-flow" fill="none"/>
+          {/* Arrow down-right to Decoder */}
+          <path d="M 540 125 L 720 170" stroke="#fbbf24" strokeWidth="2" markerEnd="url(#arrowAmber)" className="arrow-flow" fill="none"/>
+
+          {/* Encoder Path */}
+          <rect x="100" y="170" width="280" height="55" rx="12" fill="#0d1424" stroke="#f43f5e40" strokeWidth="1.5"/>
+          <text x="240" y="192" textAnchor="middle" className="text-[11px] font-bold" fill="#f43f5e">Preprocessing: Flatten + Tokenize</text>
+          <text x="240" y="210" textAnchor="middle" className="mono text-[8px]" fill="#94a3b8">Concatenate history into pipe-delimited string, pad to 512</text>
+
+          <line x1="240" y1="225" x2="240" y2="260" stroke="#f43f5e" strokeWidth="1.5" markerEnd="url(#arrowRose)" className="arrow-flow"/>
+
+          <rect x="100" y="260" width="280" height="70" rx="12" fill="#0d1424" stroke="#f43f5e40" strokeWidth="1.5"/>
+          <text x="240" y="282" textAnchor="middle" className="text-[12px] font-bold" fill="#f43f5e">PhayaThaiBERT (278M)</text>
+          <text x="240" y="298" textAnchor="middle" className="mono text-[9px]" fill="#94a3b8">AutoModelForSequenceClassification</text>
+          <text x="240" y="314" textAnchor="middle" className="mono text-[9px]" fill="#94a3b8">LoRA: query, value (0.43% params)</text>
+
+          <line x1="240" y1="330" x2="240" y2="365" stroke="#f43f5e" strokeWidth="1.5" markerEnd="url(#arrowRose)" className="arrow-flow"/>
+
+          <rect x="100" y="365" width="280" height="55" rx="12" fill="#0d1424" stroke="#f43f5e40" strokeWidth="1.5"/>
+          <text x="240" y="387" textAnchor="middle" className="text-[11px] font-bold" fill="#f43f5e">Classification Head (768 -&gt; 16)</text>
+          <text x="240" y="403" textAnchor="middle" className="mono text-[8px]" fill="#94a3b8">Cross-entropy loss &bull; argmax over 16 logits</text>
+
+          <line x1="240" y1="420" x2="240" y2="455" stroke="#f43f5e" strokeWidth="1.5" markerEnd="url(#arrowRose)" className="arrow-flow"/>
+
+          <rect x="140" y="455" width="200" height="40" rx="10" fill="#f43f5e15" stroke="#f43f5e50" strokeWidth="1.5"/>
+          <text x="240" y="478" textAnchor="middle" className="mono text-[11px] font-bold" fill="#f43f5e">Integer Label (0-15)</text>
+
+          {/* Decoder Path */}
+          <rect x="580" y="170" width="280" height="55" rx="12" fill="#0d1424" stroke="#fbbf2440" strokeWidth="1.5"/>
+          <text x="720" y="192" textAnchor="middle" className="text-[11px] font-bold" fill="#fbbf24">Preprocessing: Chat Template</text>
+          <text x="720" y="210" textAnchor="middle" className="mono text-[8px]" fill="#94a3b8">Multi-turn ChatML with generation markers</text>
+
+          <line x1="720" y1="225" x2="720" y2="260" stroke="#fbbf24" strokeWidth="1.5" markerEnd="url(#arrowAmber)" className="arrow-flow"/>
+
+          <rect x="580" y="260" width="280" height="70" rx="12" fill="#0d1424" stroke="#fbbf2440" strokeWidth="1.5"/>
+          <text x="720" y="282" textAnchor="middle" className="text-[12px] font-bold" fill="#fbbf24">Qwen 2.5-3B-Instruct</text>
+          <text x="720" y="298" textAnchor="middle" className="mono text-[9px]" fill="#94a3b8">AutoModelForCausalLM (4-bit QLoRA)</text>
+          <text x="720" y="314" textAnchor="middle" className="mono text-[9px]" fill="#94a3b8">LoRA: 7 modules per layer (q/k/v/o + MLP)</text>
+
+          <line x1="720" y1="330" x2="720" y2="365" stroke="#fbbf24" strokeWidth="1.5" markerEnd="url(#arrowAmber)" className="arrow-flow"/>
+
+          <rect x="580" y="365" width="280" height="55" rx="12" fill="#0d1424" stroke="#fbbf2440" strokeWidth="1.5"/>
+          <text x="720" y="387" textAnchor="middle" className="text-[11px] font-bold" fill="#fbbf24">LM Head (token generation)</text>
+          <text x="720" y="403" textAnchor="middle" className="mono text-[8px]" fill="#94a3b8">Next-token loss (assistant turns only)</text>
+
+          <line x1="720" y1="420" x2="720" y2="455" stroke="#fbbf24" strokeWidth="1.5" markerEnd="url(#arrowAmber)" className="arrow-flow"/>
+
+          <rect x="600" y="455" width="240" height="40" rx="10" fill="#fbbf2415" stroke="#fbbf2450" strokeWidth="1.5"/>
+          <text x="720" y="478" textAnchor="middle" className="mono text-[10px] font-bold" fill="#fbbf24">{`{"intent": "CHECK_BALANCE"}`}</text>
+        </svg>
+      </div>
+
+      {/* Core Difference Callout */}
+      <div className="callout-box bg-slate-900/40" style={{ '--callout-color': '#06b6d4' }}>
+        <div className="flex items-start gap-3">
+          <span className="text-cyan-400 text-lg mt-0.5">&#9432;</span>
+          <div>
+            <div className="text-sm font-semibold text-cyan-300 mb-1">The Single Most Important Distinction</div>
+            <p className="text-[13px] text-slate-300">
+              The <span className="text-rose-400 font-semibold">encoder</span> classifies by mapping the entire input into a fixed vector and projecting it onto label scores.
+              The <span className="text-amber-400 font-semibold">decoder</span> classifies by <em>generating the answer as text</em>, token by token.
+              Everything else -- data format, training API, quantization, LoRA targets -- follows from this fundamental difference.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Shared Config */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-900/30 p-5">
+        <h3 className="text-sm font-bold text-white mb-3">What They Share</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: 'Dataset', value: 'Thai telco intent classification dataset' },
+            { label: 'Split', value: '80/10/10' },
+            { label: 'Adapter', value: 'LoRA (r=16, alpha=32)' },
+            { label: 'Dropout', value: '0.05' },
+            { label: 'LR Scheduler', value: 'Cosine' },
+            { label: 'Tracking', value: 'MLflow lineage callback' },
+            { label: 'Eval strategy', value: 'Every epoch' },
+            { label: 'Data columns', value: 'user_message, intent, session_history' },
+          ].map((item, i) => (
+            <div key={i} className="rounded-lg bg-slate-800/40 border border-slate-700/30 px-3 py-2">
+              <div className="text-[10px] text-slate-500 uppercase tracking-wide">{item.label}</div>
+              <div className="mono text-[12px] text-slate-200">{item.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ======================================================================
+// TAB 2: TASK FORMULATION
+// ======================================================================
+
+function TaskTab() {
+  return (
+    <div className="fade-in space-y-8">
+      <SectionHeading number="01" title="What is the model actually learning to do?" subtitle="This is the single most important distinction between the two approaches." />
+
+      {/* Comparison Table */}
+      <div className="rounded-xl border border-slate-700/40 overflow-hidden">
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="bg-slate-800/50">
+              <th className="text-left px-4 py-3 text-slate-400 font-medium w-[20%]">Aspect</th>
+              <th className="text-left px-4 py-3 font-medium w-[40%]"><span className="text-rose-400">Encoder</span> <span className="text-slate-500">(PhayaThaiBERT)</span></th>
+              <th className="text-left px-4 py-3 font-medium w-[40%]"><span className="text-amber-400">Decoder</span> <span className="text-slate-500">(Qwen 2.5-3B)</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              {
+                aspect: 'Task formulation',
+                encoder: 'Sequence classification: input text maps to one of N integer labels',
+                decoder: 'Text generation: model generates JSON like {"intent": "CHECK_BALANCE"} as free text',
+              },
+              {
+                aspect: 'Output layer',
+                encoder: 'Linear classification head (768 dims to 16 labels). Randomly initialized, trained from scratch',
+                decoder: 'No classification head. Uses the existing LM head to produce tokens',
+              },
+              {
+                aspect: 'Loss function',
+                encoder: 'Cross-entropy over label logits (standard classification loss)',
+                decoder: 'Next-token prediction loss, masked to assistant turns only (assistant_only_loss=True)',
+              },
+              {
+                aspect: 'Inference output',
+                encoder: 'Argmax over 16 logit scores. Deterministic, no parsing needed',
+                decoder: 'Free-text generation. Requires JSON parsing and can hallucinate invalid output',
+              },
+              {
+                aspect: 'Label set',
+                encoder: 'Fixed: label2id / id2label baked into model config. Adding a new intent requires retraining',
+                decoder: 'Open: the model generates intent names as text. New intents can be handled via prompt',
+              },
+            ].map((row, i) => (
+              <tr key={i} className="border-t border-slate-700/30 comparison-row">
+                <td className="px-4 py-3 text-slate-300 font-medium">{row.aspect}</td>
+                <td className="px-4 py-3 text-slate-300" style={{ borderLeft: '2px solid #f43f5e30' }}>{row.encoder}</td>
+                <td className="px-4 py-3 text-slate-300" style={{ borderLeft: '2px solid #fbbf2430' }}>{row.decoder}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Visual: Output Difference */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CompareCard title="Encoder Output Pipeline" color="#f43f5e" badge="ENC">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-2 mono text-[11px] text-rose-300">Input text</div>
+              <span className="text-slate-500">&#8594;</span>
+              <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-3 py-2 mono text-[11px] text-rose-300">768-dim vector</div>
+              <span className="text-slate-500">&#8594;</span>
+              <div className="rounded-lg bg-rose-500/20 border border-rose-500/30 px-3 py-2 mono text-[11px] text-rose-200 font-bold">Label 7</div>
+            </div>
+            <p className="text-[11px] text-slate-400">Deterministic. Always one of 16 integer labels. No parsing errors possible.</p>
+          </div>
+        </CompareCard>
+
+        <CompareCard title="Decoder Output Pipeline" color="#fbbf24" badge="DEC">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2 mono text-[11px] text-amber-300">Chat prompt</div>
+              <span className="text-slate-500">&#8594;</span>
+              <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2 mono text-[11px] text-amber-300">Token gen</div>
+              <span className="text-slate-500">&#8594;</span>
+              <div className="rounded-lg bg-amber-500/20 border border-amber-500/30 px-3 py-2 mono text-[10px] text-amber-200 font-bold">{`{"intent":"..."}`}</div>
+            </div>
+            <p className="text-[11px] text-slate-400">Free text. Can hallucinate invalid JSON or unknown intents. Requires parsing.</p>
+          </div>
+        </CompareCard>
+      </div>
+    </div>
+  );
+}
+
+
+// ======================================================================
+// TAB 3: DATA & LORA
+// ======================================================================
+
+function DataLoraTab() {
+  return (
+    <div className="fade-in space-y-10">
+      {/* Data Preprocessing */}
+      <div>
+        <SectionHeading number="02" title="Data Preprocessing" subtitle="Same dataset schema, completely different transformations before reaching the model." />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CompareCard title="Flatten and Tokenize" color="#f43f5e" badge="ENC">
+            <div className="space-y-3">
+              <p className="text-[12px] text-slate-300">Session history and current message are concatenated into a single flat string with role prefixes:</p>
+              <div className="mono text-[11px] bg-slate-800/60 border border-slate-700/40 rounded-lg px-3 py-2 text-rose-300">
+                Assistant: Hello | User: check my bill | User: billing due date?
+              </div>
+              <p className="text-[12px] text-slate-400">
+                Tokenized into <CodeSnippet>input_ids</CodeSnippet> (padded to 512) and paired with an integer <CodeSnippet>labels</CodeSnippet> field from the label2id mapping.
+                Processing uses batched <CodeSnippet>.map(batched=True)</CodeSnippet> for speed.
+              </p>
+            </div>
+          </CompareCard>
+
+          <CompareCard title="Chat Template with Generation Markers" color="#fbbf24" badge="DEC">
+            <div className="space-y-3">
+              <p className="text-[12px] text-slate-300">Session history is converted into a structured multi-turn chat with system, user, and assistant roles. A custom ChatML template wraps each role with special tokens:</p>
+              <div className="mono text-[10px] bg-slate-800/60 border border-slate-700/40 rounded-lg px-3 py-2 text-amber-300">
+                {`{% generation %}{{message['content']}}{% endgeneration %}`}
+              </div>
+              <p className="text-[12px] text-slate-400">
+                The target output (<CodeSnippet>{`{"intent": "..."}`}</CodeSnippet>) is appended as the final assistant turn. The formatter has branching logic for Qwen, Phi, DeepSeek, and Gemma.
+              </p>
+            </div>
+          </CompareCard>
+        </div>
+      </div>
+
+      {/* LoRA Configuration */}
+      <div>
+        <SectionHeading number="03" title="LoRA Configuration" subtitle="Both use rank 16 and alpha 32 with 0.05 dropout. The differences are in which layers get adapters." />
+
+        <div className="rounded-xl border border-slate-700/40 overflow-hidden">
+          <table className="w-full text-[12px]">
+            <thead>
+              <tr className="bg-slate-800/50">
+                <th className="text-left px-4 py-3 text-slate-400 font-medium w-[22%]">Parameter</th>
+                <th className="text-left px-4 py-3 font-medium w-[39%]"><span className="text-rose-400">Encoder</span></th>
+                <th className="text-left px-4 py-3 font-medium w-[39%]"><span className="text-amber-400">Decoder</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { param: 'task_type', encoder: 'SEQ_CLS', decoder: 'CAUSAL_LM' },
+                { param: 'target_modules', encoder: 'query, value (2 attention matrices per layer)', decoder: 'q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj (7 modules per layer including MLP)' },
+                { param: 'modules_to_save', encoder: 'classifier (the new head must be saved or it reverts to random weights)', decoder: 'None needed (no extra head; existing LM head is frozen and reused)' },
+                { param: 'LoRA wrapping', encoder: 'Manual: get_peft_model(model, config) then pass to Trainer', decoder: 'Automatic: SFTTrainer accepts peft_config as a constructor arg' },
+                { param: 'Trainable params', encoder: '1,192,720 (0.43% of 278M) including classifier head', decoder: 'Significantly more total LoRA params due to 7 target modules across a 3B model' },
+              ].map((row, i) => (
+                <tr key={i} className="border-t border-slate-700/30 comparison-row">
+                  <td className="px-4 py-3 mono text-slate-300 font-medium text-[11px]">{row.param}</td>
+                  <td className="px-4 py-3 text-slate-300" style={{ borderLeft: '2px solid #f43f5e30' }}>{row.encoder}</td>
+                  <td className="px-4 py-3 text-slate-300" style={{ borderLeft: '2px solid #fbbf2430' }}>{row.decoder}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* LoRA Visual */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div className="rounded-xl border border-rose-500/20 bg-slate-900/30 p-4">
+            <div className="text-sm font-semibold text-rose-400 mb-3">Encoder LoRA Targets</div>
+            <div className="flex gap-2 flex-wrap">
+              {['query', 'value'].map(m => (
+                <span key={m} className="mono text-[11px] px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/25 text-rose-300">{m}</span>
+              ))}
+              <span className="mono text-[11px] px-3 py-1.5 rounded-lg bg-rose-500/20 border border-rose-500/35 text-rose-200 font-bold">+ classifier head</span>
+            </div>
+            <p className="text-[10px] text-slate-500 mt-2">2 attention matrices per transformer layer + full classification head</p>
+          </div>
+
+          <div className="rounded-xl border border-amber-500/20 bg-slate-900/30 p-4">
+            <div className="text-sm font-semibold text-amber-400 mb-3">Decoder LoRA Targets</div>
+            <div className="flex gap-2 flex-wrap">
+              {['q_proj', 'k_proj', 'v_proj', 'o_proj', 'gate_proj', 'up_proj', 'down_proj'].map(m => (
+                <span key={m} className="mono text-[11px] px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-300">{m}</span>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-500 mt-2">7 modules per transformer layer (attention + MLP), no extra head needed</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ======================================================================
+// TAB 4: QUANTIZATION
+// ======================================================================
+
+function QuantizationTab() {
+  return (
+    <div className="fade-in space-y-8">
+      <SectionHeading number="04" title="Quantization and Precision" subtitle="One fits in memory easily; the other needs careful dtype management to avoid GPU crashes." />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CompareCard title="No quantization needed" color="#f43f5e" badge="ENC">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">&#9989;</span>
+              <span className="text-sm font-semibold text-white">278M params -- fits easily</span>
+            </div>
+            <div className="space-y-2">
+              <DetailItem label="Precision" value="Full precision (FP32)" note="FP16 enabled only during training forward/backward for speed" color="#f43f5e" />
+              <DetailItem label="Memory" value="~1.1 GB model weights" note="Fits comfortably in a single T4 GPU (15.6 GB VRAM)" color="#f43f5e" />
+              <DetailItem label="Dependencies" value="Standard transformers + PEFT" note="No bitsandbytes package required" color="#f43f5e" />
+            </div>
+          </div>
+        </CompareCard>
+
+        <CompareCard title="4-bit QLoRA (NF4 + double quantization)" color="#fbbf24" badge="DEC">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">&#9888;&#65039;</span>
+              <span className="text-sm font-semibold text-white">3B params -- needs quantization</span>
+            </div>
+            <div className="space-y-2">
+              <DetailItem label="Precision" value="4-bit NF4 base + FP16 adapters" note="BitsAndBytesConfig loads base weights in 4-bit NF4 format" color="#fbbf24" />
+              <DetailItem label="Memory" value="~3.5 GB quantized (vs ~12 GB full)" note="Without quantization would not fit on single T4 GPU" color="#fbbf24" />
+              <DetailItem label="Dependencies" value="bitsandbytes required" note="Encoder notebook does not need this package" color="#fbbf24" />
+            </div>
+          </div>
+        </CompareCard>
+      </div>
+
+      {/* Decoder Gotchas */}
+      <div>
+        <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+          <span className="text-amber-400">&#9888;</span> Decoder Precision Gotchas
+        </h3>
+        <p className="text-[12px] text-slate-400 mb-4">
+          The decoder notebook has three critical dtype workarounds that the encoder does not need. These are easy to miss but cause silent training failures or GPU crashes.
+        </p>
+
+        <div className="space-y-3">
+          {[
+            {
+              code: 'model.config.torch_dtype = torch.float16',
+              why: 'Forces FP16 so PEFT does not secretly initialize LoRA weights in bfloat16',
+              severity: 'critical',
+            },
+            {
+              code: 'bf16=False in SFTConfig',
+              why: 'Explicitly denies bfloat16 to prevent T4 GPU crashes (T4 does not support native BF16)',
+              severity: 'critical',
+            },
+            {
+              code: 'model.config.use_cache = False',
+              why: 'Disables KV cache because it is incompatible with gradient checkpointing',
+              severity: 'warning',
+            },
+          ].map((item, i) => (
+            <div key={i} className="rounded-xl border bg-slate-900/30 p-4 flex items-start gap-3" style={{ borderColor: item.severity === 'critical' ? '#f43f5e40' : '#fbbf2440' }}>
+              <span className={`mono text-[10px] font-bold px-2 py-0.5 rounded ${item.severity === 'critical' ? 'bg-rose-500/15 text-rose-400' : 'bg-amber-500/15 text-amber-400'}`}>
+                {item.severity === 'critical' ? 'CRITICAL' : 'WARN'}
+              </span>
+              <div>
+                <div className="mono text-[12px] text-cyan-300 mb-1">{item.code}</div>
+                <div className="text-[11px] text-slate-400">{item.why}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* GPU Memory Visual */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-900/30 p-5">
+        <h3 className="text-sm font-bold text-white mb-4">T4 GPU Memory Layout (15.6 GB)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <div className="text-[11px] text-rose-400 font-semibold mb-2">Encoder (PhayaThaiBERT)</div>
+            <div className="h-8 rounded-lg overflow-hidden flex bg-slate-800/60 border border-slate-700/30">
+              <div className="bg-rose-500/30 border-r border-rose-500/40 flex items-center justify-center" style={{ width: '7%' }}>
+                <span className="mono text-[8px] text-rose-300">1.1G</span>
+              </div>
+              <div className="bg-rose-500/10 border-r border-rose-500/20 flex items-center justify-center" style={{ width: '5%' }}>
+                <span className="mono text-[7px] text-rose-300">LoRA</span>
+              </div>
+              <div className="flex items-center justify-center flex-1">
+                <span className="mono text-[9px] text-slate-500">~14 GB free</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[11px] text-amber-400 font-semibold mb-2">Decoder (Qwen 2.5-3B, 4-bit QLoRA)</div>
+            <div className="h-8 rounded-lg overflow-hidden flex bg-slate-800/60 border border-slate-700/30">
+              <div className="bg-amber-500/30 border-r border-amber-500/40 flex items-center justify-center" style={{ width: '22%' }}>
+                <span className="mono text-[8px] text-amber-300">3.5G</span>
+              </div>
+              <div className="bg-amber-500/15 border-r border-amber-500/25 flex items-center justify-center" style={{ width: '12%' }}>
+                <span className="mono text-[7px] text-amber-300">LoRA</span>
+              </div>
+              <div className="bg-amber-500/8 border-r border-amber-500/15 flex items-center justify-center" style={{ width: '25%' }}>
+                <span className="mono text-[7px] text-amber-200">grads+optim</span>
+              </div>
+              <div className="flex items-center justify-center flex-1">
+                <span className="mono text-[9px] text-slate-500">~6 GB free</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ======================================================================
+// TAB 5: TRAINING CONFIG
+// ======================================================================
+
+function TrainingTab() {
+  return (
+    <div className="fade-in space-y-8">
+      <SectionHeading number="05" title="Training APIs and Configuration" subtitle="Side-by-side comparison of every training setting that differs between the two notebooks." />
+
+      <div className="rounded-xl border border-slate-700/40 overflow-hidden">
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="bg-slate-800/50">
+              <th className="text-left px-4 py-3 text-slate-400 font-medium w-[25%]">Setting</th>
+              <th className="text-left px-4 py-3 font-medium w-[37.5%]"><span className="text-rose-400">Encoder</span></th>
+              <th className="text-left px-4 py-3 font-medium w-[37.5%]"><span className="text-amber-400">Decoder</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              { setting: 'HF model class', encoder: 'AutoModelForSequenceClassification', decoder: 'AutoModelForCausalLM' },
+              { setting: 'Trainer', encoder: 'Trainer (transformers)', decoder: 'SFTTrainer (trl)' },
+              { setting: 'Config object', encoder: 'TrainingArguments', decoder: 'SFTConfig (extends TrainingArguments)' },
+              { setting: 'Batch size', encoder: '16', decoder: '1 (memory-constrained by 3B model)' },
+              { setting: 'Gradient accumulation', encoder: '1 (effective batch = 16)', decoder: '16 (effective batch = 16)' },
+              { setting: 'Epochs', encoder: '5', decoder: '8' },
+              { setting: 'Learning rate', encoder: '2e-4', decoder: '1e-4 (lower to prevent mode collapse)' },
+              { setting: 'Warmup ratio', encoder: '0.1', decoder: '0.15' },
+              { setting: 'Max sequence length', encoder: '512 tokens', decoder: '1024 tokens' },
+              { setting: 'Gradient checkpointing', encoder: 'No', decoder: 'Yes (saves memory at cost of speed)' },
+              { setting: 'eval_accumulation_steps', encoder: 'Not set (default)', decoder: '1 (moves eval results off GPU to prevent OOM)' },
+              { setting: 'packing', encoder: 'N/A (not a TRL concept)', decoder: 'False (each example is its own sequence)' },
+              { setting: 'assistant_only_loss', encoder: 'N/A (classification loss)', decoder: 'True (loss on assistant tokens only)' },
+              { setting: 'Best model metric', encoder: 'accuracy (higher is better)', decoder: 'eval_loss (lower is better)' },
+              { setting: 'compute_metrics', encoder: 'Yes: accuracy via np.argmax', decoder: 'No: relies on eval_loss only' },
+              { setting: 'Logging steps', encoder: '25', decoder: '10' },
+              { setting: 'Pad token', encoder: 'Default tokenizer pad token', decoder: 'Set to eos_token (<|im_end|>)' },
+            ].map((row, i) => (
+              <tr key={i} className={`border-t border-slate-700/30 comparison-row ${i % 2 === 0 ? 'bg-slate-800/10' : ''}`}>
+                <td className="px-4 py-2.5 text-slate-300 font-medium">{row.setting}</td>
+                <td className="px-4 py-2.5 mono text-[11px] text-slate-300" style={{ borderLeft: '2px solid #f43f5e30' }}>{row.encoder}</td>
+                <td className="px-4 py-2.5 mono text-[11px] text-slate-300" style={{ borderLeft: '2px solid #fbbf2430' }}>{row.decoder}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Key Insight Callout */}
+      <div className="callout-box bg-slate-900/40" style={{ '--callout-color': '#22c55e' }}>
+        <div className="flex items-start gap-3">
+          <span className="text-green-400 text-lg mt-0.5">&#128161;</span>
+          <div>
+            <div className="text-sm font-semibold text-green-300 mb-1">Same Effective Batch Size, Different Approach</div>
+            <p className="text-[12px] text-slate-300">
+              Both achieve an effective batch size of 16, but the encoder does it with batch_size=16 and accumulation=1,
+              while the decoder uses batch_size=1 with gradient_accumulation=16. This is because the 3B decoder model
+              can barely fit a single example in GPU memory at once.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ======================================================================
+// TAB 6: INFRASTRUCTURE
+// ======================================================================
+
+function InfraTab() {
+  return (
+    <div className="fade-in space-y-10">
+      {/* Multi-GPU */}
+      <div>
+        <SectionHeading number="06" title="Multi-GPU and Distributed Training" />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CompareCard title="Single GPU only" color="#f43f5e" badge="ENC">
+            <div className="space-y-3">
+              <DetailItem label="Device mapping" value='device_map="auto"' note="No explicit rank handling" color="#f43f5e" />
+              <DetailItem label="Scale" value="Single T4 is more than enough" note="278M model with large batch size 16" color="#f43f5e" />
+            </div>
+          </CompareCard>
+
+          <CompareCard title="Distributed-ready (LOCAL_RANK)" color="#fbbf24" badge="DEC">
+            <div className="space-y-3">
+              <DetailItem label="Device mapping" value='device_map={"": local_rank}' note="Reads LOCAL_RANK from environment (set by torchrun)" color="#fbbf24" />
+              <DetailItem label="Rank 0 guard" value="Housekeeping only on rank 0" note="Prevents duplicate logging and artifact saving" color="#fbbf24" />
+              <DetailItem label="DDP config" value="gradient_checkpointing_kwargs + ddp_find_unused_parameters" note="Documented best practices for multi-GPU training" color="#fbbf24" />
+            </div>
+          </CompareCard>
+        </div>
+      </div>
+
+      {/* Model Swappability */}
+      <div>
+        <SectionHeading number="07" title="Model Swappability" />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CompareCard title="Tied to PhayaThaiBERT" color="#f43f5e" badge="ENC">
+            <div className="space-y-3">
+              <p className="text-[12px] text-slate-300">
+                The tokenizer, label mapping, model architecture, and LoRA target module names (<CodeSnippet>query</CodeSnippet>, <CodeSnippet>value</CodeSnippet>) are all specific to PhayaThaiBERT / CamemBERT.
+              </p>
+              <div className="callout-box bg-rose-500/5" style={{ '--callout-color': '#f43f5e' }}>
+                <p className="text-[11px] text-slate-400">
+                  Swapping to a different encoder requires changing target module names and re-verifying the architecture.
+                </p>
+              </div>
+            </div>
+          </CompareCard>
+
+          <CompareCard title="Model-agnostic data formatter" color="#fbbf24" badge="DEC">
+            <div className="space-y-3">
+              <p className="text-[12px] text-slate-300">
+                The <CodeSnippet>format_messages_for_training</CodeSnippet> function has explicit branching for multiple model families:
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                {['Qwen', 'Phi', 'DeepSeek', 'Gemma'].map(m => (
+                  <span key={m} className="mono text-[11px] px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-300">{m}</span>
+                ))}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Changing to a different decoder model only requires updating the model name; the formatter adapts automatically.
+              </p>
+            </div>
+          </CompareCard>
+        </div>
+      </div>
+
+      {/* Artifacts Saved */}
+      <div>
+        <SectionHeading number="08" title="What Gets Saved After Training" />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CompareCard title="Adapter + Classification Head (~4.8 MB)" color="#f43f5e" badge="ENC">
+            <div className="space-y-3">
+              <div className="space-y-1">
+                {['LoRA matrices (query/value layers)', 'Classification head weights (768 x 16)', 'Tokenizer'].map((item, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                    <span className="text-[12px] text-slate-300">{item}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mono text-[10px] bg-slate-800/60 border border-slate-700/40 rounded-lg px-3 py-2 text-slate-300">
+                PeftModel.from_pretrained(base_model, adapter_path)
+              </div>
+            </div>
+          </CompareCard>
+
+          <CompareCard title="Adapter + Chat Template" color="#fbbf24" badge="DEC">
+            <div className="space-y-3">
+              <div className="space-y-1">
+                {['adapter_model.safetensors (LoRA deltas)', 'adapter_config.json', 'Tokenizer', 'chat_template.jinja'].map((item, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                    <span className="text-[12px] text-slate-300">{item}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                No classification head because the model uses its existing LM head. Rank 0 guard ensures only one process writes in multi-GPU.
+              </p>
+            </div>
+          </CompareCard>
+        </div>
+      </div>
+
+      {/* MLflow */}
+      <div>
+        <SectionHeading number="09" title="MLflow Callback Design" subtitle="Both use a custom MLflowLineageCallback with a state.is_world_process_zero guard for multi-GPU safety." />
+
+        <div className="rounded-xl border border-slate-700/40 overflow-hidden">
+          <table className="w-full text-[12px]">
+            <thead>
+              <tr className="bg-slate-800/50">
+                <th className="text-left px-4 py-3 text-slate-400 font-medium w-[25%]">Aspect</th>
+                <th className="text-left px-4 py-3 font-medium w-[37.5%]"><span className="text-rose-400">Encoder</span></th>
+                <th className="text-left px-4 py-3 font-medium w-[37.5%]"><span className="text-amber-400">Decoder</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-slate-700/30 comparison-row">
+                <td className="px-4 py-3 text-slate-300 font-medium">Constructor args</td>
+                <td className="px-4 py-3 text-slate-300" style={{ borderLeft: '2px solid #f43f5e30' }}>Individual params: model_name, data_path, dataset_source, peft_config, datasets</td>
+                <td className="px-4 py-3 text-slate-300" style={{ borderLeft: '2px solid #fbbf2430' }}>Wraps config in a SimpleNamespace object; passes full datasets directly</td>
+              </tr>
+              <tr className="border-t border-slate-700/30 comparison-row bg-slate-800/10">
+                <td className="px-4 py-3 text-slate-300 font-medium">Dataset logging</td>
+                <td className="px-4 py-3 text-slate-300" style={{ borderLeft: '2px solid #f43f5e30' }}>Uses select_columns(["user_message", "intent"]) to log only raw columns (avoids logging tokenized data)</td>
+                <td className="px-4 py-3 text-slate-300" style={{ borderLeft: '2px solid #fbbf2430' }}>Logs the full dataset as-is (only has the "messages" column after remove_columns)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ======================================================================
+// TAB 7: TRADEOFFS
+// ======================================================================
+
+function TradeoffsTab() {
+  return (
+    <div className="fade-in space-y-8">
+      <SectionHeading number="10" title="Key Tradeoffs for Learners" subtitle="When to choose an encoder approach vs. a decoder approach for SFT." />
+
+      {/* Visual Tradeoff Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Encoder Wins */}
+        <div className="rounded-xl border border-rose-500/30 bg-slate-900/30 overflow-hidden">
+          <div className="px-5 py-3 bg-rose-500/10 border-b border-rose-500/20 flex items-center gap-2">
+            <span className="mono text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-400">ENC</span>
+            <span className="text-sm font-bold text-rose-300">Encoder Wins</span>
+          </div>
+          <div className="p-5 space-y-4">
+            {[
+              {
+                title: 'Speed and Memory',
+                desc: '10x smaller model, larger batches, faster training and inference, no quantization needed',
+                icon: '&#9889;',
+              },
+              {
+                title: 'Output Reliability',
+                desc: 'Deterministic integer label, no JSON parsing failures possible',
+                icon: '&#9989;',
+              },
+              {
+                title: 'Production Simplicity',
+                desc: 'No text parsing, no hallucination risk, simpler serving pipeline',
+                icon: '&#128295;',
+              },
+            ].map((item, i) => (
+              <div key={i} className="benefit-card rounded-lg bg-slate-800/30 border border-slate-700/30 p-3.5" style={{ '--accent': 'rgba(244,63,94,0.08)' }}>
+                <div className="flex items-start gap-3">
+                  <span className="text-lg" dangerouslySetInnerHTML={{ __html: item.icon }}></span>
+                  <div>
+                    <div className="text-[13px] font-semibold text-white mb-0.5">{item.title}</div>
+                    <div className="text-[11px] text-slate-400">{item.desc}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Decoder Wins */}
+        <div className="rounded-xl border border-amber-500/30 bg-slate-900/30 overflow-hidden">
+          <div className="px-5 py-3 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2">
+            <span className="mono text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-400">DEC</span>
+            <span className="text-sm font-bold text-amber-300">Decoder Wins</span>
+          </div>
+          <div className="p-5 space-y-4">
+            {[
+              {
+                title: 'Label Set Flexibility',
+                desc: 'No fixed label vocabulary. New intents can be handled via system prompt without retraining a classification head',
+                icon: '&#128260;',
+              },
+              {
+                title: 'Multi-Turn Reasoning',
+                desc: 'Native chat template preserves conversational structure with role separation',
+                icon: '&#128172;',
+              },
+              {
+                title: 'Few-Shot / Zero-Shot',
+                desc: 'System prompt can guide behavior. Encoder has no system prompt concept',
+                icon: '&#127919;',
+              },
+              {
+                title: 'Model Swappability',
+                desc: 'Data formatter handles multiple model families out of the box',
+                icon: '&#128256;',
+              },
+              {
+                title: 'Distributed Training',
+                desc: 'LOCAL_RANK aware, designed for multi-GPU torchrun from the start',
+                icon: '&#9881;',
+              },
+            ].map((item, i) => (
+              <div key={i} className="benefit-card rounded-lg bg-slate-800/30 border border-slate-700/30 p-3.5" style={{ '--accent': 'rgba(251,191,36,0.08)' }}>
+                <div className="flex items-start gap-3">
+                  <span className="text-lg" dangerouslySetInnerHTML={{ __html: item.icon }}></span>
+                  <div>
+                    <div className="text-[13px] font-semibold text-white mb-0.5">{item.title}</div>
+                    <div className="text-[11px] text-slate-400">{item.desc}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Summary Table */}
+      <div className="rounded-xl border border-slate-700/40 overflow-hidden">
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="bg-slate-800/50">
+              <th className="text-left px-4 py-3 text-slate-400 font-medium w-[30%]">Consideration</th>
+              <th className="text-center px-4 py-3 font-medium w-[35%]"><span className="text-rose-400">Encoder Wins</span></th>
+              <th className="text-center px-4 py-3 font-medium w-[35%]"><span className="text-amber-400">Decoder Wins</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              { factor: 'Speed and memory', encoder: true, decoder: false },
+              { factor: 'Output reliability', encoder: true, decoder: false },
+              { factor: 'Production simplicity', encoder: true, decoder: false },
+              { factor: 'Label set flexibility', encoder: false, decoder: true },
+              { factor: 'Multi-turn reasoning', encoder: false, decoder: true },
+              { factor: 'Few-shot / zero-shot', encoder: false, decoder: true },
+              { factor: 'Model swappability', encoder: false, decoder: true },
+              { factor: 'Distributed training', encoder: false, decoder: true },
+            ].map((row, i) => (
+              <tr key={i} className="border-t border-slate-700/30 comparison-row">
+                <td className="px-4 py-2.5 text-slate-300 font-medium">{row.factor}</td>
+                <td className="px-4 py-2.5 text-center">
+                  {row.encoder ? <span className="inline-block w-6 h-6 rounded-full bg-rose-500/15 text-rose-400 leading-6 text-[13px]">&#10003;</span> : <span className="text-slate-600">--</span>}
+                </td>
+                <td className="px-4 py-2.5 text-center">
+                  {row.decoder ? <span className="inline-block w-6 h-6 rounded-full bg-amber-500/15 text-amber-400 leading-6 text-[13px]">&#10003;</span> : <span className="text-slate-600">--</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Decision Guide */}
+      <div className="callout-box bg-slate-900/40" style={{ '--callout-color': '#a855f7' }}>
+        <div className="flex items-start gap-3">
+          <span className="text-purple-400 text-lg mt-0.5">&#128218;</span>
+          <div>
+            <div className="text-sm font-semibold text-purple-300 mb-2">Decision Guide</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-[12px] text-rose-300 font-semibold mb-1">Choose Encoder when:</p>
+                <ul className="text-[11px] text-slate-300 space-y-1">
+                  <li className="flex items-start gap-1.5"><span className="text-rose-400 mt-0.5">&#8226;</span> Fixed, well-defined label set</li>
+                  <li className="flex items-start gap-1.5"><span className="text-rose-400 mt-0.5">&#8226;</span> Latency and throughput are critical</li>
+                  <li className="flex items-start gap-1.5"><span className="text-rose-400 mt-0.5">&#8226;</span> Limited GPU budget</li>
+                  <li className="flex items-start gap-1.5"><span className="text-rose-400 mt-0.5">&#8226;</span> Output must be deterministic</li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-[12px] text-amber-300 font-semibold mb-1">Choose Decoder when:</p>
+                <ul className="text-[11px] text-slate-300 space-y-1">
+                  <li className="flex items-start gap-1.5"><span className="text-amber-400 mt-0.5">&#8226;</span> Labels evolve or are open-ended</li>
+                  <li className="flex items-start gap-1.5"><span className="text-amber-400 mt-0.5">&#8226;</span> Multi-turn context matters</li>
+                  <li className="flex items-start gap-1.5"><span className="text-amber-400 mt-0.5">&#8226;</span> You want to swap models easily</li>
+                  <li className="flex items-start gap-1.5"><span className="text-amber-400 mt-0.5">&#8226;</span> Few-shot adaptability is needed</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Source */}
+      <div className="text-center">
+        <p className="text-[11px] text-slate-500 mono">
+          Source: decoder-sft/decoder_lora_finetuning.ipynb vs encoder-sft/encoder_lora_finetuning.ipynb
+        </p>
+      </div>
+    </div>
+  );
+}
+
+
+// ======================================================================
+// MAIN APP
+// ======================================================================
+
+const TABS = [
+  { id: 'overview', label: 'Overview', icon: 'ARCH' },
+  { id: 'task', label: 'Task Formulation', icon: 'TASK' },
+  { id: 'data-lora', label: 'Data & LoRA', icon: 'CFG' },
+  { id: 'quantization', label: 'Quantization', icon: 'GPU' },
+  { id: 'training', label: 'Training Config', icon: 'TRAIN' },
+  { id: 'infra', label: 'Infrastructure', icon: 'INFRA' },
+  { id: 'tradeoffs', label: 'Tradeoffs', icon: 'VS' },
+];
+
+function App() {
+  const [activeTab, setActiveTab] = useState('overview');
+
+  return (
+    <div className="relative z-10 max-w-6xl mx-auto px-4 py-6">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <div className="h-px flex-1 max-w-[80px] bg-gradient-to-r from-transparent to-cyan-500/40"></div>
+          <span className="mono text-[10px] text-cyan-400/60 tracking-[0.2em] uppercase">SFT Fine-Tuning Comparison</span>
+          <div className="h-px flex-1 max-w-[80px] bg-gradient-to-l from-transparent to-cyan-500/40"></div>
+        </div>
+        <h1 className="text-3xl font-extrabold text-white mb-2" style={{ letterSpacing: '-0.02em' }}>
+          <span className="text-rose-400">Encoder</span> vs <span className="text-amber-400">Decoder</span> SFT
+        </h1>
+        <p className="text-sm text-slate-400 max-w-xl mx-auto">
+          Key differences when fine-tuning PhayaThaiBERT (encoder) vs Qwen 2.5-3B (decoder) for Thai telco intent classification using LoRA
+        </p>
+      </div>
+
+      {/* Tab navigation */}
+      <div className="flex gap-1.5 mb-6 justify-center flex-wrap">
+        {TABS.map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-medium transition-all border ${
+              tab.id === activeTab
+                ? 'bg-cyan-600/20 border-cyan-500/40 text-cyan-300 shadow-lg shadow-cyan-500/10'
+                : 'bg-slate-800/30 border-slate-700/30 text-slate-400 hover:bg-slate-700/30 hover:text-slate-300'
+            }`}>
+            <span className={`mono text-[10px] font-bold px-1.5 py-0.5 rounded ${
+              tab.id === activeTab ? 'bg-cyan-500/20 text-cyan-300' : 'bg-slate-700/30 text-slate-500'
+            }`}>{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div className="min-h-[500px]">
+        {activeTab === 'overview' && <OverviewTab />}
+        {activeTab === 'task' && <TaskTab />}
+        {activeTab === 'data-lora' && <DataLoraTab />}
+        {activeTab === 'quantization' && <QuantizationTab />}
+        {activeTab === 'training' && <TrainingTab />}
+        {activeTab === 'infra' && <InfraTab />}
+        {activeTab === 'tradeoffs' && <TradeoffsTab />}
+      </div>
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
