@@ -311,11 +311,11 @@ root:
   inputDefinitions:
     parameters:
       mlflow_token:
-        defaultValue: sha256~KOlrcQXJ4-J1po8G510HgFsanZh4Tqy15kvrLNoAoN4
+        defaultValue: <<token-here>>
         isOptional: true
         parameterType: STRING
       repo_url:
-        defaultValue: https://github.com/bbalakriz/ai-explainer.git
+        defaultValue: https://github.com/<<org>>/<<repo>>.git
         isOptional: true
         parameterType: STRING
 schemaVersion: 2.1.0
