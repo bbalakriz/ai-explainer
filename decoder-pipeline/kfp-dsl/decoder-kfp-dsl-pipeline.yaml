@@ -258,7 +258,7 @@ root:
     tasks:
       execute-notebook:
         cachingOptions:
-          enableCache: true
+          enableCache: false
         componentRef:
           name: comp-execute-notebook
         inputs:
@@ -274,7 +274,7 @@ root:
           name: QLoRA SFT Training
       execute-notebook-2:
         cachingOptions:
-          enableCache: true
+          enableCache: false
         componentRef:
           name: comp-execute-notebook-2
         dependentTasks:
@@ -292,7 +292,7 @@ root:
           name: Model Evaluation
       execute-notebook-3:
         cachingOptions:
-          enableCache: true
+          enableCache: false
         componentRef:
           name: comp-execute-notebook-3
         dependentTasks:

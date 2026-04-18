@@ -91,6 +91,9 @@ def sft_pipeline(
             mount_path="/mnt/data"
         )
         
+        # Disable caching for the task
+        task.set_caching_options(enable_caching=False)
+
         # Set CPU and Memory constraints
         task.set_cpu_request('2').set_cpu_limit('4')
         task.set_memory_request('4G').set_memory_limit('8G')

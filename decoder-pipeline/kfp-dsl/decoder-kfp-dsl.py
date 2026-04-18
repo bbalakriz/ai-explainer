@@ -103,6 +103,9 @@ def sft_pipeline(
                 'AWS_ENDPOINT_URL': 'AWS_ENDPOINT_URL'
             }
         )
+        # Disable caching for the task
+        task.set_caching_options(enable_caching=False)
+
         task.set_env_variable('S3_BUCKET', 'qwen25-3b-model-bucket')
         task.set_env_variable('S3_PREFIX', 'merged-models/decoder')
         
