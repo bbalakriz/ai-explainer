@@ -94,9 +94,14 @@ def format_messages_for_training(row: dict, base_model_id: str) -> dict:
     """
     messages = []
     system_prompt = (
-        "You are an AI intent classifier. Analyze the conversation history "
-        "and the latest user message. You must output only a valid JSON object "
-        "containing the predicted 'intent'."
+        "You are an expert AI intent classifier for a telecom provider.\n\n"
+        "RULES:\n"
+        "1. Prioritize the final user message. It is the primary signal.\n"
+        "2. Only use the assistant/user conversation history for context if the final message is short or ambiguous.\n"
+        "3. If the final message contradicts the history, the final message wins.\n"
+        "4. You must output ONLY a valid, minified JSON object.\n\n"
+        "OUTPUT FORMAT:\n"
+        '{"intent": "<predicted_label>"}'
     )
     
     model_name = base_model_id.lower()
