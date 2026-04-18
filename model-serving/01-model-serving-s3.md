@@ -97,7 +97,7 @@ Decoder models are massive generative engines. Unlike the CPU-bound encoder, Qwe
 
 ### Step 3: Model Deployment (Hardware & Runtime)
 
-1. **Model deployment name:** Enter `qwen25-32b-finetuned`.
+1. **Model deployment name:** Enter `qwen25-3b-finetuned`.
 2. **Hardware profile:** *CRITICAL CHANGE* -> Select **gpu-profile** (or your cluster's equivalent profile that allocates GPUs).
 3. **Serving runtime:** Choose **Select from a list of serving runtimes** and select your **vLLM GPU ServingRuntime**. *(Do not select the CPU version).*
 4. **Number of replicas to deploy:** Leave as `1`.
@@ -134,18 +134,18 @@ For the decoder, you can programmatically fetch the InferenceService (`isvc`) UR
 
 ```bash
 # Get the endpoint URL for the decoder
-export MODEL_NAME=qwen25-32b-finetuned
-export ENDPOINT=$(oc get isvc qwen25-32b-finetuned \
+export MODEL_NAME=qwen25-3b-finetuned
+export ENDPOINT=$(oc get isvc qwen25-3b-finetuned \
   -n decoder-sft -o jsonpath='{.status.url}')
 
 echo $ENDPOINT
-# Example output: https://qwen25-32b-finetuned-decoder-sft.apps.cluster.com
+# Example output: https://qwen25-3b-finetuned-decoder-sft.apps.cluster.com
 
 # Test the chat completions API
 curl -k -X POST "$ENDPOINT/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "qwen25-32b-finetuned",
+    "model": "qwen25-3b-finetuned",
     "messages": [
       {
         "role": "system",
@@ -188,7 +188,7 @@ Expected output:
 ```json
 {
   "id": "chatcmpl-fb92a1b9...",
-  "model": "qwen25-32b-finetuned",
+  "model": "qwen25-3b-finetuned",
   "choices": [{
     "message": {
       "role": "assistant",
