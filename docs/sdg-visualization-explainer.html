@@ -724,7 +724,7 @@ function OverviewTab() {
               <div><h4 className="text-[13px] font-bold text-red-300">Handcrafted ChatGPT</h4><p className="text-[10px] text-slate-500">Manual, ad-hoc process</p></div>
             </div>
             <ul className="space-y-2 text-[11px] text-slate-400 leading-relaxed">
-              {['Manual copy-paste into ChatGPT, re-prompt each intent individually','No version control — each session is ad-hoc, prompts vary by mood','Inconsistent quality: different wordings yield different styles and formats','No validation — raw output may have wrong JSON, extra fields, broken structure','Zero reproducibility — can\'t re-run to get comparable output','Time-consuming: 2-4 hours of manual work for 200 examples','No seed strategy — manually picking examples each time','No constraint enforcement — history length, typo ratio, intent switching all manual','No scalability — need 1000 examples? Repeat the entire process 5x'].map((t,i)=>
+              {['Manual copy-paste into ChatGPT, re-prompt each intent individually','No version control — each session is ad-hoc, prompts vary by mood','Inconsistent quality: different wordings yield different styles and formats','No validation — raw output may have wrong JSON, extra fields, broken structure','Zero reproducibility — can\'t re-run to get comparable output','Time-consuming: longer duration of manual work for 200 examples','No seed strategy — manually picking examples each time','No constraint enforcement — history length, typo ratio, intent switching all manual','No scalability — need 1000 examples? Repeat the entire process 5x'].map((t,i)=>
                 <li key={i} className="flex gap-2"><span className="text-red-400 flex-shrink-0 mt-0.5">✕</span>{t}</li>
               )}
             </ul>
@@ -744,7 +744,7 @@ function OverviewTab() {
         {/* Metrics */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
           {[
-            { label: 'Time (320 examples)', old: '2-4 hrs', nw: '~5 min', speedup: '48x faster' },
+            { label: 'Time (320 examples)', old: 'hrs', nw: '~5 min', speedup: '48x faster' },
             { label: 'Format Compliance', old: '~70%', nw: '100%', speedup: 'Validated' },
             { label: 'Reproducibility', old: '0%', nw: '100%', speedup: 'Deterministic' },
             { label: 'Scalability', old: 'O(n) hours', nw: 'O(1) command', speedup: '1 command' },
