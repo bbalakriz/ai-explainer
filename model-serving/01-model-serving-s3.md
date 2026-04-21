@@ -64,7 +64,7 @@ curl https://phayathaibert-encoder-sft.apps.cluster-s99dt.s99dt.sandbox5294.open
   -H "Content-Type: application/json" \
   -d '{
     "model": "phayathaibert",
-    "input": "Assistant: สวัสดีค่ะ ติดต่อเรื่องเปิดใช้งานซิมรายเดือนใช่ไหมคะ| User: ใช่ครับ เพิ่งได้รับซิมใหม่มา ยังใช้ไม่ได้เลย เซง สุด แล่ว อ้อแล้วช่วยเช็ก Network แถวบ้านให้หน่อยสัญญานไม่ดีเลย มีปัญหาตลอดโครหงุดหงิด | Assistant: ได้ค่ะ รบกวนแจ้งหมายเลขที่ต้องการเปิดใช้งานก่อนนะคะ | User: เบอร์ 086-031-xxxx ครับ | Assistant: ตรวจสอบแล้วเป็นซิมรายเดือนที่รอเปิดใช้งานอยู่ค่ะ ต้องการให้ดำเนินการเปิดใช้งานเลยไหมครับ | User: งั้นช่วยเปิดไช้งานเบอร์รายเดือนนี้ให้เลยคับ ต้องการด่วนๆเลยพอดีพรุ่งจะไปต่างจังหวัดพอดีมีประชุมด่วน"
+    "input": "History: Assistant: สวัสดีค่ะ ติดต่อเรื่องเปิดใช้งานซิมรายเดือนใช่ไหมคะ | User: ใช่ครับ เพิ่งได้รับซิมใหม่มา ยังใช้ไม่ได้เลย เซง สุด แล่ว อ้อแล้วช่วยเช็ก Network แถวบ้านให้หน่อยสัญญานไม่ดีเลย มีปัญหาตลอดโครหงุดหงิด | Assistant: ได้ค่ะ รบกวนแจ้งหมายเลขที่ต้องการเปิดใช้งานก่อนนะคะ | User: เบอร์ 086-031-xxxx ครับ | Assistant: ตรวจสอบแล้วเป็นซิมรายเดือนที่รอเปิดใช้งานอยู่ค่ะ ต้องการให้ดำเนินการเปิดใช้งานเลยไหมครับ [SEP] Current: งั้นช่วยเปิดไช้งานเบอร์รายเดือนนี้ให้เลยคับ ต้องการด่วนๆเลยพอดีพรุ่งจะไปต่างจังหวัดพอดีมีประชุมด่วน"
   }' | jq '.data[0] | {label: .label, confidence: (.probs | max)}'
 ```
 
@@ -134,8 +134,8 @@ For the decoder, you can programmatically fetch the InferenceService (`isvc`) UR
 
 ```bash
 # Get the endpoint URL for the decoder
-export MODEL_NAME=qwen25-3b-finetuned
-export ENDPOINT=$(oc get isvc qwen25-3b-finetuned \
+export MODEL_NAME=qwen-25-3b-it-sft
+export ENDPOINT=$(oc get isvc qwen-25-3b-it-sft \
   -n decoder-sft -o jsonpath='{.status.url}')
 
 echo $ENDPOINT
@@ -145,7 +145,7 @@ echo $ENDPOINT
 curl -k -X POST "$ENDPOINT/v1/chat/completions" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "qwen25-3b-finetuned",
+    "model": "qwen-25-3b-it-sft",
     "messages": [
       {
         "role": "system",
