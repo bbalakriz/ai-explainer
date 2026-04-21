@@ -203,3 +203,31 @@ Expected output:
   }
 }
 ```
+
+
+---
+
+## 3: Quick Performance Tests with Siege
+
+Once both models are loaded and responding to single requests, you can use [siege](https://github.com/JoeDog/siege) to run a quick load test. The commands below hit each endpoint with 5 concurrent users for 30 seconds.
+
+| Parameter | Value | Purpose |
+|---|---|---|
+| `-c 5` | 5 | Number of concurrent simulated users |
+| `-t 30s` | 30s | Duration of the test |
+
+### Encoder model (PhayaThaiBERT)
+
+```bash
+siege -c 5 -t 30s \
+  -H "Content-Type: application/json" \
+  "https://phayathaibert-encoder-sft.apps.cluster-s99dt.s99dt.sandbox5294.opentlc.com/classify POST {\"model\":\"phayathaibert\",\"input\":\"History: Assistant: สวัสดีค่ะ ติดต่อเรื่องเปิดใช้งานซิมรายเดือนใช่ไหมคะ | User: ใช่ครับ เพิ่งได้รับซิมใหม่มา ยังใช้ไม่ได้เลย เซง สุด แล่ว อ้อแล้วช่วยเช็ก Network แถวบ้านให้หน่อยสัญญานไม่ดีเลย มีปัญหาตลอดโครหงุดหงิด | Assistant: ได้ค่ะ รบกวนแจ้งหมายเลขที่ต้องการเปิดใช้งานก่อนนะคะ | User: เบอร์ 086-031-xxxx ครับ | Assistant: ตรวจสอบแล้วเป็นซิมรายเดือนที่รอเปิดใช้งานอยู่ค่ะ ต้องการให้ดำเนินการเปิดใช้งานเลยไหมครับ [SEP] Current: งั้นช่วยเปิดไช้งานเบอร์รายเดือนนี้ให้เลยคับ ต้องการด่วนๆเลยพอดีพรุ่งจะไปต่างจังหวัดพอดีมีประชุมด่วน\"}"
+```
+
+### Decoder model (Qwen 2.5 3B)
+
+```bash
+siege -c 5 -t 30s \
+  -H "Content-Type: application/json" \
+  "$ENDPOINT/v1/chat/completions POST {\"model\":\"qwen-25-3b-it-sft\",\"messages\":[{\"role\":\"system\",\"content\":\"You are an expert AI intent classifier for a telecom provider.\\n\\nRULES:\\n1. Prioritize the final user message. It is the primary signal.\\n2. Only use the assistant/user conversation history for context if the final message is short or ambiguous.\\n3. If the final message contradicts the history, the final message wins.\\n4. You must output ONLY a valid, minified JSON object.\\n\\nOUTPUT FORMAT:\\n{\\\"intent\\\": \\\"<predicted_label>\\\"}\"},{\"role\":\"assistant\",\"content\":\"สวัสดีค่ะ ติดต่อเรื่องเปิดใช้งานซิมรายเดือนใช่ไหมคะ\"},{\"role\":\"user\",\"content\":\"ใช่ครับ เพิ่งได้รับซิมใหม่มา ยังใช้ไม่ได้เลย เซง สุด แล่ว อ้อแล้วช่วยเช็ก Network แถวบ้านให้หน่อยสัญญานไม่ดีเลย มีปัญหาตลอดโครหงุดหงิด\"},{\"role\":\"assistant\",\"content\":\"ได้ค่ะ รบกวนแจ้งหมายเลขที่ต้องการเปิดใช้งานก่อนนะคะ\"},{\"role\":\"user\",\"content\":\"เบอร์ 086-031-xxxx ครับ\"},{\"role\":\"assistant\",\"content\":\"ตรวจสอบแล้วเป็นซิมรายเดือนที่รอเปิดใช้งานอยู่ค่ะ ต้องการให้ดำเนินการเปิดใช้งานเลยไหมครับ\"},{\"role\":\"user\",\"content\":\"งั้นช่วยเปิดไช้งานเบอร์รายเดือนนี้ให้เลยคับ ต้องการด่วนๆเลยพอดีพรุ่งจะไปต่างจังหวัดพอดีมีประชุมด่วน\"}],\"temperature\":0.0,\"max_tokens\":50,\"response_format\":{\"type\":\"json_object\"}}"
+```
