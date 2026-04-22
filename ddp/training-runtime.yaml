@@ -1,0 +1,157 @@
+apiVersion: trainer.kubeflow.org/v1alpha1
+kind: TrainingRuntime
+metadata:
+  name: decoder-ddp-runtime
+  labels:
+    trainer.kubeflow.org/framework: torch
+spec:
+  mlPolicy:
+    numNodes: 1
+    torch:
+      numProcPerNode: 2
+  template:
+    spec:
+      replicatedJobs:
+        - name: node
+          template:
+            metadata:
+              labels:
+                trainer.kubeflow.org/trainjob-ancestor-step: trainer
+            spec:
+              template:
+                spec:
+                  restartPolicy: OnFailure
+                  nodeSelector:
+                    nvidia.com/gpu.present: "true"
+                  tolerations:
+                  - effect: NoSchedule
+                    key: nvidia.com/gpu
+                    operator: Equal
+                  
+                  # 1. custom data loader init container
+                  initContainers:
+                  - name: data-loader
+                    image: 'registry.redhat.io/ubi9/python-312:latest'
+                    command:
+                    - bash
+                    - '-c'
+                    - |
+                      pip install --no-cache-dir boto3
+
+                      python3 - <<'PY'
+                      import os
+                      import boto3
+
+                      # s3 configuration from environment variables
+                      bucket = os.environ["S3_BUCKET"]
+                      key = os.environ.get("S3_KEY", "training_dataset.json")
+                      endpoint = os.environ.get("S3_ENDPOINT", None)
+                      dest = "/shared-data/training.json"
+
+                      print(f"downloading s3://{bucket}/{key} to {dest}...")
+
+                      verify_ssl = os.environ.get("S3_VERIFY_SSL", "false").lower() == "true"
+
+                      session = boto3.session.Session()
+                      client_kwargs = {"verify": verify_ssl}
+                      if endpoint:
+                          client_kwargs["endpoint_url"] = endpoint
+
+                      s3 = session.client("s3", **client_kwargs)
+
+                      try:
+                          s3.download_file(bucket, key, dest)
+                          print("download complete.")
+                      except Exception as e:
+                          print(f"error during download: {e}")
+                          exit(1)
+                      PY
+
+                      if [ $? -ne 0 ]; then
+                        echo "download failed, exiting."
+                        exit 1
+                      fi
+                      echo "download and copy complete."
+                    env:
+                    - name: S3_BUCKET
+                      valueFrom:
+                        secretKeyRef:
+                          name: s3-secret
+                          key: bucket
+                    - name: S3_KEY
+                      value: shared-data/training_dataset.json
+                    - name: S3_ENDPOINT
+                      valueFrom:
+                        secretKeyRef:
+                          name: s3-secret
+                          key: endpoint
+                    - name: AWS_ACCESS_KEY_ID
+                      valueFrom:
+                        secretKeyRef:
+                          name: s3-secret
+                          key: aws_access_key_id
+                    - name: AWS_SECRET_ACCESS_KEY
+                      valueFrom:
+                        secretKeyRef:
+                          name: s3-secret
+                          key: aws_secret_access_key
+                    volumeMounts:
+                    - name: shared-data-volume
+                      mountPath: /shared-data
+                      
+                  # 2. main training container
+                  containers:
+                  - name: node
+                    image: registry.redhat.io/rhoai/odh-training-cuda128-torch28-py312-rhel9:v3.0
+                    resources:
+                      limits:
+                        nvidia.com/gpu: "2"
+                        memory: "8Gi"
+                        cpu: "4"
+                      requests:
+                        nvidia.com/gpu: "2"
+                        memory: "4Gi"
+                        cpu: "2"                    
+                    env:
+                    - name: HF_HUB_CACHE
+                      value: /mnt/hf_cache/hub  
+                    - name: PYTORCH_CUDA_ALLOC_CONF
+                      value: "expandable_segments:True" 
+                    - name: HF_MODULES_CACHE
+                      value: /tmp/hf_modules
+                    - name: HF_METRICS_CACHE
+                      value: /tmp/hf_metrics                       
+                    - name: HF_DATASETS_CACHE
+                      value: /tmp/hf_datasets
+                    - name: HF_HOME
+                      value: /tmp/hf_home_base 
+                    envFrom:
+                    - configMapRef:
+                        name: decoder-ddp-train-args
+                    - secretRef:
+                        name: hf-secret
+                    volumeMounts:
+                    - mountPath: /app/train.py
+                      name: train-script-volume
+                      subPath: train.py
+                    - mountPath: /app/training.json
+                      name: shared-data-volume
+                      subPath: training.json
+                    - mountPath: /mnt/data
+                      name: adapters-volume
+                    - mountPath: /mnt/hf_cache
+                      name: hf-cache-volume
+                      
+                  # 3. custom pvc and volumes
+                  volumes:
+                  - name: train-script-volume
+                    configMap:
+                      name: decoder-ddp-train-script
+                  - name: shared-data-volume
+                    emptyDir: {}
+                  - name: adapters-volume
+                    persistentVolumeClaim:
+                      claimName: lora-adapters-pvc
+                  - name: hf-cache-volume
+                    persistentVolumeClaim:          
+                      claimName: hf-model-cache-pvc
