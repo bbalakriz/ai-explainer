@@ -181,7 +181,7 @@ curl -k -X POST "$ENDPOINT/v1/chat/completions" \
     "response_format": {
       "type": "json_object"
     }      
-  }'
+  }' | jq
 ```
 
 Expected output:
