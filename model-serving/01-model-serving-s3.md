@@ -149,7 +149,7 @@ curl -k -X POST "$ENDPOINT/v1/chat/completions" \
     "messages": [
       {
         "role": "system",
-        "content": "You are an expert AI intent classifier for a telecom provider.\n\nRULES:\n1. Prioritize the final user message. It is the primary signal.\n2. Only use the assistant/user conversation history for context if the final message is short or ambiguous.\n3. If the final message contradicts the history, the final message wins.\n4. You must output ONLY a valid, minified JSON object.\n\nOUTPUT FORMAT:\n{\"intent\": \"<predicted_label>\"}"
+        "content": "You are an AI intent classifier. Analyze the conversation and output a JSON object with the predicted intent."
       },
       {
         "role": "assistant",
