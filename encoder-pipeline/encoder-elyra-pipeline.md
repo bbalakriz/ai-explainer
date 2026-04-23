@@ -103,7 +103,7 @@ git push -u origin pipeline
 
 ## Phase 2: The Control Tower & Data Seeding
 
-We use a lightweight workbench to act as your control tower, ensuring it doesn't hoard expensive GPUs while you author the pipeline.
+We use a lightweight workbench to act as your control tower, ensuring it doesn't take the expensive GPUs while you author the pipeline.
 
 ### Step 1 — Create the Control Tower
 
@@ -126,7 +126,7 @@ Edit your Control Tower workbench and attach the `shared-pipeline-data` PVC, set
 
 Start the workbench and open the terminal. Download, copy, or move your training data directly to `/mnt/data/training_dataset.json`.
 
-> **Why we do this:** Bypassing Elyra's default S3 (MinIO) artifact storage completely prevents heavy network transfers, pipeline timeout crashes, and the `NoSuchKey` wildcard errors. The pods will simply read and write to the same physical disk.
+> **Why we do this:** Bypassing Elyra's default S3  artifact storage completely prevents heavy network transfers, pipeline timeout crashes, and the `NoSuchKey` wildcard errors. The pods will simply read and write to the same physical disk.
 
 ### Step 5 — Release the Storage Lock (CRITICAL)
 
@@ -160,6 +160,22 @@ Click the **Pipeline Properties** icon (gear symbol) in the Elyra sidebar to set
 | **Data Volumes — PVC Name** | `shared-pipeline-data` |
 
 > The Data Volumes entry dynamically attaches the shared drive to the headless pods at runtime.
+
+### Step 4 — Set S3 Upload Credentials for the Merge Step
+
+The merge notebook uploads the final merged model to an S3 bucket. When running inside an Elyra pipeline, RHOAI automatically injects `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_ENDPOINT_URL` into every pod. These injected credentials point to the pipeline server's own artifact bucket, not your model serving bucket.
+
+The merge notebook uses a separate set of environment variables (`UPLOAD_AWS_ACCESS_KEY_ID`, `UPLOAD_AWS_SECRET_ACCESS_KEY` and `UPLOAD_AWS_ENDPOINT_URL`) to override this behavior. If these are not set, the notebook falls back to the auto injected `AWS_*` values and the upload will fail entirely.
+
+Right click the Merge node on the canvas, open its Properties and add the following environment variables:
+
+| Environment Variable | Value |
+|----------------------|-------|
+| `UPLOAD_AWS_ACCESS_KEY_ID` | Access key for your model serving S3 bucket |
+| `UPLOAD_AWS_SECRET_ACCESS_KEY` | Secret key for your model serving S3 bucket |
+| `UPLOAD_AWS_ENDPOINT_URL` | Endpoint URL for your model serving S3 storage |
+
+You can also set `S3_BUCKET` and `S3_PREFIX` to control the target bucket and folder path for the uploaded model.
 
 ---
 
