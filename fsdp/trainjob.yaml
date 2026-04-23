@@ -1,0 +1,43 @@
+apiVersion: trainer.kubeflow.org/v1alpha1
+kind: TrainJob
+metadata:
+  name: decoder-fsdp-trainjob
+spec:
+  runtimeRef:
+    name: decoder-fsdp-runtime    # references the training runtime blueprint
+    kind: TrainingRuntime        # targets a namespace-scoped runtime
+    apiGroup: trainer.kubeflow.org
+  trainer:
+    numNodes: 1
+    command:
+      - bash
+      - -c
+      - |
+        echo "installing dependencies..."
+        pip install -q scipy==1.17.0 "git+https://github.com/red-hat-data-services/mlflow@rhoai-3.3"
+        pip install -q -U transformers trl peft accelerate bitsandbytes
+
+        echo "starting training..."
+        torchrun --nproc_per_node=2 /app/train.py \
+          --model_name "${MODEL_NAME}" \
+          --data_path "/app/training.json" \
+          --output_dir "${OUTPUT_DIR}" \
+          --dataset_source "${DATASET_SOURCE}" \
+          --run_name "${MLFLOW_RUN_NAME}"
+    env:
+      - name: DATASET_SOURCE
+        value: "s3://training-data/training_dataset.json"
+      - name: MLFLOW_TRACKING_URI
+        value: https://mlflow.redhat-ods-applications.svc.cluster.local:8443
+      - name: MLFLOW_EXPERIMENT_NAME
+        value: decoder-fsdp-finetuning
+      - name: MLFLOW_RUN_NAME
+        value: decoder-fsdp-run-v1
+      - name: MLFLOW_TRACKING_TOKEN
+        value: <<your-mlflow-token>>
+      - name: MLFLOW_TRACKING_INSECURE_TLS
+        value: "true"
+      - name: MLFLOW_WORKSPACE
+        value: <<your-project-name>>
+      - name: MLFLOW_TRACKING_HEADERS
+        value: '{"X-MLFLOW-WORKSPACE": "<<your-project-name>>", "Content-Type": "application/json"}' 
