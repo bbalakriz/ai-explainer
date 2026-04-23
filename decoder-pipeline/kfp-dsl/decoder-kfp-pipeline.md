@@ -6,7 +6,7 @@ We will be implementing, compiling, importing and executing a Kubeflow Pipeline 
 
 ## Step 1: Update Your Pipeline Script
 
-We will use the `execute_notebook` component in `decoder-kfp-dsl.py` file to accept AWS credentials as secrets. These get injected directly into the operating system environment so the notebook can authenticate natively. Ensure you create a secret named `aws-connection-minio` with the suitable values for the paramaters `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL`..
+We will use the `execute_notebook` component in `decoder-kfp-dsl.py` file to accept S3 credentials as secrets. These get injected directly into the operating system environment so the notebook can authenticate natively. Ensure you create a secret named `s3-connection` with the suitable values for the paramaters `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL`..
 
 
 ## Step 2: Compile the Pipeline

@@ -6,7 +6,7 @@ We will be implementing, compiling, importing and executing a Kubeflow Pipeline 
 
 ## Step 1: Update Your Pipeline Script
 
-Update the `execute_notebook` component in your `encoder-kfp-dsl.py` file to accept AWS credentials as secrets. These get injected directly into the operating system environment so the notebook can authenticate natively. Ensure you create a secret named `aws-connection-minio` with the suitable values for the paramaters `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL`..
+Update the `execute_notebook` component in your `encoder-kfp-dsl.py` file to accept S3 credentials as secrets. These get injected directly into the operating system environment so the notebook can authenticate natively. Ensure you create a secret named `s3-connection` with the suitable values for the paramaters `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL`..
 
 Add the following parameters and environment variable assignments:
 
@@ -48,7 +48,7 @@ def sft_pipeline(
     # Step C: Merge 
     merge_step = execute_notebook(
         repo_url=repo_url,
-        notebook_path="decoder-sft/decoder_lora_model_merge.ipynb", 
+        notebook_path="encoder-sft/encoder_lora_model_merge.ipynb", 
         mlflow_token=mlflow_token
     ).set_display_name("Merge Weights").after(eval_step)
 
@@ -61,7 +61,7 @@ def sft_pipeline(
         # --- ADD THIS SECURE INJECTION BLOCK ---
         kubernetes.use_secret_as_env(
             task,
-            secret_name='aws-connection-minio', # Update to your actual OpenShift secret name
+            secret_name='s3-connection', # Update to your actual OpenShift secret name
             secret_key_to_env={
                 'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID',
                 'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY',
