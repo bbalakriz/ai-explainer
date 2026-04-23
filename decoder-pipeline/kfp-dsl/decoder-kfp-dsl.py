@@ -95,7 +95,7 @@ def sft_pipeline(
         # ---------------------------------------------------------
         kubernetes.use_secret_as_env(
             task,
-            secret_name='aws-connection-minio', # <--- UPDATE this to your actual K8s secret name
+            secret_name='s3-connection', # <--- UPDATE this to your actual K8s secret name
             secret_key_to_env={
                 # 'key_inside_secret': 'NAME_OF_ENV_VAR_IN_POD'
                 'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID',

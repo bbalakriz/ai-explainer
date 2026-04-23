@@ -341,10 +341,10 @@ platforms:
             - envVar: AWS_ENDPOINT_URL
               secretKey: AWS_S3_ENDPOINT
             optional: false
-            secretName: aws-connection-minio
+            secretName: s3-connection
             secretNameParameter:
               runtimeValue:
-                constant: aws-connection-minio
+                constant: s3-connection
           tolerations:
           - effect: NoSchedule
             key: nvidia.com/gpu
@@ -365,10 +365,10 @@ platforms:
             - envVar: AWS_ENDPOINT_URL
               secretKey: AWS_S3_ENDPOINT
             optional: false
-            secretName: aws-connection-minio
+            secretName: s3-connection
             secretNameParameter:
               runtimeValue:
-                constant: aws-connection-minio
+                constant: s3-connection
           tolerations:
           - effect: NoSchedule
             key: nvidia.com/gpu
@@ -389,10 +389,10 @@ platforms:
             - envVar: AWS_ENDPOINT_URL
               secretKey: AWS_S3_ENDPOINT
             optional: false
-            secretName: aws-connection-minio
+            secretName: s3-connection
             secretNameParameter:
               runtimeValue:
-                constant: aws-connection-minio
+                constant: s3-connection
           tolerations:
           - effect: NoSchedule
             key: nvidia.com/gpu
