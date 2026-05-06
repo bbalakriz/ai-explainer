@@ -128,3 +128,86 @@ This is where everything comes together. You pass your secure credentials at run
 4. Click **Create**.
 
 The pipeline server will now spin up the pods, clone the repo, run the SFT step, evaluate it and if successful, the merge notebook will use those newly injected `AWS_` variables to authenticate and push your final model to object storage.
+
+---
+
+## Invoke the compiled pipeline with Kubeflow Pipelines REST APIs
+
+Pipeline runs can be started from the RHOAI Pipelines UI (steps 3 and 4 above) or with the Kubeflow Pipelines REST API on the same pipeline server.
+
+### 1. Resolve the Kubeflow Pipelines API host
+
+Get the OpenShift route hostname for the Data Science Pipelines API in your Data Science project namespace (replace `<your-ds-project>` with the namespace where the pipeline server runs, for example the project that hosts your workbench and DSPA instance):
+
+```bash
+oc get route ds-pipeline-dspa --template='{{ .spec.host }}' -n <your-ds-project>
+```
+
+Use the printed host as `<ROUTE>` in the URLs below (for example `ds-pipeline-dspa-<project>.apps.<cluster-domain>`).
+
+### 2. Obtain a Bearer token
+
+The route is protected by OpenShift OAuth. Use a token that can access that namespace:
+
+```bash
+oc whoami --show-token
+```
+
+Use the output as `<YOUR_TOKEN>` in the `Authorization: Bearer` header.
+
+### 3. Upload the compiled pipeline YAML
+
+Upload `encoder-kfp-dsl-pipeline.yaml` (from step 2) to register a pipeline version. Multipart form fields match the KFP v2beta1 upload contract:
+
+```bash
+curl -X POST "https://<ROUTE>/apis/v2beta1/pipelines/upload" \
+  -H "Authorization: Bearer <YOUR_TOKEN>" \
+  -F "uploadfile=@/path/to/encoder-kfp-dsl-pipeline.yaml" \
+  -F "name=encoder-kfp-dsl-pipeline" \
+  -F "display_name=Encoder SFT KFP DSL Pipeline" \
+  -F "description=SFT eval and merge pipeline via Papermill with S3" \
+  -F "namespace=<your-ds-project>"
+```
+
+Field notes:
+
+- `<ROUTE>`: hostname only from step 1; use it inside `https://<ROUTE>/...` as shown.
+- `uploadfile`: local path to your compiled YAML.
+- `name`: internal id (no spaces).
+- `namespace`: same OpenShift project as the pipeline server.
+
+A successful response includes `pipeline_id` (and often a default version id). Keep `pipeline_id` for the run request.
+
+### 4. Start a run with runtime parameters
+
+Trigger execution with a JSON body. Parameters must match the pipeline function signature in `encoder-kfp-dsl.py` (here `repo_url` and `mlflow_token`):
+
+```bash
+curl -X POST "https://<ROUTE>/apis/v2beta1/runs" \
+  -H "Authorization: Bearer <YOUR_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pipeline_version_reference": {
+      "pipeline_id": "<PIPELINE_ID>"
+    },
+    "runtime_config": {
+      "parameters": {
+        "repo_url": "https://github.com/your-org/your-repo.git",
+        "mlflow_token": "your-mlflow-tracking-token"
+      }
+    },
+    "display_name": "encoder-sft-run-001"
+  }'
+```
+
+Replace `<PIPELINE_ID>` with the value from the upload response. Adjust `display_name` and parameter values per run.
+
+If your server expects a specific pipeline version instead of the default, you can set `pipeline_version_reference` to include `pipeline_version_id` as documented in the upstream Kubeflow Pipelines API.
+
+### 5. Verify in the console
+
+In RHOAI, open Pipelines for the same project: you should see the imported pipeline and the new run with the display name you sent.
+
+### Further reading
+
+For listing pipelines, runs, experiments, and other v2beta1 operations, see the [Kubeflow Pipelines API reference](https://www.kubeflow.org/docs/components/pipelines/reference/api/kfp-api/).
