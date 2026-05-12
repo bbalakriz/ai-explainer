@@ -1,0 +1,34 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+    serving.kserve.io/stop: "true"
+  name: qwen3-tts
+  namespace: decoder-sft
+spec:
+  predictor:
+    automountServiceAccountToken: false
+    deploymentStrategy:
+      type: Recreate
+    maxReplicas: 1
+    minReplicas: 1
+    model:
+      modelFormat:
+        name: vllm-omni
+      name: ""
+      resources:
+        limits:
+          cpu: "4"
+          memory: 16Gi
+          nvidia.com/gpu: "1"
+        requests:
+          cpu: "2"
+          memory: 8Gi
+          nvidia.com/gpu: "1"
+      runtime: qwen3-tts-runtime
+      storageUri: hf://Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice
+    tolerations:
+    - effect: NoSchedule
+      key: nvidia.com/gpu
+      operator: Equal

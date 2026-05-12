@@ -1,0 +1,68 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  annotations:
+    opendatahub.io/apiProtocol: REST
+    opendatahub.io/recommended-accelerators: '["nvidia.com/gpu"]'
+    opendatahub.io/runtime-version: v0.18.0
+    opendatahub.io/serving-runtime-scope: global
+    opendatahub.io/template-display-name: vLLM-Omni Qwen3-TTS
+    opendatahub.io/template-name: template-n7xlad
+    openshift.io/display-name: vLLM-Omni Qwen3-TTS
+  labels:
+    opendatahub.io/dashboard: "true"
+  name: qwen3-tts
+  namespace: decoder-sft
+spec:
+  annotations:
+    prometheus.io/path: /metrics
+    prometheus.io/port: "8000"
+  containers:
+  - args:
+    - |
+      exec vllm serve /mnt/models --omni --task-type ${TASK_TYPE} \
+        --host 0.0.0.0 --port 8000 --served-model-name={{.Name}} \
+        --trust-remote-code --enforce-eager --max-model-len 512 --gpu-memory-utilization 0.8 ${EXTRA_ARGS}
+    command:
+    - /bin/sh
+    - -c
+    env:
+    - name: TASK_TYPE
+      value: CustomVoice
+    - name: EXTRA_ARGS
+      value: ""
+    - name: HOME
+      value: /tmp
+    - name: HF_HOME
+      value: /tmp/hf_home
+    - name: NUMBA_CACHE_DIR
+      value: /tmp/numba_cache
+    - name: MPLCONFIGDIR
+      value: /tmp/matplotlib
+    image: vllm/vllm-omni:v0.18.0
+    name: kserve-container
+    ports:
+    - containerPort: 8000
+      name: http
+      protocol: TCP
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+        nvidia.com/gpu: "1"
+      requests:
+        cpu: "4"
+        memory: 8Gi
+        nvidia.com/gpu: "1"
+    volumeMounts:
+    - mountPath: /dev/shm
+      name: shm
+  multiModel: false
+  supportedModelFormats:
+  - autoSelect: true
+    name: vllm-omni
+  volumes:
+  - emptyDir:
+      medium: Memory
+      sizeLimit: 2Gi
+    name: shm

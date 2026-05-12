@@ -1,0 +1,42 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: qwen3-tts
+  namespace: decoder-sft
+spec:
+  containers:
+  - args:
+    - |
+      exec vllm serve /mnt/models --omni --task-type ${TASK_TYPE} \
+        --host 0.0.0.0 --port 8080 --served-model-name Qwen3-Thai \
+        --trust-remote-code --enforce-eager
+    command:
+    - /bin/sh
+    - -c
+    env:
+    - name: TASK_TYPE
+      value: CustomVoice
+    - name: HOME
+      value: /tmp
+    - name: HF_HOME
+      value: /tmp/hf_home
+    - name: NUMBA_CACHE_DIR
+      value: /tmp/numba_cache
+    - name: MPLCONFIGDIR
+      value: /tmp/matplotlib
+    image: docker.io/vllm/vllm-omni:v0.18.0
+    name: kserve-container
+    ports:
+    - containerPort: 8080
+      protocol: TCP
+    volumeMounts:
+    - mountPath: /dev/shm
+      name: shm
+  supportedModelFormats:
+  - autoSelect: true
+    name: vllm-omni
+  volumes:
+  - emptyDir:
+      medium: Memory
+      sizeLimit: 2Gi
+    name: shm

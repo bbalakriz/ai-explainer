@@ -1,0 +1,45 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  annotations:
+    opendatahub.io/connections: qwen3-tts
+    opendatahub.io/hardware-profile-name: nvidia-gpu
+    opendatahub.io/hardware-profile-namespace: redhat-ods-applications
+    opendatahub.io/hardware-profile-resource-version: "1304368"
+    opendatahub.io/model-type: generative
+    openshift.io/description: ""
+    openshift.io/display-name: qwen3-tts
+    security.opendatahub.io/enable-auth: "false"
+    serving.kserve.io/deploymentMode: RawDeployment
+    serving.kserve.io/stop: "true"
+  labels:
+    networking.kserve.io/visibility: exposed
+    opendatahub.io/dashboard: "true"
+  name: qwen3-tts
+  namespace: decoder-sft
+spec:
+  predictor:
+    automountServiceAccountToken: false
+    deploymentStrategy:
+      type: Recreate
+    maxReplicas: 1
+    minReplicas: 1
+    model:
+      modelFormat:
+        name: vllm-omni
+      name: ""
+      resources:
+        limits:
+          cpu: "8"
+          memory: 64Gi
+          nvidia.com/gpu: "1"
+        requests:
+          cpu: "2"
+          memory: 16Gi
+          nvidia.com/gpu: "1"
+      runtime: qwen3-tts
+      storageUri: hf://Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice
+    tolerations:
+    - effect: NoSchedule
+      key: nvidia.com/gpu
+      operator: Equal
