@@ -1,0 +1,344 @@
+[
+  {
+    "user_message": "เช็คเน็ตโรมมิ่งให้หน่อยครับ",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": []
+  },
+  {
+    "user_message": "เนตโรมมิ่งเหลือเท่าไหร่อ่ะค้าบ 😅",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": []
+  },
+  {
+    "user_message": "รบกวนตรวจสอบยอดเน็ตโรมมิ่งที่เหลือให้หน่อยค่ะ",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ มีอะไรให้ช่วยดูแลคะ 😊"
+      }
+    ]
+  },
+  {
+    "user_message": "Check roaming data left please",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "Hello"
+      }
+    ]
+  },
+  {
+    "user_message": "091234XXXX เช็คเน็ตโรมมิ่งให้หน่อยค่ะ",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ รบกวนแจ้งหมายเลขโทรศัพท์ที่ต้องการตรวจสอบข้อมูลด้วยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วเน็ตโรมมิ่งเหลือเท่าไหร่ครับ",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "จ่ายบิลรอบที่แล้วผ่านแอปเรียบร้อยแล้วครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบพบยอดชำระเรียบร้อยแล้วค่ะ ขอบคุณมากค่ะ 😊"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอดูเนตโรมมิ่งหน่อยจ้า",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ตอนนี้อยู่ญี่ปุ่นครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีต้อนรับสู่ประเทศญี่ปุ่นค่ะ ไม่ทราบว่าต้องการให้ช่วยดูแลเรื่องใดเป็นพิเศษไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "How much data left for roaming?",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "I am in London now"
+      },
+      {
+        "role": "assistant",
+        "content": "Welcome to London! How can I help you today?"
+      }
+    ]
+  },
+  {
+    "user_message": "ยอดโรมมิ่งเหลือปะ",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สอบถามครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ค่ะ สอบถามได้เลยค่ะ ยินดีให้บริการค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เลือกข้อ 1 ค่ะ อยากเช็คเน็ต",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดีค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "สอบถามเรื่องโรมมิ่งหน่อย"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีค่ะ ต้องการทราบข้อมูลด้านใดคะ [Options: {1: เช็คยอดการใช้งาน, 2: สมัครแพ็กเกจ, 3: ยกเลิกบริการ}]"
+      }
+    ]
+  },
+  {
+    "user_message": "ตรจสอบเนตโรมมิ่งให้หน่อยคร้า 🙏",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดี"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "รบกวณช่วยเช็คข้อมูลให้ที"
+      }
+    ]
+  },
+  {
+    "user_message": "เน็ตโรมมิ่งเหลือเท่าไหร่ อะ",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดีครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อยากเช็คยอดโรมมิ่ง"
+      }
+    ]
+  },
+  {
+    "user_message": "เช็คเนตให้หน่อยดิ",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดีค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อยากดูข้อมูลโรมมิ่ง"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการตรวจสอบข้อมูลส่วนใดคะ [Options: {1: เช็คยอดเน็ตคงเหลือ, 2: ตรวจสอบวันหมดอายุ, 3: เปลี่ยนแพ็กเกจ}]"
+      }
+    ]
+  },
+  {
+    "user_message": "ตอนนี้ใช้โรมมิ่งไปเท่าไหร่แล้วคะ",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตที่บ้านช้ามากเลยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ รบกวนแจ้งหมายเลขโทรศัพท์เพื่อตรวจสอบสัญญาณให้ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "098765XXXX ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบแล้วสัญญาณในพื้นที่ปกติค่ะ แนะนำให้ลองรีสตาร์ทเครื่องนะคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อยากรู้ว่าเน็ตโรมมิ่งที่สมัครไว้จะหมดวันไหน",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดีค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "พอดีเดินทางไปต่างประเทศค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีค่ะ ไม่ทราบว่าเดินทางไปประเทศไหนคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ลืืมเช็คเนตโรมมิ่งเลย เหลือเท่าไหร่มัยคะ 😅",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดีค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "เดินทางไปสิงคโปร์ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขอให้เดินทางโดยสวัสดิภาพนะคะ ต้องการให้ช่วยเรื่องแพ็กเกจโรมมิ่งไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ช่วยดูยอดเน็ตโรมมิ่งให้หน่อยครับ",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากซื้อ iPhone 15 โปรโมชั่นมีอะไรบ้าง"
+      },
+      {
+        "role": "assistant",
+        "content": "ตอนนี้มีโปรผ่อน 0% 10 เดือน และรับส่วนลดค่าเครื่องเมื่อสมัครแพ็กเกจรายเดือนค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "เดี๋ยวขอดูก่อนครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้เลยค่ะ หากสนใจสามารถแจ้งเจ้าหน้าที่ได้ทันทีเลยนะคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เช็คยอดเน็ตโรมมิ่งให้ทีครับ 081234XXXX",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดีครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ช่วยคะ"
+      },
+      {
+        "role": "user",
+        "content": "อยากรู้เรื่องแพ็กเกจที่ใช้อยู่"
+      },
+      {
+        "role": "assistant",
+        "content": "คุณลูกค้าใช้แพ็กเกจ Ready2Fly Asia 10GB ราคา 399 บาทค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "โอเคครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "เนตโรมมิ่งเหลือพอมั้ย จะกลับพรุ่งนี้แล้ว 😭",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอเปิดซิมใหม่หน่อยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถเปิดซิมผ่านแอป myAIS ได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "เปิดได้แล้วค่ะ ขอบคุณค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีค่ะ มีเรื่องอื่นสอบถามเพิ่มเติมไหมคะ"
+      },
+      {
+        "role": "user",
+        "content": "อ้อ แล้วเรื่องเน็ตโรมมิ่งล่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เช็คยอดเน็ตโรมมิ่งให้หน่อยค่ะ",
+    "intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ทำไมบิลเดือนนี้แพงจัง"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ รบกวนแจ้งเบอร์โทรศัพท์เพื่อตรวจสอบรายละเอียดค่าใช้จ่ายให้ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "090123XXXX ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบพบว่ามีการใช้งาน data เกินแพ็กเกจในเดือนที่ผ่านมาค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อ๋อ โอเคค่ะ"
+      }
+    ]
+  }
+]

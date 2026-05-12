@@ -1,0 +1,332 @@
+[
+  {
+    "user_message": "ขอดูประวัติการใช้เน็ตย้อนหลังหน่อยค่ะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": []
+  },
+  {
+    "user_message": "เช็คประวัติแพ็กเนตย้อนหลังให้หน่อยค๊าา 🙏",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": []
+  },
+  {
+    "user_message": "091234XXXX ขอเช็คประวัติการใช้ data ย้อนหลังด้วยครับ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "ยินดีตรวจสอบให้ค่ะ รบกวนขอทราบหมายเลขโทรศัพท์ที่ต้องการเช็คข้อมูลด้วยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วประวัติการใช้เน็ตเดือนก่อนดูตรงไหนได้บ้างคะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ทำไมเน็ตแถวบ้านสัญญาณอ่อนจังเลยคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอดูย้อนหลังหน่อยว่าเดือนที่แล้วใช้ไปเท่าไหร",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "ขณะนี้แพ็กเกจเน็ตของคุณเหลือเพียง 500MB จะหมดอายุในอีก 2 วันค่ะ ต้องการสมัครแพ็กเกจเสริมเพิ่มไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอประวัติการใช้เน็ต 2 เดือนล่าสุดครับ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ตอนนี้เหลือเน็ตเท่าไหร่ครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "หมายเลข 091234XXXX มีอินเทอร์เน็ตคงเหลือ 12.4 GB จากทั้งหมด 20 GB ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "งั้นขอดูประวัติแพ็กเกจย้อนหลังหน่อยค่ะว่าเคยใช้ตัวไหน",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ ตรวจสอบเบื้องต้นพบว่ามีการใช้งาน Data เกินจากแพ็กเกจหลักค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เช็คประวัติการใช้เน็ตค่ะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "ต้องการให้แอดมินช่วยดูแลด้านไหนคะ? [Options: {เช็คยอดค้างชำระ, ตรวจสอบแพ็กเกจปัจจุบัน, เช็คประวัติการใช้งาน}]"
+      },
+      {
+        "role": "user",
+        "content": "เลือกเช็คประวัติการใช้งานค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอรายละเอียกย้อนหลัง 3 เดือนค้าบ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากตรจสอบว่าเดือ่นที่แล้วใช้เนตไปเท่าไหร"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถตรวจสอบได้ค่ะ คุณลูกค้าต้องการดูย้อนหลังกี่เดือนดีคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อ้อ แล้วช่วยเช็คประวัติการใช้เน็ตย้อนหลังของเบอร์นี้ให้ด้วยได้มัยคะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ถ้าไปเกาหลีต้องสมัคร roaming ตัวไหนดีคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำแพ็กเกจ Ready2Fly ค่ะ เริ่มต้น 399 บาท ใช้งานได้ 10 วันค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "โอเคค่ะ ขอบคุณมาก"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอดูประวัติการใช้ data ย้อนหลังหน่อย",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอดูยอดบิลเดือนล่าสุดหน่อย"
+      },
+      {
+        "role": "assistant",
+        "content": "ยอดค้างชำระของหมายเลข 091234XXXX ประจำรอบบิลนี้คือ 642 บาท กำหนดชำระวันที่ 15 นี้ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ทำไมมันเยอะจัง ขอดูรายละเอียดหน่อย"
+      }
+    ]
+  },
+  {
+    "user_message": "yes please check my data history",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "hello, i want check my data usage from last month please"
+      },
+      {
+        "role": "assistant",
+        "content": "I can help you with that. Could you please provide your phone number?"
+      },
+      {
+        "role": "user",
+        "content": "my number 091234XXXX"
+      }
+    ]
+  },
+  {
+    "user_message": "เดือนที่แล้วใช้แพ็กไรไปอะ ช่วยเช็คให้ที 555",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ตอนนี้มีโปรเน็ตอะไรแนะนำบ้าง"
+      },
+      {
+        "role": "assistant",
+        "content": "มีแพ็กเกจ 5G Max Speed 1199 บาท เน็ตไม่อั้น ความเร็วสูงสุด และโทรฟรีทุกเครือข่ายค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "แพงจัง"
+      }
+    ]
+  },
+  {
+    "user_message": "เออ แล้วขอดูประวัติการใช้งานเน็ตย้อนหลังหน่อยได้ป่าว",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "iPhone 15 Pro Max ตอนนี้ราคาเท่าไหร่คะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ราคาเริ่มต้น 41,900 บาทค่ะ หรือเลือกรับสิทธิ์ราคาพิเศษพร้อมแพ็กเกจรายเดือนได้ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "เอาเครื่องเก่ามาเทรดได้ไหม"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้ค่ะ สามารถนำเครื่องมาประเมินราคาได้ที่ AIS Shop ทุกสาขาเลยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอดูประวัติย้อนหลัง 2 เดือนหน่อยค่ะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เช็คยอดเงินคงเหลือให้หน่อย"
+      },
+      {
+        "role": "assistant",
+        "content": "หมายเลข 091234XXXX มียอดเงินคงเหลือ 15.50 บาท ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ทำไมเงินหายหมดเลย"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบพบว่ามีการหักค่าบริการแพ็กเกจเสริมอัตโนมัติค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวนเช็คประวัติแพ็กเกจย้อนหลังให้หน่อยได้ไหมคะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากลงทะเบียนซิมใหม่ต้องทำยังไง"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถลงทะเบียนผ่านแอป myAIS หรือนำบัตรประชาชนไปที่ AIS Shop ได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ลงในแอปเรียบร้อยแล้วค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ระบบดำเนินการลงทะเบียนสำเร็จแล้วค่ะ เริ่มใช้งานได้ทันทีเลยนะคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เช็คประวัติการใช้เนตย้อนหลังให้หน่อยดิ้",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เติมเงินไม่เข้า ทำไงดี"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนขอสลิปการเติมเงิน หรือหมายเลขที่ทำรายการเพื่อตรวจสอบให้ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ส่งรูปให้แล้วครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "จากการตรวจสอบ ยอดเงินเข้าสู่ระบบแล้วค่ะ แต่อาจมีการหักค่าแพ็กเกจที่ค้างชำระไว้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "งั้นขอดูประวัติการใช้เน็ตย้อนหลังก่อนตัดสินใจเปลี่ยนแพ็กเกจค่ะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ทำไมเน็ตช้ามากเลยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนลองปิด-เปิดโหมดเครื่องบินเพื่อรีเซ็ตสัญญาณดูก่อนนะคะ"
+      },
+      {
+        "role": "user",
+        "content": "ลองแล้วยังช้าเหมือนเดิม"
+      },
+      {
+        "role": "assistant",
+        "content": "อาจเป็นเพราะคุณลูกค้าใช้เน็ตครบตามปริมาณของแพ็กเกจแล้ว ทำให้ความเร็วลดลงค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำให้เปลี่ยนเป็นแพ็กเกจ 5G แบบไม่อั้น เริ่มต้น 699 บาทค่ะ สนใจไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "งั้นขอดูประวัติการใช้ data ของเดือนมกราคมแบบละเอียดหน่อยค่ะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอโต้แย้งยอดบิลเดือนมกราค่ะ มันผิดปกติ"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนคุณลูกค้าแจ้งรายละเอียดส่วนที่สงสัย หรือแคปหน้าจอมาให้แอดมินตรวจสอบได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "นี่ค่ะ [Image]"
+      },
+      {
+        "role": "assistant",
+        "content": "จากการตรจสอบ พบว่ามีการใช้ Data ในช่วงวันที่ 10-15 มกราคม สูงกว่าปกติค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ไม่ทราบว่าต้องการให้แอดมินเช็คประวัติแยกตามวันให้ไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "I want check history usage last 3 month",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "my internet slow"
+      },
+      {
+        "role": "assistant",
+        "content": "Which area are you using the service in?"
+      },
+      {
+        "role": "user",
+        "content": "bangkok"
+      },
+      {
+        "role": "assistant",
+        "content": "Please try to restart your device or reset network settings."
+      },
+      {
+        "role": "user",
+        "content": "no work, still slow"
+      }
+    ]
+  }
+]

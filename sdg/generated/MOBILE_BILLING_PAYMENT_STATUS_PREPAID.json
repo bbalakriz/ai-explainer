@@ -1,0 +1,336 @@
+[
+  {
+    "user_message": "ขอตรวจสอบสถานะการเติมเงินล่าสุดของเบอร์ 081234XXXX ค่ะ",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": []
+  },
+  {
+    "user_message": "เติมเงินไปแล้วแต่เงินยังไมเข้าอะ ช่วยเช็คให้หน่อยดิ 😭",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": []
+  },
+  {
+    "user_message": "อยากรู้ว่ายอดเติมเงินล่าสุดเข้าหรือยังคะ",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS Call Center ยินดีให้บริการค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เช็คยอดเติมเงินให้หน่อยค้าบ 098765XXXX",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่า มีอะไรให้ช่วยดูแลคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "I top up 100 baht but not enter yet. Please check.",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "Welcome to AIS. How can I help you today?"
+      }
+    ]
+  },
+  {
+    "user_message": "เออ แล้วก็อยากเช็คด้วยว่าที่เติมเงินไปเมื่อกี้เข้ายังอะ",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตช้ามากเลยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ รบกวนขอเบอร์โทรศัพท์เพื่อตรวจสอบสัญญาณค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เอาสถานะเติมเงินค่ะ",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เช็คเบอร์ 082345XXXX ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการตรวจสอบอะไรคะ [Options: เช็คยอดเงิน, สถานะเติมเงิน, เปลี่ยนแพ็กเกจ]"
+      }
+    ]
+  },
+  {
+    "user_message": "061234XXXX ค่าาา ตรจสอบให้หน่อย",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เติมเงินไม่เข้า"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนขอเบอร์โทรศัพท์ที่ทำรายการด้วยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เดี๋ยวขอเช็คยอดเงินในซิมก่อนว่าพอป่าว",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ไปญี่ปุ่นใช้เน็ตยังไงคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำแพ็กเกจ Ready2Fly ค่ะ เริ่มต้น 399 บาท"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวนตรวจสอบให้หน่อยค่ะว่ายอดเข้าหรือยัง",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สอบถามเรื่องการเติมเงินค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้ค่ะ ลูกค้าเติมเงินผ่านช่องทางไหนคะ"
+      },
+      {
+        "role": "user",
+        "content": "เติมผ่าน App K Plus ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ทำไมเงินยังไมเข้าอะ รบกวนเช็คให้หน่อยดิ 📱",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เนตหมด"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการสมัครแพ็กเกจเสริมไหมคะ"
+      },
+      {
+        "role": "user",
+        "content": "เติมเงินไปแล้วเนี่ย"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วถ้าเติมเงินเข้าไปแล้ว จะเช็คได้ไงว่าเงินเข้ายังคะ",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซิมใหม่เปิดใช้งานยังไง"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถกด *151*เลขบัตรประชาชน# โทรออกค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "โอเคค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "Did my last top-up successful?",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "Hello"
+      },
+      {
+        "role": "assistant",
+        "content": "Hi! How can I assist you?"
+      },
+      {
+        "role": "user",
+        "content": "I want to check my balance"
+      }
+    ]
+  },
+  {
+    "user_message": "089123XXXX เติมไป 200 บาทค่ะ ช่วยดูสถานะให้หน่อย",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ช่วยด้วยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "เกิดปัญหาอะไรขึ้นคะ"
+      },
+      {
+        "role": "user",
+        "content": "เติมเงินแล้วเงินหาย"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ รบกวนขอเบอร์โทรศัพท์และจำนวนเงินที่เติมค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เดี๋ยวก่อนค่ะ ขอเช็คยอดเงินในเบอร์เติมเงินก่อนว่ามีเท่าไหร่",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "มี iPhone 15 โปรโมชั่นอะไรบ้าง"
+      },
+      {
+        "role": "assistant",
+        "content": "มีโปรผ่อน 0% 10 เดือนค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "น่าสนใจค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการให้เจ้าหน้าที่ติดต่อกลับเพื่อแจ้งรายละเอียดไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "094567XXXX จ้าาา ดูให้หน่อยว่าเงินเข้ามัย",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เติมเงินผ่านตู้"
+      },
+      {
+        "role": "assistant",
+        "content": "ตู้เติมเงินของเจ้าไหนคะ"
+      },
+      {
+        "role": "user",
+        "content": "ตู้บุญเติมค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนขอเบอร์โทรศัพท์เพื่อตรวจสอบค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อ่า แต่หนูใช้แบบเติมเงิน อยากรู้ว่ายอดเงินตอนนี้พอสมัครปะ",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากเปลี่ยนแพ็กเกจเน็ต"
+      },
+      {
+        "role": "assistant",
+        "content": "ตอนนี้มีแพ็กเกจแนะนำ 5G Max Speed ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ราคาเท่าไหร่คะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ราคา 699 บาทต่อเดือนค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ช่วยเช็คสถานะการเติมเงินล่าสุดให้หน่อยว่าหักค่าอะไรไปหรือเปล่า",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สอบถามยอดเงินค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีค่ะ ขอทราบเบอร์โทรศัพท์ด้วยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "081111XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบพบว่ายอดเงินคงเหลือ 10 บาทค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อ้าว เพิ่งเติมไป 100 นะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เอ้อ แล้วที่เติมเงินไปเมื่อเช้าเข้ายังอะ ตรจสอบให้ที 😅",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตช้ามากกก"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ รบกวนรีสตาร์ทเครื่องก่อนนะคะ"
+      },
+      {
+        "role": "user",
+        "content": "ทำแล้วไม่หาย"
+      },
+      {
+        "role": "assistant",
+        "content": "ขอตรวจสอบพื้นที่ใช้งานค่ะ รบกวนแจ้งพิกัด"
+      },
+      {
+        "role": "user",
+        "content": "อยู่แถวสยามค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "But I top up 50 baht yesterday, is it success?",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "I have problem with my SIM"
+      },
+      {
+        "role": "assistant",
+        "content": "Could you please provide your phone number?"
+      },
+      {
+        "role": "user",
+        "content": "082222XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "Checking... your SIM is active."
+      },
+      {
+        "role": "user",
+        "content": "Okay thanks"
+      }
+    ]
+  }
+]

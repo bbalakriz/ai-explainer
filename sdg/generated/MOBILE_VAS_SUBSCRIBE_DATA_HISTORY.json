@@ -1,0 +1,344 @@
+[
+  {
+    "user_message": "รบกวนตรวจสอบประวัติการสมัครบริการเสริมย้อนหลังให้หน่อยค่ะ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": []
+  },
+  {
+    "user_message": "เช็คประวัติบริการเสริมให้หน่อยค้าบ สมัครไรไปมั่งอะ 😅",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": []
+  },
+  {
+    "user_message": "เออ แล้วช่วยเช็คประวัติการสมัครบริการเสริมให้ด้วยได้ป่ะ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ทำไมเน็ตแถวบ้านช้าจังเลยค่ะ สัญญาณไม่ค่อยมีเลย"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องขออภัยในความไม่สะดวกด้วยค่ะ รบกวนขอทราบพื้นที่การใช้งาน หรือหมายเลขโทรศัพท์เพื่อตรวจสอบสัญญาณในพื้นที่ให้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "091234XXXX ค่ะ อยากดูประวัติการสมัครบริการเสริมย้อนหลัง",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS Call Center ยินดีให้บริการค่ะ เพื่อความถูกต้องในการตรวจสอบ รบกวนขอทราบหมายเลขโทรศัพท์ที่ต้องการเช็คข้อมูลค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อยากรู้วว่าเคยสมัครเนตเสริมหรือพวกบริการอื่นไรไปบ้างอะ รายละเอียกหน่อย",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้แอดมินช่วยดูแลในวันนี้คะ 😊"
+      }
+    ]
+  },
+  {
+    "user_message": "Can u check my VAS subscribe history pls?",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "my bill is too high this month"
+      },
+      {
+        "role": "assistant",
+        "content": "I'm sorry to hear that. Let me check the details for you. Could you please provide your phone number?"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอดูประวัติย้อนหลังของเดือนที่แล้วด้วยค่ะ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ตอนนี้เบอร์ฉันมีบริการเสริมอะไรที่เสียเงินอยู่บ้างคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "จากการตรวจสอบ หมายเลขของท่านมีบริการเสริม 'ข่าวเด่นรายวัน' ราคา 5 บาท/วัน ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "โอเคครับ อีกเรื่องนึง ช่วยตรวจประวัติการสมัครบริการเสริมให้หน่อย",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ไปญี่ปุ่นเดือนหน้า ใช้แพ็กเกจ Roaming ตัวไหนดีครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "สำหรับประเทศญี่ปุ่น แนะนำแพ็กเกจ Ready2Fly ค่ะ เริ่มต้น 399 บาท ใช้งานเน็ตได้ 10GB นาน 10 วันค่ะ [Options: {ดูแพ็กเกจทั้งหมด, สมัครเลย}]"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วเดือนก่อนสมัครพวกดูดวงไรไปป่าวอะ เช็คให้หน่อยยย",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เช็คยอดเงินคงเหลือให้หน่อย"
+      },
+      {
+        "role": "assistant",
+        "content": "ยอดเงินคงเหลือปัจจุบันของหมายเลข 091234XXXX คือ 150.50 บาทค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ช่วยสรุปประวัติการสมัครทั้งหมดของปีนี้ให้หน่อยค่ะ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "เดือนมีนาคม 2567 ท่านได้สมัครบริการ 'ริงโทนเพลงฮิต' ราคา 35 บาท/เดือน ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "แล้วเพลงนี้สมัครไว้วันที่เท่าไหร่นะคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สมัครเมื่อวันที่ 12 มีนาคม 2567 ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวนเช็คประวัติการสมัครบริการเสริมของเบอร์นี้ด้วยครับ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซิมการ์ดเพิ่งได้รับ อยากเปิดใช้งานซิมค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถเปิดใช้งานได้ด้วยตนเองผ่านแอป myAIS หรือกด *151*เลขบัตรประชาชน# โทรออก ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "เปิดเรียบร้อยแล้วครับ ขอบคุณครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "จะดูประวัติการสมัครบริการเสริมด้วยค่ะ ตรจสอบให้ที 🙏",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ทำไมบิลเดือนนี้แพงจัง"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนขอทราบหมายเลขโทรศัพท์ เพื่อตรวจสอบรายละเอียดค่าใช้จ่ายให้ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "082345XXXX ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "I want to see history of VAS subscribe, can u help?",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "my internet is very slow"
+      },
+      {
+        "role": "assistant",
+        "content": "We apologize for the inconvenience. Please try restarting your device or checking your data balance."
+      },
+      {
+        "role": "user",
+        "content": "already did, still slow"
+      }
+    ]
+  },
+  {
+    "user_message": "งั้นขอรายละเอียดประวัติการสมัครบริการเสริมทั้งหมดเลยค่ะ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ค่าบริการส่วนเกินในบิลคือค่าอะไรคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "จากการตรวจสอบ เป็นค่าบริการเสริม SMS ข่าวสารและบันเทิงค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ฉันจำไม่ได้ว่าสมัครตอนไหน"
+      },
+      {
+        "role": "assistant",
+        "content": "ทางเราสามารถตรวจสอบวันที่และเวลาที่สมัครให้ได้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เอ้อ ลืมเลย ช่วยเช็คประวัติการสมัครบริการเสริมของเบอร์เก่าให้หน่อย",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากเปลี่ยนเป็น iPhone 15 Pro Max ต้องจ่ายเพิ่มเท่าไหร่คะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สำหรับลูกค้าปัจจุบัน มีโปรโมชั่นนำเครื่องเก่ามาแลกเครื่องใหม่ ลดสูงสุด 5,000 บาทค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "แล้วต้องใช้แพ็กเกจรายเดือนขั้นต่ำเท่าไหร่"
+      },
+      {
+        "role": "assistant",
+        "content": "เริ่มต้นที่แพ็กเกจ 699 บาทขึ้นไปค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เคๆ แล้วช่วยดูให้หน่อยว่าเคยสมัครพวก SMS ข่าวอะไรไว้มั้ยอะ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตหมดไวมากกก"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำให้ลองตรวจสอบการใช้งานผ่านแอป myAIS เพื่อดูว่าแอปไหนใช้เน็ตเยอะที่สุดค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ลองแล้วค่ะ ไม่ค่อยช่วยเลย"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ สนใจรับแพ็กเกจเสริมเน็ตไม่อั้นเพิ่มไหมคะ?"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอดูประวัติการสมัครบริการนี้ย้อนหลังหน่อยค่ะ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "คุณลูกค้าสามารถเลือกทำรายการได้ดังนี้ค่ะ [Options: {เช็คยอดค้างชำระ, ตรวจสอบแพ็กเกจ, จ่ายบิล}]"
+      },
+      {
+        "role": "user",
+        "content": "เช็คยอดค้างชำระค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยอดค้างชำระปัจจุบันคือ 450 บาท โดยมีค่าบริการเสริมรวมอยู่ 30 บาทค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ค่าบริการเสริมคือค่าอะไร"
+      },
+      {
+        "role": "assistant",
+        "content": "เป็นค่าบริการสมัคร SMS ดูดวงรายสัปดาห์ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อ้อ อีกเรื่องครับ ช่วยเช็คประวัติการสมัครบริการเสริมย้อนหลังให้ที",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "จ่ายบิลผ่านช่องทางไหนได้บ้างครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถจ่ายผ่านแอป myAIS, K-Plus, SCB Easy หรือ 7-Eleven ได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ในแอป myAIS ต้องกดตรงไหน"
+      },
+      {
+        "role": "assistant",
+        "content": "กดที่เมนู 'จ่ายบิล' ในหน้าแรกได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "โอเคครับ เรียบร้อย"
+      }
+    ]
+  },
+  {
+    "user_message": "ลืืมถามเลยยย เคยสมัครบริการเสริมไรไว้บ้างอะ ขอดูประวัติหน่อยยย 💸",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตช้ามากเลยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนรีสตาร์ทเครื่องหนึ่งครั้ง หรือลองเปิด-ปิด Airplane Mode ดูนะคะ"
+      },
+      {
+        "role": "user",
+        "content": "ยังช้าเหมือนเดิมเลย"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ สนใจสมัครแพ็กเกจเน็ตเพิ่มความเร็วไหมคะ?"
+      },
+      {
+        "role": "user",
+        "content": "เอาตัว 5G แบบไม่อั้นค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวนขอประวัติการสมัครบริการเสริมย้อนหลัง 3 เดือนล่าสุดด้วยค่ะ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "เบอร์ 091234XXXX ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบพบว่าเป็นคุณสมชายนะคะ ยืนยันตัวตนเรียบร้อยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ตอนนี้ใช้แพ็กเกจอะไรอยู่คะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ปัจจุบันใช้แพ็กเกจ 5G Max Speed 1199 บาท/เดือน ค่ะ"
+      }
+    ]
+  }
+]

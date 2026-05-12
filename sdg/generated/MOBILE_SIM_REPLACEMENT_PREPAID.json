@@ -1,0 +1,376 @@
+[
+  {
+    "user_message": "ซิมเสียค่ะ อยากขอเปลี่ยนซิมเบอร์เดิมของระบบเติมเงิน",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": []
+  },
+  {
+    "user_message": "ทำซิมหายครับ เบอร์เติมเงิน 081234XXXX อยากได้ซิมใหม่เบอร์เดิม",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": []
+  },
+  {
+    "user_message": "ช่างมันเถอะค่ะ พอดีเพิ่งนึกได้ว่าซิมอีกเบอร์ที่เป็นเติมเงินมันหาย อยากขอเปลี่ยนซิมใหม่ค่ะ",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตช้ามากเลยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ รบกวนคุณลูกค้าแจ้งพื้นที่การใช้งานเพื่อให้ทางเราตรวจสอบสัญญาณให้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "โอเคครับ แต่ตอนนี้ซิมผมพังอะ อยากเปลี่ยนซิมเบอร์เติมเงินตัวเดิม",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สอบถามโปรเน็ตหน่อยครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "สำหรับลูกค้าเติมเงิน มีแพ็กเกจ 5G Max Speed เริ่มต้น 200 บาทต่อเดือนค่ะ สนใจรายละเอียดเพิ่มเติมไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "SIM card broken. I want new SIM but same number for my prepaid.",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "My sim not work."
+      },
+      {
+        "role": "assistant",
+        "content": "Could you please provide more details about the issue or your phone number?"
+      }
+    ]
+  },
+  {
+    "user_message": "งั้นขอเปลี่ยนซิมเบอร์เติมเงินเลยค่ะ",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "จ่ายบิลยังไงคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "คุณลูกค้าสามารถชำระค่าบริการผ่านแอป myAIS, Mobile Banking หรือ 7-Eleven ได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ขอบคุณค่ะ อ้อ แล้วถ้าซิมเติมเงินหายต้องทำไงคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถขอทำซิมใหม่เบอร์เดิมได้ที่ AIS Shop หรือ Telewiz ทุกสาขาค่ะ หรือให้ทางเราช่วยประสานงานให้ดีคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ช่วยดำเนินการเปลี่ยนซิมให้หน่อยค้าบ",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซิมเสียครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนสอบถามว่าเป็นซิมระบบเติมเงินหรือรายเดือนคะ"
+      },
+      {
+        "role": "user",
+        "content": "เติมเงินครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "แต่มันขึ้นว่าซิมไม่ทำงานอะ อยากขอเปลี่ยนซิมเบอร์เติมเงินใหม่ได้มัย",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอเช็คยอดเงินหน่อยครับ 098765XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบพบว่าเบอร์ 098765XXXX มียอดเงินคงเหลือ 120 บาทค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ลืมไปเลยว่าซิมเก่ามันร้าว อยากเปลี่ยนซิมใหม่เบอร์เติมเงินก่อนไปต่างประเทศครับ",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากเปิดโรมมิ่งไปญี่ปุ่นครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถสมัครแพ็กเกจ Ready2Fly ได้ผ่านแอป myAIS หรือกด *111# ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ใช่ค่ะ ขอเปลี่ยนซิมเบอร์เติมเงินนี้เลย",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซิมหายค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการให้ทางเราช่วยอายัดเบอร์เพื่อป้องกันการใช้งานก่อนไหมคะ"
+      },
+      {
+        "role": "user",
+        "content": "อายัดด้วยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ดำเนินการอายัดเรียบร้อยค่ะ ต้องการทำซิมใหม่โดยใช้เบอร์เดิมต่อเลยไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "โอเคครับ ขอเปลี่ยนซิมเบอร์เติมเงินตัวนี้เลย 062123XXXX",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตใช้ไม่ได้เลยครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนคุณลูกค้าลองรีสตาร์ทเครื่องหนึ่งครั้ง หรือเปิด-ปิดโหมดเครื่องบินดูนะคะ"
+      },
+      {
+        "role": "user",
+        "content": "ลองแล้วไม่หายครับ สงสัยซิมเสีย"
+      },
+      {
+        "role": "assistant",
+        "content": "หากซิมการ์ดชำรุด คุณลูกค้าสามารถดำเนินการเปลี่ยนซิมใหม่เบอร์เดิมได้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "Yes please, I want to change it now.",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "Hello"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "I lost my prepaid sim card"
+      },
+      {
+        "role": "assistant",
+        "content": "You can get a replacement SIM with the same number. Would you like to proceed?"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอเปลี่ยนซิมเบอร์เติมเงินผ่านทางนี้เลยได้ปะ",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "มีโปรโมชั่นย้ายค่ายอะไรบ้าง"
+      },
+      {
+        "role": "assistant",
+        "content": "ตอนนี้มีโปรย้ายค่ายเบอร์เดิม รับส่วนลดค่าบริการรายเดือน 50% ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ยังไม่ย้ายดีกว่าครับ แต่พอดีซิมเติมเงินผมมันพัง"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถเปลี่ยนซิมใหม่เบอร์เดิมได้ที่ AIS Shop หรือดำเนินการผ่านช่องทางออนไลน์ได้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เออ แล้วถ้าจะเปลี่ยนซิมเติมเงินเพราะมันเก่ามากแล้วต้องทำไงครับ",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สมัครเน็ตรายวันให้หน่อย"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำแพ็กเกจเน็ตไม่อั้น 24 บาท ใช้งานได้ 24 ชม. ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "เอาอันนี้ครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ดำเนินการสมัครแพ็กเกจเรียบร้อยแล้วค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ใช่ครับ รบกวนด้วยครับ 🙏",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซิมพังครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนแจ้งเบอร์โทรศัพท์ที่ต้องการเปลี่ยนซิมด้วยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "095123XXXX ครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรจสอบพบว่าเป็นระบบเติมเงินค่ะ ต้องการเปลี่ยนซิมใหม่เบอร์เดิมใช่ไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "มีครับ พอดีซิมเติมเงินอีกเบอร์หาย อยากขอเปลี่ยนซิมใหม่ครับ",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากรู้ยอดค้างชำระครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "จากการตรวจสอบ เบอร์นี้ไม่มียอดค้างชำระค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อ้าวเหรอ ขอบคุณครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีค่ะ มีข้อมูลด้านอื่นให้ช่วยดูแลเพิ่มเติมไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เอาซิมปกติเหมือนเดิมค่ะ ขอเปลี่ยนซิมเบอร์เติมเงินตัวนี้เลย",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซิมเสียค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "เป็นซิมการ์ดปกติหรือ eSIM คะ"
+      },
+      {
+        "role": "user",
+        "content": "ซิมปกติค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการเปลี่ยนเป็นซิมปกติเหมือนเดิม หรือเปลี่ยนเป็น eSIM ดีคะ [Options: {ซิมปกติ, eSIM}]"
+      }
+    ]
+  },
+  {
+    "user_message": "งั้นขอเปลี่ยนซิมเบอร์เติมเงินใหม่เลยได้มั้ยคะ",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ รบกวนแจ้งพื้นที่ใช้งานปัจจุบันให้หน่อยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "เป็นทุกที่เลยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขอทราบเบอร์โทรศัพท์เพื่อตรวจสอบสัญญาณในพื้นที่ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "082345XXXX ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบแล้วสัญญาณในพื้นที่ปกติค่ะ อาการนี้อาจเกิดจากซิมการ์ดเสื่อมสภาพค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เดี๋ยวก่อนครับ พอดีซิมผมมันเสีย อยากขอเปลี่ยนซิมเบอร์เติมเงินก่อน",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "แนะนำเป็น 5G Max Speed 599 บาท เน็ตไม่อั้น ความเร็วสูงสุดค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "แพงไป มีที่ถูกกว่านี้มั้ย"
+      },
+      {
+        "role": "assistant",
+        "content": "มีโปร 299 บาท เน็ต 60GB ความเร็วสูงสุด หลังจากนั้นใช้ได้ต่อเนื่องที่ 4Mbps ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "โอเคครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการให้ดำเนินการสมัครแพ็กเกจนี้เลยไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ใช่ครับ ช่วยเปลี่ยนซิมให้หน่อยครับ",
+    "intent": "MOBILE_SIM_REPLACEMENT_PREPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "รบกวนแจ้งเบอร์โทรศัพท์เพื่อตรวจสอบข้อมูลค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "099888XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบพบเป็นระบบเติมเงินนะคะ"
+      },
+      {
+        "role": "user",
+        "content": "ครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการทำซิมใหม่เบอร์เดิมใช่ไหมคะ [Options: {ใช่, ไม่ใช่}]"
+      }
+    ]
+  }
+]

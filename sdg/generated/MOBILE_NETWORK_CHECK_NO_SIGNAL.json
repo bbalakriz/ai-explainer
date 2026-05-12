@@ -1,0 +1,336 @@
+[
+  {
+    "user_message": "รบกวนตรวจสอบสัญญาณให้หน่อยค่ะ อยู่แถวบางนาแล้วไม่มีสัญญาณเลย",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": []
+  },
+  {
+    "user_message": "เนตหายค้าบ โทรออกก้อไม่ได้ 😭 ช่วยดูหน่อย",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": []
+  },
+  {
+    "user_message": "ไม่มีขีดสัญญาณเลยครับ",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ วันนี้มีอะไรให้ช่วยดูแลคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "สัญญาณมัยหายไปไหนหมดอะ พึ่งเป็นเมื่อกี้เลย",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "แจ้งปัญหาการใช้งานด้านใดคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "My phone no signal help me please",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "Hello! How can AIS help you today?"
+      }
+    ]
+  },
+  {
+    "user_message": "เออ แล้วตอนนี้ทำไมเครื่องผมไม่มีสัญญาณเลยอะครับ",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากจ่ายบิลที่ค้างไว้ครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถชำระผ่านแอป myAIS ได้เลยค่ะ ยอดค้างชำระของท่านคือ 450 บาทค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แต่ตอนนี้เหมือนสัญญาณจะหายไปเลยครับ โทรออกไม่ได้",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ไปต่างประเทศต้องเปิด roaming ยังไงคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "คุณลูกค้าสามารถกด *125 หรือทำรายการผ่าน myAIS ได้เลยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "091234XXXX ครับ ไม่มีสัญญาณเลย",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "รบกวนขอหมายเลขโทรศัพท์ที่พบปัญหาเพื่อตรวจสอบให้ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "เบอร์ที่ใช้ประจำเลยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ตรจสอบให้ทีครับว่าทำไมไม่มีคลื่นเลย 📱",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "ไม่ทราบว่าตอนนี้ใช้งานอยู่ที่พื้นที่ไหนคะ"
+      },
+      {
+        "role": "user",
+        "content": "อยู่คอนโดแถวสุขุมวิทครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "โทรออกไม่ได้เลยอะ ลองรีสตาร์ทแล้วก็ยังไม่มา",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สัญญาณมือถือมีปัญหา"
+      },
+      {
+        "role": "assistant",
+        "content": "เบื้องต้นแนะนำให้ลองปิด-เปิดเครื่องใหม่ดูก่อนนะคะ"
+      },
+      {
+        "role": "user",
+        "content": "ทำแล้วครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วเรื่องสัญญาณล่ะครับ ทำไมตอนนี้มันไม่ขึ้นเลย",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากเปลี่ยนแพ็กเกจเน็ตเป็นแบบไม่อั้น"
+      },
+      {
+        "role": "assistant",
+        "content": "มีแพ็กเกจแนะนำเป็น 5G Max Speed 1199 บาทค่ะ สนใจรับข้อมูลเพิ่มเติมไหมคะ"
+      },
+      {
+        "role": "user",
+        "content": "เดี๋ยวขอดูก่อนครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "Sim no service since morning",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "Please describe the problem you are facing."
+      },
+      {
+        "role": "user",
+        "content": "I can't use my phone."
+      },
+      {
+        "role": "assistant",
+        "content": "Is it about the internet or calling?"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวณเช็คให้หน่อยครับ กานใช้งานโทรศัพท์ไม่ได้เลย สัญญาณหาย",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ช่วยด้วยครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "พบปัญหาการใช้งานด้านใดคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เออ แล้วเครื่องที่เพิ่งซื้อไปเนี่ย ทำไมไม่มีสัญญาณเลยครับ",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สอบถามโปรโมชั่นเครื่อง iPhone 15 พร้อมแพ็กเกจครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตอนนี้มีโปรย้ายค่ายเบอร์เดิม รับส่วนลดค่าเครื่องสูงสุด 5,000 บาทค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ซื้อมาแล้วครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขอบพระคุณที่ไว้วางใจ AIS ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "555 สัญญาณหายหมดเลยครับ พี่ช่วยดูให้หน่อยว่าเกิดจากอะไร 😅",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตช้ามากเลยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ รบกวนขอเบอร์โทรศัพท์เพื่อตรวจสอบพื้นที่นะคะ"
+      },
+      {
+        "role": "user",
+        "content": "082345XXXX ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบแล้ว พื้นที่ดังกล่าวมีการปรับปรุงเสาสัญญาณชั่วคราวค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ลืืมเช็ครายละเอียดเลยว่าต้องทำยังไง สรุปคือไม่มีสัญญาณเลยครับ",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "หากพบปัญหาสัญญาณหาย แนะนำให้ตรวจสอบการตั้งค่าเครือข่ายค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ตั้งค่ายังไงนะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ไปที่ การตั้งค่า > เครือข่ายมือถือ > เลือกเครือข่ายอัตโนมัติค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ทำตามแล้วครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "แต่ว่าตอนนี้มันขึ้น No Service อะครับ ทำยังไงดี",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เปิดเบอร์ใหม่ครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีต้อนรับสู่ AIS ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ต้องรอกี่ชั่วโมงถึงจะใช้งานได้"
+      },
+      {
+        "role": "assistant",
+        "content": "โดยปกติจะใช้เวลาเปิดสัญญาณภายใน 15-30 นาทีค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอเลือก 'เช็คพื้นที่' ครับ ดูให้หน่อยว่าทำไมไม่มีสัญญาณ",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ใช้งานมือถือไม่ได้เลย"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ ไม่ทราบว่าพบอาการแบบไหนคะ"
+      },
+      {
+        "role": "user",
+        "content": "ไม่มีขีดสัญญาณเลยครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "เบื้องต้นต้องการให้ช่วยดูแลด้านใดคะ [Options: { \"รีสตาร์ทเครื่อง\", \"เช็คพื้นที่\", \"ติดต่อเจ้าหน้าที่\" }]"
+      },
+      {
+        "role": "user",
+        "content": "เอาเช็คพื้นที่ครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "ไม่ไหวแล้วครับ สัญญาณหายไปเฉยๆ เลย โทรหาใครไม่ได้เลย",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ทำไมเน็ตช้าแบบนี้"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ รบกวนแจ้งพื้นที่ใช้งานให้ทราบหน่อยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อยู่แถวสยามครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "กำลังตรวจสอบให้สักครู่นะคะ"
+      },
+      {
+        "role": "user",
+        "content": "ช้ามากกก"
+      }
+    ]
+  },
+  {
+    "user_message": "เเถวบ้านไม่มีสัญญาณเลยค่ะ เป็นมา 2 วันแล้ว ช่วยดูให้ที",
+    "intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ช่วยดูแลคะ"
+      },
+      {
+        "role": "user",
+        "content": "สอบถามเรื่องสัญญาณค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "พบปัญหาในพื้นที่ไหนคะ"
+      },
+      {
+        "role": "user",
+        "content": "จังหวัดเชียงใหม่ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขอทราบอำเภอและตำบลที่พบปัญหาด้วยค่ะ"
+      }
+    ]
+  }
+]

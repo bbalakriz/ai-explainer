@@ -1,0 +1,336 @@
+[
+  {
+    "user_message": "รบกวนตรวจสอบปริมาณอินเทอร์เน็ตคงเหลือให้หน่อยค่ะ",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": []
+  },
+  {
+    "user_message": "เช็คเนตให้หน่อยค้าบ เหลือเท่าไหร่แล้ว 📱",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": []
+  },
+  {
+    "user_message": "อยากรู้อะว่าเน็ตเหลือเท่าไหร่",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดี"
+      }
+    ]
+  },
+  {
+    "user_message": "check my data balance please",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "Hello! How can I help you today? 😊"
+      }
+    ]
+  },
+  {
+    "user_message": "081234XXXX ค่ะ เช็คเน็ตให้ที",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "เพื่อความถูกต้อง รบกวนขอทราบเบอร์โทรศัพท์ที่ต้องการตรวจสอบด้วยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วเน็ตที่ใช้รายเดือนเหลือเยอะมั้ยคะ",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ยอดบิลเดือนนี้เท่าไหร่คะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยอดค้างชำระรอบบิลปัจจุบันคือ 450 บาทค่ะ ชำระได้ผ่านแอป myAIS นะคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอทราบยอดการใช้งานเน็ตปัจจุบันของเบอร์นี้ด้วยค่ะ",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สอบถามเรื่องโปรโมชั่นหน่อยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีค่ะ ตอนนี้มีโปร 5G Max Speed สำหรับลูกค้าใหม่และลูกค้าปัจจุบันสนใจรับรายละเอียดไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เนตเหลือกี่กิ๊กอะ 😅",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "หวัดดี"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ช่วยดูแลคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "how much data left?",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "Hi"
+      },
+      {
+        "role": "assistant",
+        "content": "Hello! How can I assist you today?"
+      }
+    ]
+  },
+  {
+    "user_message": "เออ แล้วตอนนี้เน็ตเหลือเท่าไหร่แล้วอะ ช่วยเช็คให้ที",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตช้ามากเลยค่ะ ทำไมเป็นงี้"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ รบกวนขอทราบเบอร์โทรศัพท์เพื่อ ตรจสอบ สัญญาณในพื้นที่ให้ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "098765XXXX ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ใช่ค่ะ ขอดูว่าเหลือเท่าไหร่",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เช็คข้อมูลการใช้งานหน่อย"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการตรวจสอบข้อมูลด้านใดคะ [Options: {เช็คยอดบิล, เช็คเน็ตคงเหลือ, ตรวจสอบแพ็กเกจ}]"
+      },
+      {
+        "role": "user",
+        "content": "เช็คเน็ต"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวนดูปริมาณเน็ตคงเหลือให้ด้วยนะคะ",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดีค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อยากทราบยอดการใช้งานของเดือนนี้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เนตเดือนนี้ใช้ไปเท่าไหร่แล้วอะ 💸",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ปรึกษาหน่อยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้เลยค่ะ ต้องการสอบถามเรื่องอะไรคะ"
+      },
+      {
+        "role": "user",
+        "content": "โปรเน็ตที่ใช้อยู่รู้สึกว่าแพงจัง มีตัวอื่นแนะนำมั้ย"
+      }
+    ]
+  },
+  {
+    "user_message": "ลืมถามเลย ตอนนี้เน็ตในไทยเหลือเท่าไหร่แล้วคะ",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "จะเดินทางไปญี่ปุ่นค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำแพ็กเกจ Ready2Fly สำหรับใช้งานต่างประเทศค่ะ เริ่มต้นเพียง 99 บาท"
+      },
+      {
+        "role": "user",
+        "content": "สมัครยังไงคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถกด *111# แล้วโทรออก หรือสมัครผ่านแอป myAIS ได้เลยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วแพ็กนี้ตอนนี้เหลือเน็ตให้ใช้กี่ GB คะ",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดี"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "สอบถามแพ็กเกจที่ใช้อยู่ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ปัจจุบันคุณลูกค้าใช้แพ็กเกจ 5G Max Speed 699 บาทต่อเดือนค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เช็คเนตคงเหลือให้ด้วยดิ 😭",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เฮลโหล"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ช่วยดูแลคะ"
+      },
+      {
+        "role": "user",
+        "content": "เน็ตช้ามากกก"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ รบกวนแจ้งเบอร์เพื่อ ตรจสอบ สัญญาณให้สักครู่นะคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ใช่ค้าบ ขอดูหน่อยว่าเหลือมัย",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ช่วยหน่อยครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีค่ะ ต้องการให้ช่วยเรื่องอะไรคะ"
+      },
+      {
+        "role": "user",
+        "content": "อยากดูยอดการใช้งานครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการดูยอดบิลค้างชำระ หรือตรวจสอบปริมาณเน็ตคงเหลือคะ [Options: {ยอดบิล, ยอดเน็ต}]"
+      }
+    ]
+  },
+  {
+    "user_message": "อ้อ อีกเรื่องนึงค่ะ เช็คเน็ตที่ใช้อยู่ให้หน่อยได้มั้ยคะ",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากได้ iPhone 15 ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "มีโปรโมชั่นผ่อน 0% นานสูงสุด 10 เดือนสำหรับลูกค้า Serenade ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ถ้าสั่งวันนี้ได้เครื่องวันไหนคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "จัดส่งถึงบ้านภายใน 1-3 วันทำการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ขอบคุณค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวนแจ้งปริมาณอินเทอร์เน็ตคงเหลือของรอบบิลนี้ด้วยค่ะ",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดี"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ขอข้อมูลเบอร์ 089123XXXX ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "เพื่อความปลอดภัย รบกวนยืนยันตัวตนด้วยการแจ้งเลขบัตรประชาชน 4 หลักสุดท้ายค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ยืนยันเรียบร้อยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เช็คเนตให้หน่อยดิว่าเหลือเท่าไหร่แล้ว 📱",
+    "intent": "MOBILE_USAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "หวัดดีจ้า"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ช่วยคะ"
+      },
+      {
+        "role": "user",
+        "content": "โปรเน็ตหมดวันไหนอะ"
+      },
+      {
+        "role": "assistant",
+        "content": "แพ็กเกจปัจจุบันจะหมดอายุวันที่ 30 ของเดือนนี้ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อ๋อโอเค"
+      }
+    ]
+  }
+]

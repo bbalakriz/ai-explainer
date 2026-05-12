@@ -1,0 +1,340 @@
+[
+  {
+    "user_message": "สวัสดีครับ ต้องการเปิดใช้งานซิมการ์ดรายเดือนที่เพิ่งสมัครไปครับ",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": []
+  },
+  {
+    "user_message": "ช่วยเปิดซิมรายเดือนให้หน่อยค้าบ พอดีรีบใช้มากก 😭",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": []
+  },
+  {
+    "user_message": "อ้อ แล้วก็ซิมใหม่ที่เพิ่งได้มา ช่วยเปิดใช้งานให้ด้วยได้มั้ยคะ",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ยอดบิลเดือนนี้เท่าไหร่คะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยอดค้างชำระปัจจุบันคือ 599 บาทค่ะ ชำระได้ผ่านแอป myAIS นะคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อยากเปิดใช้งานซิมรายเดือนคับ 081234XXXX",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ AIS ช่วยดูแลคุณลูกค้าในวันนี้คะ"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวนขอเปิดใช้งานซิมรายเดือนครับ",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "ยินดีต้อนรับสู่ AIS ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ช่างมันเถอะค่ะ แต่ช่วยเปิดใช้งานซิมรายเดือนเบอร์ 092345XXXX ให้หน่อยได้ไหมคะ พอดีจะรีบใช้",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ทำไมเน็ตช้าจัง ใช้อะไรก็โหลดไม่ขึ้นเลย ⚠️"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ รบกวนแจ้งพื้นที่ใช้งานหรือส่งพิกัดเพื่อให้เจ้าหน้าที่ตรวจสอบสัญญาณนะคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "088765XXXX จ้าา ช่วยตรจสอบให้ที",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซิมรายเดือนยังใช้ไม่ได้เลย"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ รบกวนแจ้งหมายเลขโทรศัพท์ที่ต้องการเปิดใช้งานด้วยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "please activate my postpaid sim now. number 099123XXXX",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "Welcome to AIS. How can I help you today?"
+      },
+      {
+        "role": "user",
+        "content": "I have new sim"
+      }
+    ]
+  },
+  {
+    "user_message": "เบอร์ 081234XXXX ครับ รบกวนด้วยครับ",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอทราบขั้นตอนการเปิดซิมรายเดือนครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ลูกค้าสามารถแจ้งเบอร์โทรศัพท์ที่ต้องการเปิดใช้งานเพื่อให้เจ้าหน้าที่ดำเนินการให้ได้เลยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วซิมรายเดือนที่มากับเครื่องเนี่ย ช่วยเปิดใช้งานให้เลยได้ปะ พอดีรีบใช้",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "มี iPhone 15 Pro Max ไหมครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "มีสินค้าพร้อมส่งค่ะ สนใจรับเครื่องพร้อมโปรโมชั่นรายเดือนไหมคะ"
+      },
+      {
+        "role": "user",
+        "content": "รับครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวณรีบหน่อยน้าา พอดีต้องใช้ติดต่องานด่วนนน 📱",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซิมรายเดือนเปิดยังไง"
+      },
+      {
+        "role": "assistant",
+        "content": "แจ้งเบอร์ที่ต้องการเปิดใช้งานได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "095555XXXX"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวนดำเนินการเปิดใช้งานให้ด้วยครับ",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อยากเปิดซิมรายเดือนครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนแจ้งเบอร์โทรศัพท์ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เออ แล้วซิมรายเดือนใบใหม่ที่เพิ่งได้มา ช่วยเปิด activate ให้ทีครับ เบอร์ 084444XXXX",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ไปญี่ปุ่นใช้แพ็กเกจไหนดีครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำ Ready2Fly ค่ะ เริ่มต้น 399 บาท ใช้งานได้ครอบคลุมเลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "โอเคครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "093333XXXX ค้าบ ช่วยเปิดให้ที มัยใช้ไม่ได้เลยย 😭",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ช่วยคะ"
+      },
+      {
+        "role": "user",
+        "content": "ซิมใช้ไม่ได้"
+      },
+      {
+        "role": "assistant",
+        "content": "เป็นซิมแบบเติมเงินหรือรายเดือนคะ"
+      },
+      {
+        "role": "user",
+        "content": "รายเดือนครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวนเปิดให้ทันทีเลยค่ะ",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอเปิดซิมรายเดือน"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนแจ้งเบอร์โทรศัพท์ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "082222XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบแล้วพบว่ายังไม่เปิดใช้งาน ต้องการให้เปิดทันทีเลยไหมคะ [Options: {ทันที, รอการเปิดใช้งาน}]"
+      }
+    ]
+  },
+  {
+    "user_message": "ช่างเรื่องเน็ตก่อนเถอะ ช่วยเปิดใช้งานซิมรายเดือนเบอร์ 087777XXXX ให้ก่อนได้มั้ย",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตหมดเร็วมาก เดือนนี้ใช้ไปเยอะมั้ย"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำแพ็กเกจเสริมเน็ตไม่ลดสปีดเพื่อความคุ้มค่าค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "แพงมั้ย"
+      },
+      {
+        "role": "assistant",
+        "content": "เริ่มต้นที่ 200 บาทต่อเดือนค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "my number is 096666XXXX, please open it fast!",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "Hello, AIS helper here. How can I assist you?"
+      },
+      {
+        "role": "user",
+        "content": "my sim not work"
+      },
+      {
+        "role": "assistant",
+        "content": "Is it a prepaid or postpaid sim?"
+      },
+      {
+        "role": "user",
+        "content": "postpaid"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวณช่วยเร่งให้หน่อยได้มั้ยค้าบ พอดีจะรีบใช้โทรหาลูกค้า 😅🙏",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เปิดซิมรายเดือนให้หน่อย"
+      },
+      {
+        "role": "assistant",
+        "content": "แจ้งเบอร์โทรศัพท์ด้วยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "081111XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "รอสักครู่นะคะ กำลังตรวจสอบข้อมูลในระบบค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "นานจังงง"
+      }
+    ]
+  },
+  {
+    "user_message": "อ้อ เปลี่ยนใจละ อยากใช้รายเดือนแทน ช่วยเปิดซิมรายเดือนเบอร์ 083333XXXX ให้ทีครับ",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซิมเติมเงินเปิดยังไง"
+      },
+      {
+        "role": "assistant",
+        "content": "กด *151*เลขบัตรประชาชน# แล้วโทรออกได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ทำแล้วไม่ได้"
+      },
+      {
+        "role": "assistant",
+        "content": "ขอเลขบัตรประชาชนเพื่อตรวจสอบความถูกต้องให้ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "110XXXXXXXXXX"
+      }
+    ]
+  },
+  {
+    "user_message": "เปิดทันทีเลยค่ะ ขอบคุณค่ะ",
+    "intent": "MOBILE_SIM_ACTIVATION_POSTPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อยากเปิดซิมรายเดือน"
+      },
+      {
+        "role": "assistant",
+        "content": "ขอเบอร์โทรศัพท์ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "094444XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบแล้ว เบอร์นี้สามารถเปิดใช้งานได้ค่ะ ต้องการเปิดตอนนี้เลยไหมคะ [Options: {ทันที, รอการเปิดใช้งาน}]"
+      }
+    ]
+  }
+]

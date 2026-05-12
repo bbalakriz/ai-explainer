@@ -1,0 +1,336 @@
+[
+  {
+    "user_message": "ขอทำซิมใหม่เบอร์เดิมค่ะ เป็นรายเดือน",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": []
+  },
+  {
+    "user_message": "ซิมรายเดือนหายครับ ต้องทำยังไงบ้าง",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": []
+  },
+  {
+    "user_message": "เนตไม่วิ่งเลย มัยเปลี่ยนซิมรายเดือนได้ปะ",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ช่วยดูแลคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "I want change sim card for my postpaid number please",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "Hello! How can I help you today?"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอเปลี่ยนซิมรายเดือนเบอร์ 081234XXXX ครับ",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "ยินดีให้บริการค่ะ ต้องการติดต่อเรื่องอะไรคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เออ แล้วถ้าจะเปลี่ยนซิมรายเดือนใหม่ต้องทำไง",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ทำไมเน็ตช้าจัง"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ รบกวนขอทราบพื้นที่ที่ใช้งานเพื่อตรวจสอบสัญญาณให้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอเปลี่ยนซิมรายเดือนใหม่ค้าบ พอดีทำหาย 555",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีเรื่องอะไรให้ช่วยดูแลแจ้งได้เลยนะคะ"
+      },
+      {
+        "role": "user",
+        "content": "สวัสดีครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอซิมใหม่รายเดือนค่ะ 😭",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ช่วยด้วยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "Lost my sim card postpaid. want new one same number.",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "Hello, how can I assist you?"
+      },
+      {
+        "role": "user",
+        "content": "hi"
+      }
+    ]
+  },
+  {
+    "user_message": "เปลี่ยนเป็นซิมรายเดือนใบใหม่ได้ที่ไหนบ้าง",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "จะไปต่างประเทศ ใช้ Roaming ยังไง"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถสมัครแพ็กเกจ Roaming ได้ผ่านแอป myAIS ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ขอบคุณครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "อยากได้รายละเอียกการเปลี่ยนซิมรายเดือนหน่อยครับ",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ช่วยคะ"
+      },
+      {
+        "role": "user",
+        "content": "สอบถามเรื่องซิมครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้เลยค่ะ ต้องการทำรายการด้านไหนคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เอาแบบรายเดือนครับ 📱✨",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ต้องการเปลี่ยนซิมใหม่ใช่ไหมคะ"
+      },
+      {
+        "role": "user",
+        "content": "ใช่ครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ไม่ทราบว่าเป็นซิมแบบเติมเงินหรือรายเดือนคะ [Options: {เติมเงิน, รายเดือน}]"
+      }
+    ]
+  },
+  {
+    "user_message": "จัดให้หน่อยครับ เบอร์รายเดือนเดิมเลย",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ซิมพังอะ"
+      },
+      {
+        "role": "assistant",
+        "content": "เสียใจด้วยนะคะ ต้องการออกซิมใหม่เบอร์เดิมใช่ไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วถ้าจะขอซิมใหม่สำหรับเบอร์รายเดือนต้องใช้เอกสารอะไรบ้าง",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ยอดบิลเดือนนี้เท่าไหร่"
+      },
+      {
+        "role": "assistant",
+        "content": "ยอดค้างชำระของเบอร์ 091234XXXX คือ 599 บาทค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "โอเคครับ เดี๋ยวไปจ่าย"
+      },
+      {
+        "role": "assistant",
+        "content": "ขอบคุณค่ะ มีเรื่องอื่นให้ช่วยอีกไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ลืืมทิ้งซิมไว้ที่บ้าน แต่อยากได้ซิมรายเดือนใหม่มาใช้ก่อน ค่าาา",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "สอบถามค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีค่ะ แจ้งเรื่องได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "เรื่องซิมค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เปลี่ยนซิมรายเดือนให้หน่อยครับ",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ช่วยคะ"
+      },
+      {
+        "role": "user",
+        "content": "ซิมเสีย"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการเปลี่ยนซิมใหม่เบอร์เดิมใช่ไหมคะ"
+      },
+      {
+        "role": "user",
+        "content": "ใช่ครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "เปลี่ยนซิมรายเดือนปะ เดี๋ยวไปที่ช้อปเอง อ่า",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "หาข้อมูลหน่อย"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการทราบข้อมูลด้านไหนคะ"
+      },
+      {
+        "role": "user",
+        "content": "เรื่องการเปลี่ยนซิม"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวณ ตรจสอบกานใช้งาน แล้วขอเปลี่ยนซิมรายเดือนใหม่ด้วยครับ",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตแพ็กเกจ 5G ของผมหมดวันไหน"
+      },
+      {
+        "role": "assistant",
+        "content": "แพ็กเกจของคุณจะหมดอายุวันที่ 25 นี้ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อ้อ โอเค"
+      },
+      {
+        "role": "assistant",
+        "content": "มีด้านอื่นต้องการสอบถามเพิ่มเติมไหมคะ"
+      },
+      {
+        "role": "user",
+        "content": "มีครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "เปลี่ยนซิมรายเดือนอันนี้ได้เลยมั้ย",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากซื้อ iPhone 15"
+      },
+      {
+        "role": "assistant",
+        "content": "มีโปรโมชั่นผ่อน 0% 10 เดือนค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ราคาเท่าไหร่"
+      },
+      {
+        "role": "assistant",
+        "content": "เริ่มต้น 32,900 บาทค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "โอเคครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอเปลี่ยนซิมรายเดือนใหม่ครับ",
+    "intent": "MOBILE_SIM_REPLACEMENT_POSPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เปิดเบอร์ใหม่ทำยังไง"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถเปิดเบอร์ใหม่ได้ที่ AIS Shop ทุกสาขาค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ต้องใช้บัตรประชาชนใบเดียวใช่มั้ย"
+      },
+      {
+        "role": "assistant",
+        "content": "ใช่ค่ะ ใช้เพียงบัตรประชาชนตัวจริงค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อ๋อ แต่ผมมีเบอร์เก่ารายเดือนที่ซิมเสียอยู่ด้วย"
+      }
+    ]
+  }
+]

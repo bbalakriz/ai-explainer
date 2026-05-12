@@ -1,0 +1,372 @@
+[
+  {
+    "user_message": "รบกวนสอบถามความแตกต่างของแพ็กเกจเน็ตรายเดือนหน่อยค่ะ",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": []
+  },
+  {
+    "user_message": "ช่วยเทียบเนตให้หน่อยย อันไหนคุ้มสุดอะ 😅",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": []
+  },
+  {
+    "user_message": "เอ่อ แล้วถ้าจะเปลี่ยนแพ็กเกจ มีอันไหนแนะนำที่คุ้มกว่าเดิมมัยครับ",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตช้ามากเลยครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ รบกวนขอเบอร์โทรศัพท์เพื่อตรวจสอบสัญญาณให้สักครู่นะคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อยากเปรียบเทียบโปรเน็ต 5G กับ 4G ครับ",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ AIS ช่วยดูแลคะ 😊"
+      }
+    ]
+  },
+  {
+    "user_message": "I want compare data plan, which one is cheaper?",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "Welcome to AIS, how can I help you today?"
+      }
+    ]
+  },
+  {
+    "user_message": "สองอันนี้มันต่างกันตรงไหนบ้างคะ ช่วยอธิบายหน่อย",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "มีโปรเน็ตอะไรบ้าง"
+      },
+      {
+        "role": "assistant",
+        "content": "มีให้เลือก [Options: {เน็ตไม่อั้น 200บ., เน็ต 5G 400บ.}] ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เช็คให้ด้วยนะ แล้วก็อยากรู้ว่ามีแพ็กเกจอื่นที่ถูกกว่านี้แต่เน็ตพอๆ กันมั้ย",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "บิลเดือนนี้แพงจัง"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ รบกวนขอเบอร์ 0XXXXXXXX เพื่อตรวจเช็ครายละเอียดค่าบริการให้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ล้อเล่นน 555 คือจะถามว่าเนต 20GB กับ 50GB อันไหนคุ้มกว่ากันอะ",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "หิวจัง 555"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ ดิฉันเป็นระบบอัตโนมัติ ไม่สามารถแนะนำร้านอาหารได้ค่ะ มีเรื่องบริการ AIS ให้ช่วยไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ช่วยเปรียบเทียบรายละเอียดของทั้งสองโปรนี้ให้หน่อยได้ไหมคะ",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สนใจสมัครเน็ตเพิ่ม"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้เลยค่ะ ต้องการเน้นการใช้งานแบบไหนคะ"
+      },
+      {
+        "role": "user",
+        "content": "แนะนำแพ็กเกจหน่อย"
+      },
+      {
+        "role": "assistant",
+        "content": "มีโปรแนะนำเป็นแบบ 399 บาท และ 599 บาท ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วถ้าเทียบกับแพ็กเกจ Roaming รายวัน แบบไหนประหยัดกว่ากันคะ",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "จะไปญี่ปุ่น ใช้เน็ตยังไง"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำ Sim2Fly สำหรับเดินทางไปต่างประเทศค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ราคาเท่าไหร่"
+      },
+      {
+        "role": "assistant",
+        "content": "เริ่มต้นที่ 399 บาท ใช้งานได้ 10 วันค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เอาดิ มีอันไหนน่าสนมั่ง ช่วยเทียบให้หน่อยดิ้",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตหมดไวมากก"
+      },
+      {
+        "role": "assistant",
+        "content": "ลองเช็คการใช้งานในแอป myAIS เพื่อดูรายละเอียดการใช้เน็ตได้นะคะ"
+      },
+      {
+        "role": "user",
+        "content": "เช็คแล้วว"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการเปลี่ยนแพ็กเกจให้เหมาะสมกับการใช้งานมากขึ้นไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "Can you tell me difference between 5G and 4G plan?",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "Hello"
+      },
+      {
+        "role": "assistant",
+        "content": "Hello, how can I help you?"
+      },
+      {
+        "role": "user",
+        "content": "I want net"
+      },
+      {
+        "role": "assistant",
+        "content": "We have many plans. Do you want 5G or 4G?"
+      }
+    ]
+  },
+  {
+    "user_message": "อยากดูโปรเน็ตที่เหมาะกับคนใช้เยอะๆ หน่อย มีตัวไหนเทียบกับตัวท็อปบ้าง",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซิมใหม่เปิดใช้งานยังไง"
+      },
+      {
+        "role": "assistant",
+        "content": "กด *151*เลขบัตรประชาชน# แล้วโทรออกเพื่อเปิดใช้งานได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ทำแล้วครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "เรียบร้อยแล้วค่ะ มีอะไรให้ช่วยเพิ่มเติมอีกไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ช่วยวิเคราะห์หน่อยค่ะว่าแพ็กเกจ 499 กับ 699 ต่างกันในแง่ของความเร็วอย่างไร",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอทราบรายละเอียดโปรโมชั่น"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีค่ะ ต้องการเน้นการใช้งานด้านใดคะ"
+      },
+      {
+        "role": "user",
+        "content": "เน้นใช้เน็ตเยอะๆ ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "มีโปรเน็ตไม่อั้นหลายระดับราคาให้เลือกค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ขอดูตารางราคาหน่อย"
+      }
+    ]
+  },
+  {
+    "user_message": "ช้าจิงงง อยากเปลี่ยนแพ็กเนต มีตัวไหนแรงกว่านี้มั้ย ช่วยเทียบให้หน่อยค้าบ",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตช้าชิบ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ รบกวนแจ้งเบอร์โทรศัพท์เพื่อตรวจสอบค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "081234XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "กำลังตรจสอบสัญญาณในพื้นที่ให้สักครู่นะคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "สองอันนี้เน็ตต่างกันเยอะมั้ยอะ อันไหนคุ้มกว่ากัน",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากเปลี่ยนโปร"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการเน็ตความเร็วเท่าไหร่คะ"
+      },
+      {
+        "role": "user",
+        "content": "เอาแบบแรงๆ"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำ [Options: {5G Max Speed 1199, 5G Speed 899}] ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วถ้าซื้อเครื่องพร้อมแพ็กเกจ มีโปรเน็ตตัวไหนที่คุ้มที่สุดเทียบกับซื้อแยกบ้าง",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "มีสินค้าพร้อมจำหน่ายค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ราคาเท่าไหร่"
+      },
+      {
+        "role": "assistant",
+        "content": "เริ่มต้นที่ 32,xxx บาทค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "มีโปรผ่อนไหม"
+      },
+      {
+        "role": "assistant",
+        "content": "มีผ่อน 0% นานสูงสุด 10 เดือนกับบัตรที่ร่วมรายการค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "สองอันนี้ต่างกั นยังไงอะ ช่วยบอกรายละเอียดหน่อยยย",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สามารถเติมเน็ตได้ง่ายๆ ผ่านแอป myAIS ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ขี้เกียจเข้าแอป"
+      },
+      {
+        "role": "assistant",
+        "content": "ให้แอดมินช่วยแนะนำแพ็กเกจที่เหมาะสมให้ไหมคะ"
+      },
+      {
+        "role": "user",
+        "content": "จัดมาเลย"
+      },
+      {
+        "role": "assistant",
+        "content": "มีโปรแนะนำเป็น 150 บาท และ 250 บาท ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เอ้อ แล้วถ้าจะเปลี่ยนเน็ตให้คุ้มกว่านี้ มีแพ็กเกจไหนแนะนำให้เทียบมั้ยคะ",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สามารถชำระผ่าน myAIS หรือ 7-11 ได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "จ่ายผ่านแอปได้เลยใช่ปะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ใช่ค่ะ สะดวกและรวดเร็วมากค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "โอเค จ่ายแล้ว"
+      },
+      {
+        "role": "assistant",
+        "content": "ระบบได้รับยอดชำระเรียบร้อยแล้วค่ะ ขอบคุณค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อยากทราบว่าถ้าเปลี่ยนเป็นแพ็กเกจ 699 บาท จะได้ปริมาณเน็ตเพิ่มขึ้นเท่าไหร่ และคุ้มค่ากว่าเดิมอย่างไรคะ",
+    "intent": "MOBILE_USAGE_COMPARE_DATA_PLAN",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ขอสอบถามเรื่องโปรโมชั่น"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้เลยค่ะ รบกวนขอเบอร์โทรศัพท์เพื่อตรวจสอบข้อมูลค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "098765XXXX ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบพบว่าปัจจุบันคุณลูกค้าใช้แพ็กเกจ 499 บาทอยู่ค่ะ"
+      }
+    ]
+  }
+]

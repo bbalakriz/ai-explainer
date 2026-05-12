@@ -1,0 +1,364 @@
+[
+  {
+    "user_message": "ยอดบิลเดือนนี้เท่าไหร่อ่ะคะ 😅",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": []
+  },
+  {
+    "user_message": "ขอตรวจสอบยอดค้างชำระของเบอร์รายเดือนค่ะ",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": []
+  },
+  {
+    "user_message": "081234XXXX ค่ะ แต่เอ้อ อยากเช็คยอดบิลด้วยว่าจ่ายยัง",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตช้ามากเลยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ รบกวนแจ้งเบอร์โทรศัพท์เพื่อตรวจสอบสัญญาณให้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อยากรู้ว่าบิลเดือนนี้จ่ายหรือยังค้าบ",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดีค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ ต้องการสอบถามเรื่องใดคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "I want check my bill paid or not",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "Hello"
+      },
+      {
+        "role": "assistant",
+        "content": "Hello! How can I help you today?"
+      }
+    ]
+  },
+  {
+    "user_message": "เดี๋ยวก่อนค่ะ ขอดูยอดค้างชำระก่อน",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอเช็คโปรโมชั่น"
+      },
+      {
+        "role": "assistant",
+        "content": "ตอนนี้มีโปรแนะนำค่ะ เริ่มต้นเพียง 399 บาทต่อเดือน สนใจรับรายละเอียดไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "092345XXXX ค่ะ รบกวนดูให้หน่อยว่ายอดนี้ชำระไปรึยัง",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "บิลเดือนนี้แพงจัง"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ รบกวนแจ้งเบอร์เพื่อตรวจสอบรายละเอียดค่าใช้จ่ายให้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วยอดที่ค้างอยู่ตอนนี้เท่าไหร่คะ",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "จ่ายเงินทางไหนได้บ้าง"
+      },
+      {
+        "role": "assistant",
+        "content": "ชำระได้ผ่านแอป myAIS, K-Plus หรือเคาน์เตอร์เซอร์วิสทั่วประเทศค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ป่าวค่ะ อยากเช็คยอดของเบอร์เดิมก่อนว่าค้างเท่าไหร่",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "จะเปลี่ยนเป็นรายเดือน"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถทำได้ค่ะ ต้องการทราบข้อมูลแพ็กเกจรายเดือนที่น่าสนใจไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "โอเคค่ะ แล้วบิลเดือนที่แล้วของฉันจ่ายรึยังนะ",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ไปญี่ปุ่นใช้เน็ตยังไง"
+      },
+      {
+        "role": "assistant",
+        "content": "มีแพ็กเกจ Ready2Fly ค่ะ สามารถเลือกตามจำนวนวันที่เดินทางได้เลย"
+      },
+      {
+        "role": "user",
+        "content": "ราคาเท่าไหร่"
+      },
+      {
+        "role": "assistant",
+        "content": "เริ่มต้น 399 บาท สำหรับ 10 วันค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวณรีบหน่อยนะค้าาา",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เช็คยอดบิลหน่อย"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้ค่ะ รบกวนแจ้งเบอร์โทรศัพท์ที่ต้องการตรวจสอบค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "085678XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "กำลังตรวจสอบข้อมูลสักครู่นะคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อ่า อยากตรจสอบยอดค้างชำระด้วยค่ะ",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ลืมรหัสผ่านแอป"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถกด 'ลืมรหัสผ่าน' เพื่อรีเซ็ตผ่านเบอร์โทรศัพท์ได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ขอบคุณค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีค่ะ มีเรื่องอื่นให้ช่วยเพิ่มเติมไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "Check my bill status please",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "My internet slow"
+      },
+      {
+        "role": "assistant",
+        "content": "I'm sorry to hear that. May I have your phone number?"
+      },
+      {
+        "role": "user",
+        "content": "081122XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "Checking now... the signal in your area is normal. Anything else?"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วมันจะไปรวมในบิลเดือนนี้ปะ",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ทำไมเน็ตหมดเร็ว"
+      },
+      {
+        "role": "assistant",
+        "content": "ขอตรวจสอบการใช้งานให้ค่ะ รบกวนรอสักครู่นะคะ"
+      },
+      {
+        "role": "user",
+        "content": "ใช้ปกติเลยนะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบพบว่ามีการใช้ Data เกินแพ็กเกจหลักค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอดูยอดบิลปัจจุบันก่อนว่าจ่ายครบมั้ย",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากเปลี่ยนโปร"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการเปลี่ยนเป็นโปรเน้นเน็ตหรือเน้นโทรคะ"
+      },
+      {
+        "role": "user",
+        "content": "แนะนำหน่อย"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำ 5G Max Speed 699 บาทค่ะ [Options: {สนใจ, ดูโปรอื่น}]"
+      }
+    ]
+  },
+  {
+    "user_message": "ยอดนี้จ่ายไปแล้วนะ ช่วยเช็คสถานะให้ที",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "บิลไม่ถูกต้อง"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ รบกวนแจ้งเบอร์โทรศัพท์เพื่อตรวจสอบค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "099888XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "พบยอดค้างชำระของเดือนที่แล้ว 450 บาทค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "โอเค ขอดูยอดบิลเดือนนี้ด้วยว่าเท่าไหร่",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เปิดโรมมิ่งยังไง"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถกด *125*1# โทรออก เพื่อเปิดบริการได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ต้องเสียเงินมั้ย"
+      },
+      {
+        "role": "assistant",
+        "content": "การเปิดบริการฟรีค่ะ แต่จะมีค่าใช้จ่ายตามแพ็กเกจเน็ตที่เลือกใช้ในต่างประเทศค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เออ ลืืมถามเลย บิลเดือนนี้จ่ายยังอะ",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "SIM การ์ดเสีย"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถเปลี่ยนซิมใหม่เบอร์เดิมได้ที่ AIS Shop ทุกสาขาค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ต้องใช้เอกสารอะไรบ้าง"
+      },
+      {
+        "role": "assistant",
+        "content": "ใช้บัตรประชาชนตัวจริงของผู้จดทะเบียนค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ขอบคุณค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วยอดค้างชำระทั้งหมดของเบอร์นี้คือเท่าไหร่คะ",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สมัครเน็ตเสริม"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการเน็ตความเร็วเท่าไหร่คะ"
+      },
+      {
+        "role": "user",
+        "content": "เอาแบบไม่อั้น"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำแพ็กเกจ 200 บาท/30 วันค่ะ [Options: {สมัครเลย, ดูตัวอื่น}]"
+      },
+      {
+        "role": "user",
+        "content": "สมัครเลยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เช็กบิลรายเดือนให้หน่อยว่ายอดล่าสุดชำระสำเร็จมัย",
+    "intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "แจ้งปัญหาเน็ต"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนแจ้งเบอร์โทรศัพท์เพื่อตรวจสอบพื้นที่ใช้งานค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "081234XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "ดำเนินการรีเซ็ตสัญญาณให้เรียบร้อยแล้วค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ดีขึ้นแล้วค่ะ"
+      }
+    ]
+  }
+]

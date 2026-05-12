@@ -1,0 +1,52 @@
+metadata:
+  id: telco-chat-sdg
+  name: "Telco Chat Training Data Generation Flow"
+  description: >-
+    Generates synthetic multi-turn chat training data for Thai telecom
+    intent classification. Uses seed examples from existing datasets
+    to produce new examples matching the same format and style.
+  version: "1.0.0"
+  author: "AI Lab Team"
+  recommended_models:
+    default: "gemini/gemma-4-31b-it"
+  tags:
+    - "chat-generation"
+    - "intent-classification"
+    - "thai-language"
+    - "telecom"
+  license: "Apache-2.0"
+  dataset_requirements:
+    required_columns:
+      - "intent"
+      - "intent_description"
+      - "seed_examples"
+      - "num_examples"
+      - "num_seed"
+    description: "Each row represents one intent with seed examples and generation parameters."
+
+blocks:
+  # Step 1: Build the generation prompt from template + seed data
+  - block_type: "PromptBuilderBlock"
+    block_config:
+      block_name: "build_generation_prompt"
+      input_cols: ["intent", "intent_description", "seed_examples", "num_examples", "num_seed"]
+      output_cols: "generation_prompt"
+      prompt_config_path: "prompts/generate_telco_chat.yaml"
+
+  # Step 2: Call LLM to generate new examples
+  - block_type: "LLMChatBlock"
+    block_config:
+      block_name: "generate_examples"
+      input_cols: "generation_prompt"
+      output_cols: "raw_output"
+      max_tokens: 16384
+      temperature: 0.8
+      async_mode: true
+
+  # Step 3: Extract text content from LLM response
+  - block_type: "LLMResponseExtractorBlock"
+    block_config:
+      block_name: "extract_output"
+      input_cols: "raw_output"
+      extract_content: true
+      expand_lists: true

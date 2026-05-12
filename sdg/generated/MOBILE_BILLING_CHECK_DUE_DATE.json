@@ -1,0 +1,336 @@
+[
+  {
+    "user_message": "บิลเดือนนี้ต้องจ่ายวันไหนอะคะ 😅",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": []
+  },
+  {
+    "user_message": "ขอสอบถามวันครบกำหนดชำระค่าบริการรอบบิลปัจจุบันค่ะ",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": []
+  },
+  {
+    "user_message": "อยากรู้ว่าต้องจ่ายบิลวันไหนครับ",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ ไม่ทราบว่าต้องการสอบถามเรื่องใดคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เช็ค due date ให้หน่อยค้าบ",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ยินดีให้บริการค่ะ ต้องการให้ช่วยดูแลเรื่องไหนแจ้งได้เลยนะคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เออ แล้วบิลรอบนี้หมดเขตจ่ายวันไหนหรอ",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "จากการตรวจสอบ สัญญาณในพื้นที่ของลูกค้าปกติดีนะคะ ลองรีสตาร์ทเครื่องดูหรือยังคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "บิลกานใช้งานเดือนนี้จ่ายวันไหนนะ",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดีครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ ไม่ทราบว่าต้องการสอบถามเรื่องใดคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เดี๋ยวก่อน อยากรู้ว่าบิลเก่าต้องจ่ายวันไหน",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากเปลี่ยนแพ็กเกจเน็ตครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้เลยค่ะ ไม่ทราบว่าลูกค้าสนใจเน็ตความเร็วเท่าไหร่ หรือเน้นใช้งานด้านไหนเป็นพิเศษคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เช็ควันครบกำหนดจ่ายให้ทีครับ",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "ได้ค่ะ เพื่อความถูกต้อง รบกวนขอหมายเลขโทรศัพท์ที่ต้องการตรวจสอบด้วยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "091234XXXX"
+      }
+    ]
+  },
+  {
+    "user_message": "เอ้อ แล้วสรุป due date คือวันไหนนะ",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตช้ามากเลยครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ รบกวนรอสักครู่เพื่อทำการรีเซ็ตสัญญาณให้นะคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อยากรู้ว่าบิลรอบนี้ต้องจ่ายวันไหนหรอคะ",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดีค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "081234XXXX"
+      }
+    ]
+  },
+  {
+    "user_message": "When is the payment due date please?",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "I want to pay my bill"
+      },
+      {
+        "role": "assistant",
+        "content": "Sure, how many bills would you like to pay?"
+      },
+      {
+        "role": "user",
+        "content": "just 1 bill"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วบิลที่ใช้โรมมิ่งจะครบกำหนดจ่ายวันไหนอะ",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอเช็คแพ็กเกจ roaming ไปญี่ปุ่นหน่อยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "มีแพ็กเกจ Ready2Fly เริ่มต้น 399 บาท ใช้เน็ตได้ 7 วันค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "โอเคค่ะ สมัครเรียบร้อยแล้ว"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวณเช็ควันครบกำหนดชำระให้หน่อยได้มัย",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "จ่ายเงินผ่านแอพแล้วแต่ยอดไม่ตัดค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนขอหลักฐานการชำระเงิน หรือหมายเลขโทรศัพท์เพื่อตรจสอบให้ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "061234XXXX"
+      }
+    ]
+  },
+  {
+    "user_message": "Can you tell me the due date for my bill?",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "082345XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "พบข้อมูลหมายเลขของลูกค้าแล้วค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "Check balance please"
+      }
+    ]
+  },
+  {
+    "user_message": "อ้อ ลืืมถามเลย บิลแรกต้องจ่ายวันไหนหรอ",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอเปิดเบอร์ใหม่แบบรายเดือนค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ดำเนินการเปิดเบอร์ให้เรียบร้อยแล้วนะคะ"
+      },
+      {
+        "role": "user",
+        "content": "ขอบคุณมากค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีค่ะ มีส่วนไหนให้ช่วยดูแลเพิ่มเติมอีกไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วยอดที่เหลือต้องจ่ายวันไหนครับ",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอยกเลิกแพ็กเกจเสริมเน็ตครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยืนยันการยกเลิกแพ็กเกจเสริมถูกต้องนะคะ"
+      },
+      {
+        "role": "user",
+        "content": "ใช่ครับ ยืนยันครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ดำเนินการยกเลิกให้เรียบร้อยแล้วค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอเช็ค due date ของบิลเดือนนี้ด้วยค่ะ",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ช่วยดูแลคะ"
+      },
+      {
+        "role": "user",
+        "content": "เช็คเน็ตให้หน่อยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "แพ็กเกจปัจจุบันของลูกค้าคงเหลือ data 10GB ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "โอเคค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "บิลรอบนี้ต้องจ่ายวันไหนครับ",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "099888XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "พบข้อมูลลูกค้าในระบบเรียบร้อยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ตอนนี้ใช้แพ็กเกจอะไรอยู่ครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ลูกค้าใช้งานแพ็กเกจ 5G Max Speed 1199 บาทค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ช่างมันเถอะ แล้วบิลเดือนนี้จ่ายวันไหนอะ 555",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตช้ามากเลยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขอทราบพื้นที่ที่ใช้งานเพื่อตรวจสอบสัญญาณค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "แถวสยามค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "จากการตรวจสอบ พื้นที่ดังกล่าวสัญญาณปกติค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "แปลกจังค่ะ ทั้งที่ช้ามาก"
+      }
+    ]
+  },
+  {
+    "user_message": "Wait, what is the due date for this bill?",
+    "intent": "MOBILE_BILLING_CHECK_DUE_DATE",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "I want to pay my bill"
+      },
+      {
+        "role": "assistant",
+        "content": "[Options: {K-Plus, TrueMoney, Credit Card}]"
+      },
+      {
+        "role": "user",
+        "content": "K-Plus"
+      },
+      {
+        "role": "assistant",
+        "content": "กำลังนำท่านเข้าสู่ระบบชำระเงินของ K-Plus กรุณารอสักครู่ค่ะ"
+      }
+    ]
+  }
+]

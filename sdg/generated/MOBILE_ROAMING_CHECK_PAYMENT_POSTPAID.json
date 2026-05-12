@@ -1,0 +1,336 @@
+[
+  {
+    "user_message": "ขอสอบถามยอดค่าบริการโรมมิ่งของเดือนนี้หน่อยค่ะ",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": []
+  },
+  {
+    "user_message": "เช็คยอดโรมมิ่งให้หน่อยค่าาา จ่ายกี่บาทอะ 💸",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": []
+  },
+  {
+    "user_message": "อยากรู้ว่ายอดโรมมิ่งแยกออกมาเป็นเท่าไหร่ครับ",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สอบถามเรื่องบิลเดือนนี้หน่อยครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "ยอดโรมมิ่งรอบบิลนี้เท่าไหร่มัยคะ",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ ต้องการให้ช่วยดูแลเรื่องไหนคะ 😊"
+      }
+    ]
+  },
+  {
+    "user_message": "check roaming bill for me please",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "Hello! How can I help you today? 😊"
+      }
+    ]
+  },
+  {
+    "user_message": "เออ แล้วยอดโรมมิ่งเดือนที่แล้วสรุปเท่าไหร่ครับ",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ทำไมเน็ตที่บ้านช้าจังครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ รบกวนขอทราบหมายเลขบริการเพื่อตรวจสอบสัญญาณในพื้นที่ให้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เบอร์ 081234XXXX ค่ะ ขอดูยอดโรมมิ่งหน่อย",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากเช็คค่าบริการโรมมิ่งค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้เลยค่ะ รบกวนขอทราบหมายเลขโทรศัพท์ที่ต้องการตรวจสอบด้วยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ตรจสอบยอดโรมมิ่งให้หน่อยค้าบ",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ทางเราช่วยดูแลในวันนี้คะ"
+      },
+      {
+        "role": "user",
+        "content": "อยากรู้เรื่องค่าใช้จ่ายครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "เอาอันที่เช็คยอดโรมมิ่งครับ",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอเช็คยอดเงินหน่อย"
+      },
+      {
+        "role": "assistant",
+        "content": "คุณลูกค้าต้องการตรวจสอบรายการไหนคะ [Options: {เช็คยอดค้างชำระ, ยอดโรมมิ่ง, ยอดเน็ตคงเหลือ}]"
+      }
+    ]
+  },
+  {
+    "user_message": "อ้อ อีกเรื่องนึง ยอดโรมมิ่งรอบบิลนี้เรียกเก็บมาเท่าไหร่แล้วอะ",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากซื้อ iPhone 15 Pro Max มีโปรอะไรบ้าง"
+      },
+      {
+        "role": "assistant",
+        "content": "ตอนนี้มีโปรโมชั่นผ่อน 0% นาน 10 เดือน พร้อมส่วนลดค่าเครื่องเมื่อสมัครแพ็กเกจเริ่มต้น 699 บาทค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "โอเคครับ ขอบคุณมากครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "ยืนยันตัวตนแล้วค่ะ รบกวนแจ้งยอดโรมมิ่งที่ค้างชำระด้วยค่ะ",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอเช็คค่าโรมมิ่งรายเดือนค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "เพื่อความปลอดภัย รบกวนคุณลูกค้าแจ้งชื่อ-นามสกุล และเลขบัตรประชาชน 4 หลักสุดท้ายค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "สมศรี ใจดี 1234 ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เช็คยอดโรมมิ่งให้หน่อยยย ลืืมจ่ายบิลอะ 😭",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนขอทราบเบอร์โทรศัพท์ที่ต้องการให้ตรวจสอบค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "092345XXXX ครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "how much is my roaming charge this month?",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "Hello! How can I assist you today?"
+      },
+      {
+        "role": "user",
+        "content": "I just came back from Japan."
+      },
+      {
+        "role": "assistant",
+        "content": "Welcome back! Would you like to check your usage or bill?"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วถ้าจะดูยอดโรมมิ่งที่ใช้ไปตอนนี้ ต้องดูตรงไหนคะ",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สนใจแพ็กเกจ 5G Max Speed ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำเป็นแพ็กเกจ 1,199 บาท เน็ตไม่อั้น ความเร็วสูงสุดค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ราคาเท่าไหร่รวมภาษีหรือยังคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ราคา 1,199 บาท ยังไม่รวมภาษีมูลค่าเพิ่ม 7% ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอทราบยอดโรมมิ่งแบบแยกตามวันได้ไหมคะ",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอดูบิลเดือนนี้หน่อยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยอดค่าบริการรวมของรอบบิลปัจจุบันคือ 2,450 บาทค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ทำไมยอดสูงจัง มีค่าอะไรบ้าง"
+      },
+      {
+        "role": "assistant",
+        "content": "ยอดส่วนใหญ่เป็นค่าบริการโรมมิ่งจากการใช้งานที่ต่างประเทศค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "OTP XXXXXX ครับ รบกวณเช็คยอดโรมมิ่งให้ที",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ต้องการให้ช่วยเรื่องอะไรคะ"
+      },
+      {
+        "role": "user",
+        "content": "เช็คยอดโรมมิ่งรายเดือนครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนแจ้งเบอร์โทรศัพท์ด้วยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "085678XXXX"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอบคุณจ้า แล้วยอดโรมมิ่งของบิลเก่าจ่ายไปรึยังอะ",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เปิดใช้งานซิมใหม่ยังไงคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "คุณลูกค้าสามารถลงทะเบียนผ่านแอป myAIS หรือนำบัตรประชาชนไปที่ AIS Shop ได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ทำในแอปเรียบร้อยแล้วค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "เรียบร้อยค่ะ ตอนนี้ซิมของคุณลูกค้าพร้อมใช้งานแล้วค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เออ ลืมถามเลย ยอดโรมมิ่งรอบนี้เรียกเก็บเท่าไหร่หรอ",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตช้ามากเลยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ ไม่ทราบว่าใช้งานอยู่ที่เขตไหนคะ"
+      },
+      {
+        "role": "user",
+        "content": "อยู่แถวสยามค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "กำลังตรวจสอบสัญญาณในพื้นที่ให้สักครู่นะคะ"
+      },
+      {
+        "role": "user",
+        "content": "โอเคค่ะ รอได้"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวนสรุปยอดโรมมิ่งทั้งหมดของรอบบิลปัจจุบันให้ด้วยค่ะ",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากตรวจสอบยอดเงินโรมมิ่งค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้ค่ะ รบกวนแจ้งเบอร์โทรศัพท์ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "099112XXXX ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ระบบส่งรหัส OTP ไปที่เบอร์ดังกล่าว รบกวนแจ้งรหัสให้ทราบด้วยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "XXXXXX ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เช็คให้หน่อยว่ายอดโรมมิ่งกี่บาทแล้ว 555 กลัวบิลช็อค 💸",
+    "intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ช่วยดูแลคะ"
+      },
+      {
+        "role": "user",
+        "content": "เพิ่งกลับจากเที่ยวเกาหลีมาค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "เที่ยวสนุกไหมคะ 😊 ต้องการให้ช่วยตรวจสอบการใช้งานหรือยอดค่าบริการโรมมิ่งไหมคะ"
+      },
+      {
+        "role": "user",
+        "content": "ใช่ค่ะ อยากเช็คยอด"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้เลยค่ะ รบกวนขอเบอร์โทรศัพท์เพื่อตรวจสอบข้อมูลนะคะ"
+      }
+    ]
+  }
+]

@@ -1,0 +1,344 @@
+[
+  {
+    "user_message": "รบกวนตรวจสอบแพ็กเกจอินเทอร์เน็ตปัจจุบันให้หน่อยค่ะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": []
+  },
+  {
+    "user_message": "เช็คแพ็กเนตตอนนี้ให้หน่อยค้าบ 📱",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": []
+  },
+  {
+    "user_message": "แล้วตอนนี้ใช้แพ็กเกจเน็ตตัวไหนอยู่หรอคะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอเช็คยอดค้างชำระของเดือนนี้หน่อยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบแล้วค่ะ ยอดค้างชำระปัจจุบันของหมายเลข 091234XXXX คือ 642 บาท กำหนดชำระวันที่ 20 ตุลาคมนี้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อยากรู้วว่าใช้โปรเน็ตไรอยู่อะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS อุ่นใจ ยินดีให้บริการค่ะ วันนี้ต้องการให้ช่วยดูแลเรื่องไหนคะ?"
+      }
+    ]
+  },
+  {
+    "user_message": "check my current package pls",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS อุ่นใจ ยินดีให้บริการค่ะ วันนี้มีอะไรให้ช่วยดูแลคะ?"
+      }
+    ]
+  },
+  {
+    "user_message": "โอเคค่ะ งั้นช่วยเช็คแพ็กเกจเน็ตที่ใช้อยู่ปัจจุบันให้ด้วยค่ะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "จะไปญี่ปุ่น ต้องสมัคร roaming ตัวไหนดีคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สำหรับประเทศญี่ปุ่น ขอแนะนำแพ็กเกจ Ready2Fly เริ่มต้น 399 บาท ใช้งานเน็ตได้ 10GB นาน 10 วันค่ะ สนใจรับรายละเอียดเพิ่มเติมไหมคะ?"
+      }
+    ]
+  },
+  {
+    "user_message": "แล้วแพ็กเกจปัจจุบันของเค้าเป็นตัวไหนน้าา 🙏",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "แถวบ้านสัญญาณ 5G อ่อนมากเลยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องขออภัยในความไม่สะดวกด้วยค่ะ รบกวนแจ้งพิกัดหรือที่อยู่ที่พบปัญหาสัญญาณ เพื่อให้ทางทีมวิศวกรตรวจสอบให้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวนขอรายละเอียดแพ็กเกจเน็ตปัจจุบันของเบอร์ 081234XXXX หน่อยค่ะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากทราบวิธีเปิดใช้งาน SIM ใหม่ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สำหรับการเปิดใช้งาน SIM ใหม่ สามารถทำได้ผ่านแอป myAIS หรือนำบัตรประชาชนไปติดต่อที่ AIS Shop ทุกสาขาได้เลยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "โอเคจ้า แล้วเน็ตที่ใช้อยู่ตอนนี้คือโปรอะไรหรอ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "จ่ายบิลผ่านแอปธนาคารได้เลยมั้ย"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถชำระผ่านแอปธนาคารได้ทุกธนาคารเลยค่ะ โดยใช้เลขที่บัญชีลูกค้าหรือสแกน QR Code จากใบแจ้งค่าบริการได้เลยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอบคุณค่ะ อีกเรื่องนึง อยากเช็คว่าตอนนี้ใช้แพ็กเกจเน็ตอะไรอยู่คะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "iPhone 15 Pro Max ตอนนี้มีโปรผ่อน 0% ไหมคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "มีค่ะ ปัจจุบันมีโปรโมชั่นผ่อน 0% นานสูงสุด 10 เดือนกับบัตรเครกิตที่ร่วมรายการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ราคาเครื่องเปล่าเท่าไหร่คะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ราคาเครื่องเปล่าเริ่มต้นที่ 41,900 บาทค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "098765XXXX ครับ ช่วยตรจสอบแพ็กเกจปัจจุบันให้หน่อยว่าเน็ตหมดหรือยัง",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตช้ามากเลยครับ ทำไมเป็นงี้"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ รบกวนขอทราบหมายเลขโทรศัพท์ที่พบปัญหาเพื่อตรวจสอบให้ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "เบอร์ 098765XXXX ครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "anyway can you check my data package?",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "internet signal is very bad here"
+      },
+      {
+        "role": "assistant",
+        "content": "We apologize for the inconvenience. Could you please provide your current location or district?"
+      },
+      {
+        "role": "user",
+        "content": "I am at Sukhumvit Soi 11"
+      }
+    ]
+  },
+  {
+    "user_message": "อ้อ แล้วรบกวนเช็คแพ็กเกจปัจจุบันให้ด้วยนะครับ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ไม่ได้รับ OTP ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำให้ตรวจสอบสัญญาณโทรศัพท์ หรือลองรีสตาร์ทเครื่องหนึ่งครั้งนะคะ หากยังไม่ได้รับ รบกวนแจ้งเบอร์โทรศัพท์ให้ตรวจสอบค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "รีแล้วครับ ได้แล้ว ขอบคุณครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอบคุณค่ะ รบกวนเช็คแพ็กเกจอินเทอร์เน็ตปัจจุบันที่ใช้งานอยู่ให้ด้วยนะคะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เช็คบิลเดือนนี้หน่อยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยอดค่าบริการรอบบิลล่าสุด 599 บาทค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ต้องจ่ายภายในวันไหนคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "วันครบกำหนดชำระคือวันที่ 15 พฤศจิกายน 2567 ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อ๋อ เคค้าบ แล้วตอนนี้ผมใช้โปรเน็ตตัวไหนอยู่หรอครับ 😅",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตบ้าน AIS Fibre มีโปรอะไรบ้าง"
+      },
+      {
+        "role": "assistant",
+        "content": "มีแพ็กเกจเริ่มต้น 1Gbps/500Mbps ราคา 599 บาท/เดือน พร้อมกล่อง AIS PLAYBOX ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "มีค่าติดตั้งมั้ย"
+      },
+      {
+        "role": "assistant",
+        "content": "ฟรีค่าติดตั้งและค่าเดินสายไฟเบอร์สูงสุด 600 เมตรค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เรียบร้อยครับ แล้วช่วยดูให้หน่อยว่าแพ็กเกจหลักปัจจุบันของผมคือตัวไหน",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอสมัครแพ็กเกจเน็ตเสริมสำหรับไปต่างประเทศครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำเป็น Ready2Fly ค่ะ มีให้เลือก 3 ขนาด [options:{1. 399 บาท 10GB},{2. 599 บาท 20GB},{3. 899 บาท 40GB}] คุณลูกค้าสนใจตัวไหนคะ?"
+      },
+      {
+        "role": "user",
+        "content": "เอาตัว 399 ครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ดำเนินการสมัครแพ็กเกจ Ready2Fly 399 บาท เรียบร้อยแล้วค่ะ สามารถเริ่มใช้งานได้ทันทีที่เดินทางถึงปลายทางค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แต๊งกิ้วจ้าาา แล้วเช็คแพ็กเกจปัจจุบันให้หน่อยได้ปะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เติมเงินยังไงอะ"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถเติมเงินได้ผ่านแอป myAIS, ตู้บุญเติม หรือแอปธนาคารทุกธนาคารค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "มีแอปให้โหลดมั้ย"
+      },
+      {
+        "role": "assistant",
+        "content": "มีค่ะ สามารถดาวน์โหลดแอป myAIS ได้ทั้ง App Store และ Google Play Store เลยค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ส่งรูปให้แล้วค่ะ รบกวนเช็คแพ็กเกจอินเทอร์เน็ตปัจจุบันให้ด้วยนะคะ",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ต้องการลงทะเบียนซิมใหม่ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนคุณลูกค้าถ่ายรูปหน้าบัตรประชาชนและรูปถ่ายคู่กับบัตรส่งมาให้ทางแชทนี้ได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ส่งรูปบัตรประชาชนแล้วค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้รับรูปบัตรประชาชนแล้วค่ะ รบกวนขอรูปถ่ายคู่กับบัตรประชาชน (Selfie) อีกหนึ่งรูปเพื่อยืนยันตัวตนค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "[Image]"
+      }
+    ]
+  },
+  {
+    "user_message": "โอเค เดี๋ยวสมัครครับ แต่ขอเช็คก่อนว่าตอนนี้ใช้แพ็กเกจเน็ตไรอยู่ จะได้ไม่ซ้ำ 555",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "มีแพ็กเกจดู Disney+ ไหมครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "มีค่ะ มีแพ็กเกจเสริม Disney+ Hotstar รายเดือน 199 บาท และรายปี 899 บาทค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อันนี้รวมเน็ตด้วยมั้ย"
+      },
+      {
+        "role": "assistant",
+        "content": "แพ็กเกจนี้เป็นค่าบริการความบันเทิงอย่างเดียว ไม่รวมอินเทอร์เน็ตค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "สมัครยังไงครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "เร็วดีครับ แล้วตอนนี้ผมใช้แพ็กเกจตัวไหนอยู่หรอครับ ช่วยเช็คให้ที",
+    "intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "พื้นที่นี้รองรับ 5G ไหมครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบแล้ว พื้นที่ที่คุณลูกค้าใช้งานรองรับสัญญาณ 5G ความเร็วสูงค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "มีวิธีทดสอบความเร็วเน็ตไหม"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถทดสอบได้ผ่านแอป Speedtest หรือเว็บไซต์ fast.com ได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ลองแล้วครับ วิ่ง 400Mbps เลย"
+      }
+    ]
+  }
+]

@@ -1,0 +1,380 @@
+[
+  {
+    "user_message": "ขออนุญาตสอบถามวิธีเปิดใช้งานซิมเติมเงินที่เพิ่งซื้อมาครับ",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": []
+  },
+  {
+    "user_message": "เปิดซิมเติมเงินให้หน่อยค้าบ ซื้อมาจากเซเว่นแต่ยังใช้ไม่ได้เลยยย 😭",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": []
+  },
+  {
+    "user_message": "ช่วย activate ซิมเติมเงินให้หน่อยค่ะ",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ วันนี้มีอะไรให้ช่วยดูแลคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เออ แล้วก็มีอีกเรื่อง ซื้อซิมเติมเงินมาใหม่ ช่วยเปิดใช้งานให้ด้วยได้ปะ",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตบ้านไม่วิ่งเลยครับ ช้ามาก"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องขออภัยในความไม่สะดวกด้วยค่ะ รบกวนแจ้งหมายเลขเน็ตบ้านเพื่อให้เจ้าหน้าที่ตรวจสอบสัญญาณให้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เติมเงินครับ รบกวนเปิดใช้งานให้หน่อย",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซื้อซิมใหม่มาครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีค่ะ ไม่ทราบว่าเป็นซิมเติมเงินหรือรายเดือนคะ [Options: {เติมเงิน, รายเดือน}]"
+      }
+    ]
+  },
+  {
+    "user_message": "จ้าาา รบกวนตรจสอบและเปิดให้หน่อยนะค้าบ",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซื้อซิมมาลืืมลงทะเบียน"
+      },
+      {
+        "role": "assistant",
+        "content": "สามารถให้เจ้าหน้าที่ช่วยเปิดใช้งานให้ได้นะคะ ต้องการดำเนินการเลยไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "โอเคครับ อ้อ แล้วซิมเติมเงินเบอร์ 081234XXXX ที่ซื้อมาเมื่อวาน ช่วยเปิดให้ทีครับ",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "จะไปญี่ปุ่น ใช้แพ็กเกจไหนดีครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำ Sim2Fly ค่ะ ใช้งานได้ครอบคลุมและคุ้มค่ามากค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ใช่ครับ เปิดให้เลยครับ",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซื้อซิมจาก 7-11 มาครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขอทราบเบอร์โทรศัพท์ที่ต้องการเปิดใช้งานด้วยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "092345XXXX ครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบแล้วซิมยังไม่เปิดใช้งาน ต้องการให้เจ้าหน้าที่เปิดให้ตอนนี้เลยไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "มีๆ ช่วยเปิดซิมเติมเงินอันใหม่ให้หน่อยดิ 📱",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เนตช้ามากก"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยค่ะ ขอเช็คสัญญาณพื้นที่ให้สักครู่นะคะ"
+      },
+      {
+        "role": "user",
+        "content": "ไม่เป็นไร เดี๋ยวใช้ไวไฟที่บ้านเอา"
+      },
+      {
+        "role": "assistant",
+        "content": "รับทราบค่ะ มีเรื่องอื่นให้ทางเราช่วยดูแลเพิ่มเติมไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "Yes please activate for me now",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "Hello"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "I buy new sim card prepaid"
+      },
+      {
+        "role": "assistant",
+        "content": "Would you like to activate it now?"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวนเปิดใช้งานซิมเติมเงินให้ทีนะคะ",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซิมใช้ไม่ได้ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบเบื้องต้นโดยการรีสตาร์ทเครื่องหรือยังคะ"
+      },
+      {
+        "role": "user",
+        "content": "ลองรีสตาร์ทแล้วก็ยังเงียบค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "เป็นซิมใหม่ที่ยังไม่ได้เปิดใช้งานใช่ไหมคะ [Options: {ใช่, ไม่ใช่}]"
+      },
+      {
+        "role": "user",
+        "content": "ใช่ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เอ้อ ลืมบอก ช่วยเปิดซิมเติมเงินของลูกชายให้หน่อยครับ เบอร์ 061234XXXX",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "บิลเดือนนี้แพงจังครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ขอตรวจสอบรายละเอียดค่าบริการให้สักครู่นะคะ"
+      },
+      {
+        "role": "user",
+        "content": "ทำไมค่า data มันเยอะจัง"
+      },
+      {
+        "role": "assistant",
+        "content": "เนื่องจากมีการใช้แพ็กเกจเสริมที่หมดอายุระหว่างรอบบิลค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อ๋อ โอเคครับ เข้าใจแล้ว"
+      }
+    ]
+  },
+  {
+    "user_message": "งั้นรบกวนช่วยเปิดให้หน่อยนะค้าบ ขอบคุณจ้า 🙏",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซิมเงียบกริบเลย"
+      },
+      {
+        "role": "assistant",
+        "content": "ขอทราบเบอร์โทรศัพท์เพื่อตรวจสอบค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "08555XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "พบว่าเป็นซิมเติมเงินที่ยังไม่ activate ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อ่าาา มิน่าล่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ตอนนี้ช่วยเปิดซิมเติมเงินใบใหม่ให้ก่อนได้มั้ยครับ",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "อยากเปลี่ยนโปรครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "สนใจเป็นโปรโมชั่นเน้นเน็ตหรือเน้นโทรคะ"
+      },
+      {
+        "role": "user",
+        "content": "เอาแบบเน็ตไม่อั้นเลย"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำโปร 299 บาท เน็ตไม่อั้น ความเร็ว 10Mbps ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "เดี๋ยวค่อยสมัครครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "099888XXXX ครับ รบกวนด้วย",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "เปิดใช้งานหรือยังคะ"
+      },
+      {
+        "role": "user",
+        "content": "ยังเลยครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการเปิดผ่านแอปหรือให้เจ้าหน้าที่ช่วยคะ [Options: {แอป myAIS, เจ้าหน้าที่}]"
+      },
+      {
+        "role": "user",
+        "content": "เจ้าหน้าที่ดีกว่าครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้เลยค่ะ ขอเบอร์โทรศัพท์ที่ต้องการเปิดใช้งานค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แต่ตอนนี้ช่วยเปิดซิมเติมเงิน 08222XXXX ให้หน่อยได้ป่าววว",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "มี iPhone 15 ไหมครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "มีพร้อมส่งทุกสีค่ะ สนใจผ่อนหรือจ่ายสดคะ"
+      },
+      {
+        "role": "user",
+        "content": "อยากผ่อนครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "มีโปรผ่อน 0% นาน 10 เดือนกับบัตรที่ร่วมรายการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "เดี๋ยวผมเข้าไปดูที่ช็อปวันเสาร์นี้ครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "รีแล้วก็ยังช้า รบกวนเปิดซิมเติมเงินอีกใบให้ทีครับ จะเอามาสำรองใช้",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "ยินดีค่ะ ไม่ทราบว่าพบปัญหาการใช้งานอย่างไรคะ"
+      },
+      {
+        "role": "user",
+        "content": "ทำไมมันช้าจัง"
+      },
+      {
+        "role": "assistant",
+        "content": "ขอเช็คพื้นที่สัญญาณให้สักครู่นะคะ"
+      },
+      {
+        "role": "user",
+        "content": "อยู่แถวสยามค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "พื้นที่ดังกล่าวสัญญาณปกติค่ะ ลองรีสตาร์ทเครื่องดูนะคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "Ok. Also I have another sim prepaid, please activate it for me",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "Hello, how can I help you today?"
+      },
+      {
+        "role": "user",
+        "content": "I want check balance"
+      },
+      {
+        "role": "assistant",
+        "content": "Please provide your phone number"
+      },
+      {
+        "role": "user",
+        "content": "09444XXXX"
+      },
+      {
+        "role": "assistant",
+        "content": "Your current balance is 50 Baht"
+      }
+    ]
+  },
+  {
+    "user_message": "ใช่ครับ เปิดด่วนเลยครับ จะใช้โทรหาลูกค้า",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซื้อซิมมาเมื่อกี้แต่ยังใช้ไม่ได้"
+      },
+      {
+        "role": "assistant",
+        "content": "ต้องการให้เจ้าหน้าที่ดำเนินการเปิดใช้งานให้ตอนนี้เลยไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "08777XXXX ช่วยเปิดให้หน่อยค้าบ รบกวณด้วยยย 🙏",
+    "intent": "MOBILE_SIM_ACTIVATION_PREPAID",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซิมใหม่ใช้ไม่ได้"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนแจ้งเบอร์โทรศัพท์ที่ต้องการให้ตรวจสอบค่ะ"
+      }
+    ]
+  }
+]

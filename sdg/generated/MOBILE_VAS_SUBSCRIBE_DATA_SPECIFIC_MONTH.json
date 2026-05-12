@@ -1,0 +1,340 @@
+[
+  {
+    "user_message": "ต้องการสมัครบริการดูดวงรายเดือนค่ะ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": []
+  },
+  {
+    "user_message": "อยากสมัคดูดวงอ่ะคะ 😅",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": []
+  },
+  {
+    "user_message": "เออ แล้วถ้าจะสมัครข่าวรายวันทำไงหรอ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "เน็ตช้ามากเลยค่ะ ช่วยเช็คให้หน่อย"
+      },
+      {
+        "role": "assistant",
+        "content": "ขออภัยในความไม่สะดวกค่ะ รบกวนขอหมายเลขโทรศัพท์เพื่อตรวจสอบสัญญาณในพื้นที่ให้ค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "เอาแบบรายเดือนครับ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "มีบริการ SMS ข่าวสารให้เลือกทั้งแบบรายวัน 5 บาท และรายเดือน 29 บาทค่ะ สนใจรับเป็นแบบไหนดีคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "สมัคริงโทนหน่อยค้าบ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS Call Center ยินดีให้บริการค่ะ วันนี้มีอะไรให้ช่วยดูแลคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "โอเคครับ งั้นช่วยสมัคร SMS ข่าวกีฬาให้หน่อย 081234XXXX",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ทำไมบิลเดือนนี้แพงจังครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "จากการตรวจสอบ พบว่ามีการใช้งาน data เกินแพ็กเกจในวันที่ 15 ค่ะ ทำให้มีค่าบริการส่วนเกินเพิ่มขึ้นค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ตกลงครับ สมัครอันนี้เลย",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สำหรับบริการดูดวง มีแพ็กเกจแนะนำดังนี้ค่ะ\n[Options: {1. \"ดวงรายวัน 5บ.**: รู้ทันเหตุการณ์\", 2. \"ดวงรายเดือน 49บ.**: เจาะลึกทุกด้าน\"}]\nสนใจรับเป็นแพ็กเกจไหนดีคะ"
+      },
+      {
+        "role": "user",
+        "content": "เอาแบบที่ 2 ครับ"
+      }
+    ]
+  },
+  {
+    "user_message": "i want to subscribe horoscope service plz",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "hello"
+      }
+    ]
+  },
+  {
+    "user_message": "งั้นลองสมัคแบบรายเดือนดูมัย",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "VAS คืออะไรหรอครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "VAS หรือ Value Added Service คือบริการเสริมต่างๆ เช่น ริงโทน, ข่าวสาร หรือดูดวง ที่ลูกค้าสามารถเลือกสมัครเพิ่มได้ตามความต้องการค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ลืมเลย อยากสมัครริงโทนเพลงเกาหลีด้วยค่ะ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอราคา roaming ไปญี่ปุ่นหน่อยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "แนะนำแพ็กเกจ Ready2Fly ราคา 399 บาท ใช้เน็ตได้ 7GB นาน 10 วันค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "โอเคค่ะ ขอบคุณมาก"
+      }
+    ]
+  },
+  {
+    "user_message": "ใช่ค่ะ สมัครเบอร์ 098765XXXX เลย",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "บริการ SMS ข่าวบันเทิง รายเดือน ราคา 35 บาท ต่อเดือนค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ตกลงค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนยืนยันหมายเลขโทรศัพท์ที่ต้องการสมัครบริการค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อ้อ สมัครดูดวงด้วยได้ปะ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "สวัสดีครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ AIS ช่วยดูแลคะ"
+      },
+      {
+        "role": "user",
+        "content": "เช็คยอดเงินคงเหลือให้หน่อย"
+      }
+    ]
+  },
+  {
+    "user_message": "want subscribe news sms monthly",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "Hello! Welcome to AIS. How can I help you today?"
+      },
+      {
+        "role": "user",
+        "content": "help me"
+      },
+      {
+        "role": "assistant",
+        "content": "I can help you with billing, packages, or other services. What do you need?"
+      }
+    ]
+  },
+  {
+    "user_message": "รบกวณช่วยสมัคริงโทนให้หน่อยได้มั้ย",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ซิมการ์ดใช้งานไม่ได้ค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "รบกวนลองปิด-เปิดเครื่องใหม่ หรือลองสลับซิมไปใส่เครื่องอื่นดูนะคะ"
+      },
+      {
+        "role": "user",
+        "content": "ลองแล้ว ใช้ได้แล้วค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีด้วยค่ะ มีส่วนอื่นให้ช่วยดูแลเพิ่มเติมไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "งั้นจัดอันนั้นเลยค่ะ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "แนะนำเป็นแพ็กเกจดูดวงแบบ Premium ค่ะ ราคา 59 บาท/เดือน จะได้รับคำพยากรณ์ละเอียดกว่าปกติค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อันนี้ต่างกับแบบธรรมดายังไงคะ"
+      },
+      {
+        "role": "assistant",
+        "content": "แบบ Premium จะมีการวิเคราะห์ดวงรายวันและรายสัปดาห์ พร้อมเคล็ดลับเสริมดวงค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "น่าสนใจค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "อยากได้แบบดูดวงรายเดือนอ่ะ 😭",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ฮัลโหล"
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ AIS ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "ช่วงนี้มีโปรอะไรเด็ดๆ บ้าง"
+      },
+      {
+        "role": "assistant",
+        "content": "ตอนนี้มีแพ็กเกจเน็ตไม่อั้น 15Mbps ราคา 200 บาท/เดือน สนใจไหมคะ"
+      }
+    ]
+  },
+  {
+    "user_message": "ขอสมัคร SMS ข่าวบันเทิงรายเดือนครับ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ต้องการความช่วยเหลือ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีค่ะ ต้องการสอบถามเรื่องใดคะ"
+      },
+      {
+        "role": "user",
+        "content": "อยากดูบริการเสริม"
+      },
+      {
+        "role": "assistant",
+        "content": "เรามีบริการ SMS ข่าวสาร, ดูดวง, และริงโทนให้เลือกค่ะ"
+      }
+    ]
+  },
+  {
+    "user_message": "แต่ว่าอยากสมัครดูดวงรายเดือนนะ ทำไง",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ขอเปลี่ยนแพ็กเกจเน็ตค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้ค่ะ ไม่ทราบว่าสนใจความเร็วเท่าไหร่คะ"
+      },
+      {
+        "role": "user",
+        "content": "เอาแบบ 20GB เดือนละ 300"
+      },
+      {
+        "role": "assistant",
+        "content": "แพ็กเกจนี้หมดเขตไปเมื่อเดือนที่แล้วค่ะ ตอนนี้มี 25GB ราคา 350 บาท แทนค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อ้าวหรอ งั้นเดี๋ยวคิดดูก่อน"
+      }
+    ]
+  },
+  {
+    "user_message": "เอาเบอร์ 1 ครับ 082345XXXX",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ มีอะไรให้ช่วยคะ"
+      },
+      {
+        "role": "user",
+        "content": "สวัสดีครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยินดีให้บริการค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "อยากได้ริงโทนครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "มีเพลงแนะนำดังนี้ค่ะ\n[Options: {1. \"เพลงฮิต-29บ.\", 2. \"เพลงรัก-29บ.\", 3. \"เพลงเศร้า-29บ.\"}]"
+      }
+    ]
+  },
+  {
+    "user_message": "เออ แล้วสมัคบริการดูดวงรายเดือนได้มะ",
+    "intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH",
+    "session_history": [
+      {
+        "role": "user",
+        "content": "ช่วยด้วยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "เกิดปัญหาอะไรขึ้นคะ รบกวนแจ้งรายละเอียดได้เลยค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "เช็คบิลหน่อยค่ะ"
+      },
+      {
+        "role": "assistant",
+        "content": "ยอดค้างชำระของหมายเลข 091234XXXX คือ 450 บาท ค่ะ"
+      },
+      {
+        "role": "user",
+        "content": "จ่ายผ่านแอปเรียบร้อยแล้วค่ะ"
+      }
+    ]
+  }
+]
