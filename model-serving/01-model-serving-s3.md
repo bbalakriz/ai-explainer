@@ -231,3 +231,91 @@ siege -c 5 -t 30s \
   -H "Content-Type: application/json" \
   "$ENDPOINT/v1/chat/completions POST {\"model\":\"qwen-25-3b-it-sft\",\"messages\":[{\"role\":\"system\",\"content\":\"You are an expert AI intent classifier for a telecom provider.\\n\\nRULES:\\n1. Prioritize the final user message. It is the primary signal.\\n2. Only use the assistant/user conversation history for context if the final message is short or ambiguous.\\n3. If the final message contradicts the history, the final message wins.\\n4. You must output ONLY a valid, minified JSON object.\\n\\nOUTPUT FORMAT:\\n{\\\"intent\\\": \\\"<predicted_label>\\\"}\"},{\"role\":\"assistant\",\"content\":\"สวัสดีค่ะ ติดต่อเรื่องเปิดใช้งานซิมรายเดือนใช่ไหมคะ\"},{\"role\":\"user\",\"content\":\"ใช่ครับ เพิ่งได้รับซิมใหม่มา ยังใช้ไม่ได้เลย เซง สุด แล่ว อ้อแล้วช่วยเช็ก Network แถวบ้านให้หน่อยสัญญานไม่ดีเลย มีปัญหาตลอดโครหงุดหงิด\"},{\"role\":\"assistant\",\"content\":\"ได้ค่ะ รบกวนแจ้งหมายเลขที่ต้องการเปิดใช้งานก่อนนะคะ\"},{\"role\":\"user\",\"content\":\"เบอร์ 086-031-xxxx ครับ\"},{\"role\":\"assistant\",\"content\":\"ตรวจสอบแล้วเป็นซิมรายเดือนที่รอเปิดใช้งานอยู่ค่ะ ต้องการให้ดำเนินการเปิดใช้งานเลยไหมครับ\"},{\"role\":\"user\",\"content\":\"งั้นช่วยเปิดไช้งานเบอร์รายเดือนนี้ให้เลยคับ ต้องการด่วนๆเลยพอดีพรุ่งจะไปต่างจังหวัดพอดีมีประชุมด่วน\"}],\"temperature\":0.0,\"max_tokens\":50,\"response_format\":{\"type\":\"json_object\"}}"
 ```
+
+
+curl -k -X POST "$ENDPOINT/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen-25-3b-it-sft",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are an AI intent classifier. Analyze the conversation and output a JSON object with the predicted intent."
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ติดต่อเรื่องเปิดใช้งานซิมรายเดือนใช่ไหมคะ"
+      },
+      {
+        "role": "user",
+        "content": "ใช่ครับ เพิ่งได้รับซิมใหม่มา ยังใช้ไม่ได้เลย เซง สุด แล่ว อ้อแล้วช่วยเช็ก Network แถวบ้านให้หน่อยสัญญานไม่ดีเลย มีปัญหาตลอดโครหงุดหงิด"
+      },
+      {
+        "role": "assistant",
+        "content": "ได้ค่ะ รบกวนแจ้งหมายเลขที่ต้องการเปิดใช้งานก่อนนะคะ"
+      },
+      {
+        "role": "user",
+        "content": "เบอร์ 086-031-xxxx ครับ"
+      },
+      {
+        "role": "assistant",
+        "content": "ตรวจสอบแล้วเป็นซิมรายเดือนที่รอเปิดใช้งานอยู่ค่ะ ต้องการให้ดำเนินการเปิดใช้งานเลยไหมครับ"
+      },
+      {
+        "role": "user",
+        "content": "งั้นช่วยเปิดไช้งานเบอร์รายเดือนนี้ให้เลยคับ ต้องการด่วนๆเลยพอดีพรุ่งจะไปต่างจังหวัดพอดีมีประชุมด่วน"
+      }
+    ],
+    "temperature": 0.0,
+    "max_tokens": 50,
+    "extra_body": {  
+    "structured_outputs": {  
+        "choice": [  
+            '{"intent": "MOBILE_BILLING_CHECK_DUE_DATE"}',  
+            '{"intent": "MOBILE_BILLING_PAYMENT_STATUS_POSTPAID"}',  
+            '{"intent": "MOBILE_BILLING_PAYMENT_STATUS_PREPAID"}',  
+            '{"intent": "MOBILE_NETWORK_CHECK_NO_SIGNAL"}',  
+            '{"intent": "MOBILE_PACKAGE_CHECK_DATA_CURRENT"}',  
+            '{"intent": "MOBILE_PACKAGE_CHECK_DATA_HISTORY"}',  
+            '{"intent": "MOBILE_ROAMING_CHECK_DATA_CURRENT"}',  
+            '{"intent": "MOBILE_ROAMING_CHECK_PAYMENT_POSTPAID"}',  
+            '{"intent": "MOBILE_SIM_ACTIVATION_POSTPAID"}',  
+            '{"intent": "MOBILE_SIM_ACTIVATION_PREPAID"}',  
+            '{"intent": "MOBILE_SIM_REPLACEMENT_POSPAID"}',  
+            '{"intent": "MOBILE_SIM_REPLACEMENT_PREPAID"}',  
+            '{"intent": "MOBILE_USAGE_CHECK_DATA_CURRENT"}',  
+            '{"intent": "MOBILE_USAGE_COMPARE_DATA_PLAN"}',  
+            '{"intent": "MOBILE_VAS_SUBSCRIBE_DATA_HISTORY"}',  
+            '{"intent": "MOBILE_VAS_SUBSCRIBE_DATA_SPECIFIC_MONTH"}',  
+            '{"intent": "UNKNOWN"}'  
+          ]  
+        }  
+      }
+  }' | jq
+
+
+  curl -k -X POST "$ENDPOINT/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "qwen-25-3b-it-sft",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are an AI intent classifier. Analyze the conversation and output a JSON object with the predicted intent."
+      },
+      {
+        "role": "assistant",
+        "content": "สวัสดีค่ะ ติดต่อเรื่องเปิดใช้งานซิมรายเดือนใช่ไหมคะ"
+      },
+      {
+        "role": "user",
+        "content": "อยากทราบว่าค่าบริการรายเดือนรอบล่าสุดยังค้างอยู่หรือชำระครบแล้วค่ะ"
+      }
+    ],
+    "temperature": 0.0,
+    "max_tokens": 50,
+    "response_format": {
+      "type": "json_object"
+    }      
+  }' | jq
