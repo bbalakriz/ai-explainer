@@ -1,2 +1,2 @@
 sdg_hub==0.9.1
-litellm==1.82.6
+litellm==1.109.0.dev1
